@@ -1,7 +1,9 @@
 use std::{
+    error::Error,
     fmt::Display,
     iter::{once, repeat},
     ops::{Index, IndexMut, Not, RangeInclusive},
+    str::FromStr,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -27,7 +29,7 @@ impl PieceKind {
     fn uppercase(self) -> char {
         self.lowercase().to_ascii_uppercase()
     }
-    fn algebraic_notation(self) -> Option<char> {
+    fn algebraic_notation_char(self) -> Option<char> {
         match self {
             PieceKind::Pawn => None,
             PieceKind::Knight => Some('N'),
@@ -35,6 +37,16 @@ impl PieceKind {
             PieceKind::Rook => Some('R'),
             PieceKind::Queen => Some('Q'),
             PieceKind::King => Some('K'),
+        }
+    }
+    fn algebraic_notation(self) -> &'static str {
+        match self {
+            PieceKind::Pawn => "",
+            PieceKind::Knight => "N",
+            PieceKind::Bishop => "B",
+            PieceKind::Rook => "R",
+            PieceKind::Queen => "Q",
+            PieceKind::King => "K",
         }
     }
 }
@@ -49,6 +61,61 @@ impl Display for PieceKind {
             PieceKind::King => write!(f, "king")?,
         }
         Ok(())
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParsePieceKindError {
+    Empty,
+    UnknownSymbol(char),
+    UnexpectedSymbol(char),
+}
+impl Display for ParsePieceKindError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParsePieceKindError::Empty => write!(f, "expected one character, found none instead")?,
+            ParsePieceKindError::UnknownSymbol(c) => write!(
+                f,
+                "`{c}` is neither of `p`, `n`, `b`, `r`, `q`, `k`, uppercase letter of any of these, or unicode chess symbols"
+            )?,
+            ParsePieceKindError::UnexpectedSymbol(c) => {
+                write!(f, "unexpected `{c}`, only one character is expected")?
+            }
+        }
+        Ok(())
+    }
+}
+impl Error for ParsePieceKindError {}
+
+impl FromStr for PieceKind {
+    type Err = ParsePieceKindError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut characters = s.chars();
+        let piece = characters
+            .next()
+            .ok_or(ParsePieceKindError::Empty)?
+            .try_into()?;
+        if let Some(c) = characters.next() {
+            Err(ParsePieceKindError::UnexpectedSymbol(c))
+        } else {
+            Ok(piece)
+        }
+    }
+}
+impl TryFrom<char> for PieceKind {
+    type Error = ParsePieceKindError;
+
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        let piece = match value {
+            'p' | 'P' | '♙' | '♟' => PieceKind::Pawn,
+            'n' | 'N' | '♘' | '♞' => PieceKind::Knight,
+            'b' | 'B' | '♗' | '♝' => PieceKind::Bishop,
+            'r' | 'R' | '♖' | '♜' => PieceKind::Rook,
+            'q' | 'Q' | '♕' | '♛' => PieceKind::Queen,
+            'k' | 'K' | '♔' | '♚' => PieceKind::King,
+            c => return Err(ParsePieceKindError::UnknownSymbol(c)),
+        };
+        Ok(piece)
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -229,7 +296,7 @@ impl Board {
                 .is_some_and(|count| count <= 2)
         })
     }
-    fn move_piece(&mut self, movement: Move) {
+    pub fn move_piece(&mut self, movement: Move) {
         self.current_player = !self.current_player;
         for piece in self.iter_mut() {
             piece.just_moved_twice_as_pawn = false;
@@ -333,7 +400,7 @@ impl Board {
     fn is_move_valid(self, movement: Move) -> bool {
         let current_player = self.current_player;
         let moved = self.into_moved(movement);
-        moved
+        !moved
             .king_of(current_player)
             .is_some_and(|king| moved.is_attacked_by(king.position, !current_player))
     }
@@ -521,6 +588,17 @@ impl Coord {
             .into_iter()
             .filter_map(move |(x, y)| self.move_by(x, y))
     }
+    pub fn from_char(x: char, y: char) -> Result<Self, ParseCoordError> {
+        let x = match x {
+            'a'..='h' => x as u8 - b'a',
+            _ => return Err(ParseCoordError::InvalidX(x)),
+        };
+        let y = match y {
+            '1'..='8' => 7 - (y as u8 - b'1'),
+            _ => return Err(ParseCoordError::InvalidY(y)),
+        };
+        Ok(Coord { x, y })
+    }
 }
 fn pawn_direction(color: Color) -> i8 {
     match color {
@@ -542,11 +620,52 @@ impl Display for Coord {
         Ok(())
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParseCoordError {
+    Empty,
+    YNotProvided,
+    InvalidX(char),
+    InvalidY(char),
+    UnexpectedSymbol(char),
+}
+impl Display for ParseCoordError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseCoordError::Empty => write!(f, "expected 2 characters, found none instead")?,
+            ParseCoordError::YNotProvided => write!(f, "expected 2 characters, found 1 instead")?,
+            ParseCoordError::InvalidX(c) => write!(f, "`{c}` is not a letter from a to h")?,
+            ParseCoordError::InvalidY(c) => write!(f, "`{c}` is not a number from 1 to 8")?,
+            ParseCoordError::UnexpectedSymbol(c) => {
+                write!(f, "unexpected `{c}`, only 2 characters are expected")?
+            }
+        }
+        Ok(())
+    }
+}
+impl Error for ParseCoordError {}
+
+impl FromStr for Coord {
+    type Err = ParseCoordError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut characters = s.chars();
+        let x = characters.next().ok_or(ParseCoordError::Empty)?;
+        let y = characters.next().ok_or(ParseCoordError::YNotProvided)?;
+        let coord = Coord::from_char(x, y)?;
+        if let Some(c) = characters.next() {
+            Err(ParseCoordError::UnexpectedSymbol(c))
+        } else {
+            Ok(coord)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct PieceWithContext {
-    piece: Piece,
-    position: Coord,
-    board: Board,
+pub struct PieceWithContext {
+    pub piece: Piece,
+    pub position: Coord,
+    pub board: Board,
 }
 impl PieceWithContext {
     fn moves(self) -> Box<dyn Iterator<Item = Move>> {
@@ -783,6 +902,10 @@ impl PieceWithContext {
             }
         }
     }
+    pub fn valid_moves(self) -> impl Iterator<Item = Move> {
+        self.moves()
+            .filter(move |movement| self.board.is_move_valid(*movement))
+    }
 }
 impl Display for PieceWithContext {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -791,14 +914,14 @@ impl Display for PieceWithContext {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct CastleMove {
+pub struct CastleMove {
     king_origin: Coord,
     king_destination: Coord,
     rook_origin: Coord,
     rook_destination: Coord,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum Move {
+pub enum Move {
     RegularMove {
         origin: Coord,
         destination: Coord,
@@ -820,6 +943,35 @@ impl Move {
         Move::RegularMove {
             origin: Coord::dummy(),
             destination: Coord::dummy(),
+        }
+    }
+    pub fn destination(self) -> Coord {
+        match self {
+            Move::RegularMove {
+                origin: _,
+                destination,
+            } => destination,
+            Move::Castle(castle_move) => castle_move.king_destination,
+            Move::EnPassant {
+                pawn_origin: _,
+                pawn_destination,
+                captured_pawn: _,
+            } => pawn_destination,
+            Move::Promotion {
+                origin: _,
+                destination,
+                kind: _,
+            } => destination,
+        }
+    }
+    pub fn promotion_piece(self) -> Option<PieceKind> {
+        match self {
+            Move::Promotion {
+                origin: _,
+                destination: _,
+                kind,
+            } => Some(kind),
+            _ => None,
         }
     }
 }
