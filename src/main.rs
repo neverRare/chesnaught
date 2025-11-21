@@ -8,9 +8,7 @@ use std::{
 };
 
 use crate::{
-    chess::{
-        Board, Coord, Move, ParseCoordError, ParsePieceKindError, PieceKind, PieceWithContext,
-    },
+    chess::{Board, Coord, ParseCoordError, ParsePieceKindError, PieceKind, PieceWithContext},
     tui::Tui,
 };
 
