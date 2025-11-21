@@ -341,9 +341,9 @@ impl Board {
                 self[rook_destination] = rook;
             }
             Move::EnPassant {
-                pawn_origin,
-                pawn_destination,
-                captured_pawn,
+                origin: pawn_origin,
+                destination: pawn_destination,
+                captured,
             } => {
                 let mut piece = self[pawn_origin].take();
 
@@ -351,7 +351,7 @@ impl Board {
                     piece.moved = true;
                 }
                 self[pawn_destination] = self[pawn_origin].take();
-                self[captured_pawn] = None;
+                self[captured] = None;
             }
             Move::Promotion {
                 origin,
@@ -736,12 +736,12 @@ impl PieceWithContext {
                                             && piece.just_moved_twice_as_pawn
                                     })
                                 })
-                                .filter_map(move |captured_pawn| {
+                                .filter_map(move |captured| {
                                     Some(Move::EnPassant {
-                                        pawn_origin: self.position,
-                                        pawn_destination: captured_pawn
+                                        origin: self.position,
+                                        destination: captured
                                             .move_by(0, pawn_direction(self.piece.color))?,
-                                        captured_pawn,
+                                        captured,
                                     })
                                 }),
                         ),
@@ -936,9 +936,9 @@ pub enum Move {
     },
     Castle(CastleMove),
     EnPassant {
-        pawn_origin: Coord,
-        pawn_destination: Coord,
-        captured_pawn: Coord,
+        origin: Coord,
+        destination: Coord,
+        captured: Coord,
     },
     Promotion {
         origin: Coord,
@@ -957,9 +957,7 @@ impl Move {
         match self {
             Move::RegularMove { destination, .. } => destination,
             Move::Castle(castle_move) => castle_move.king_destination,
-            Move::EnPassant {
-                pawn_destination, ..
-            } => pawn_destination,
+            Move::EnPassant { destination, .. } => destination,
             Move::Promotion { destination, .. } => destination,
         }
     }
@@ -989,11 +987,11 @@ impl Display for Move {
                 write!(f, "{king_origin}{king_destination}")?;
             }
             Move::EnPassant {
-                pawn_origin,
-                pawn_destination,
+                origin,
+                destination,
                 ..
             } => {
-                write!(f, "{pawn_origin}{pawn_destination}")?;
+                write!(f, "{origin}{destination}")?;
             }
             Move::Promotion {
                 origin,
