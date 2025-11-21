@@ -80,7 +80,7 @@ impl Display for ParsePieceKindError {
                 "`{c}` is neither of `p`, `n`, `b`, `r`, `q`, `k`, uppercase letter of any of these, or unicode chess symbols"
             )?,
             ParsePieceKindError::UnexpectedSymbol(c) => {
-                write!(f, "unexpected `{c}`, only one character is expected")?
+                write!(f, "unexpected `{c}`, only one character is expected")?;
             }
         }
         Ok(())
@@ -204,7 +204,7 @@ pub struct Board {
 }
 impl Board {
     pub fn new() -> Self {
-        Default::default()
+        Board::default()
     }
     #[cfg(test)]
     fn blank(current_player: Color) -> Self {
@@ -463,7 +463,7 @@ impl Display for Board {
             if first {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", piece)?;
+            write!(f, "{piece}")?;
         }
         Ok(())
     }
@@ -651,7 +651,7 @@ impl Display for ParseCoordError {
             ParseCoordError::InvalidX(c) => write!(f, "`{c}` is not a letter from a to h")?,
             ParseCoordError::InvalidY(c) => write!(f, "`{c}` is not a number from 1 to 8")?,
             ParseCoordError::UnexpectedSymbol(c) => {
-                write!(f, "unexpected `{c}`, only 2 characters are expected")?
+                write!(f, "unexpected `{c}`, only 2 characters are expected")?;
             }
         }
         Ok(())
@@ -841,8 +841,7 @@ impl PieceWithContext {
                                                 board: self.board,
                                             })
                                         })
-                                        .next()
-                                        .and_then(|piece| {
+                                        .find_map(|piece| {
                                             if piece.piece.color == self.piece.color
                                                 && piece.piece.kind == PieceKind::Rook
                                                 && !piece.piece.moved

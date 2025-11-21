@@ -19,8 +19,8 @@ where
         for (y, row) in self.board.board.iter().enumerate() {
             for (x, piece) in row.iter().enumerate() {
                 let position = Coord {
-                    x: x as u8,
-                    y: y as u8,
+                    x: x.try_into().unwrap(),
+                    y: y.try_into().unwrap(),
                 };
                 let color = if self
                     .highlighted

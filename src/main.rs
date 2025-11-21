@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![warn(clippy::pedantic)]
 
 use std::{
     error::Error,
@@ -56,10 +57,9 @@ impl Display for ParseInputError {
 impl Error for ParseInputError {
     fn cause(&self) -> Option<&dyn Error> {
         match self {
-            ParseInputError::InsufficientLength => None,
             ParseInputError::ParseCoordError(err) => Some(err),
             ParseInputError::ParsePieceKindError(err) => Some(err),
-            ParseInputError::UnexpectedSymbol(_) => None,
+            ParseInputError::InsufficientLength | ParseInputError::UnexpectedSymbol(_) => None,
         }
     }
 }
@@ -140,25 +140,22 @@ fn main() {
         let input: Input = match input.trim().parse() {
             Ok(input) => input,
             Err(err) => {
-                println!("Error: {}", err);
+                println!("Error: {err}");
                 print_board = false;
                 continue;
             }
         };
-        let piece = match board[input.origin] {
-            Some(piece) => {
-                if piece.color != board.current_player {
-                    println!("Error: it is {}'s turn", board.current_player);
-                    print_board = false;
-                    continue;
-                }
-                piece
-            }
-            None => {
-                println!("Error: that is an empty square");
+        let piece = if let Some(piece) = board[input.origin] {
+            if piece.color != board.current_player {
+                println!("Error: it is {}'s turn", board.current_player);
                 print_board = false;
                 continue;
             }
+            piece
+        } else {
+            println!("Error: that is an empty square");
+            print_board = false;
+            continue;
         };
         let piece = PieceWithContext {
             piece,
@@ -171,13 +168,10 @@ fn main() {
                     movement.movement.destination == destination.destination
                         && movement.promotion_piece == destination.promotion_piece
                 });
-                let movement = match movement {
-                    Some(movement) => movement,
-                    None => {
-                        println!("Error: invalid move");
-                        print_board = false;
-                        continue;
-                    }
+                let Some(movement) = movement else {
+                    println!("Error: invalid move");
+                    print_board = false;
+                    continue;
                 };
                 board.move_piece(movement);
             }
