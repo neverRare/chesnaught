@@ -685,8 +685,8 @@ impl PieceWithContext {
                                     self.position
                                         .line(direction, 0)
                                         .filter_map(|position| {
-                                            self.board[position].map(|piece| PieceWithContext {
-                                                piece,
+                                            Some(PieceWithContext {
+                                                piece: self.board[position]?,
                                                 position,
                                                 board: self.board,
                                             })
