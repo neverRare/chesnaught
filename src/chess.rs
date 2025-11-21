@@ -349,10 +349,10 @@ impl Board {
     fn is_attacked_by(self, position: Coord, color: Color) -> bool {
         position
             .pawn_captures(!color)
-            .any(|position| self.square_contains(position, color, [PieceKind::Pawn]))
+            .any(|position| self.position_contains(position, color, [PieceKind::Pawn]))
             || position
                 .knight_moves()
-                .any(|position| self.square_contains(position, color, [PieceKind::Knight]))
+                .any(|position| self.position_contains(position, color, [PieceKind::Knight]))
             || position
                 .bishop_lines()
                 .any(|line| self.line_contains(line, color, [PieceKind::Bishop, PieceKind::Queen]))
@@ -361,7 +361,7 @@ impl Board {
                 .any(|line| self.line_contains(line, color, [PieceKind::Rook, PieceKind::Queen]))
             || position
                 .king_moves()
-                .any(|position| self.square_contains(position, color, [PieceKind::King]))
+                .any(|position| self.position_contains(position, color, [PieceKind::King]))
     }
     fn is_attacked_after_move(self, origin: Coord, position: Coord, color: Color) -> bool {
         let mut board = self;
@@ -383,7 +383,7 @@ impl Board {
             .king_of(current_player)
             .is_some_and(|king| moved.is_attacked_by(king.position, !current_player))
     }
-    fn square_contains<const N: usize>(
+    fn position_contains<const N: usize>(
         self,
         position: Coord,
         color: Color,
@@ -400,7 +400,7 @@ impl Board {
         line.find_map(|position| self[position])
             .is_some_and(|piece| piece.color == color && pieces.contains(&piece.kind))
     }
-    fn possible_squares_on_line(
+    fn moveable_position_on_line(
         self,
         line: impl Iterator<Item = Coord>,
         color: Color,
@@ -681,11 +681,11 @@ pub struct PieceWithContext {
     pub board: Board,
 }
 impl PieceWithContext {
-    fn moves_from_squares(
+    fn moves_from_positions(
         self,
-        squares: impl Iterator<Item = Coord>,
+        positions: impl Iterator<Item = Coord>,
     ) -> impl Iterator<Item = Move> {
-        squares
+        positions
             .filter(move |position| {
                 self.board[*position].is_none_or(|piece| piece.color != self.piece.color)
             })
@@ -700,7 +700,7 @@ impl PieceWithContext {
         lines: impl Iterator<Item = impl Iterator<Item = Coord>>,
     ) -> impl Iterator<Item = Move> {
         lines
-            .flat_map(move |line| self.board.possible_squares_on_line(line, self.piece.color))
+            .flat_map(move |line| self.board.moveable_position_on_line(line, self.piece.color))
             .map(move |destination| SimpleMove {
                 origin: self.position,
                 destination,
@@ -786,7 +786,7 @@ impl PieceWithContext {
             )
     }
     fn knight_moves(self) -> impl Iterator<Item = Move> {
-        self.moves_from_squares(self.position.knight_moves())
+        self.moves_from_positions(self.position.knight_moves())
     }
     fn bishop_moves(self) -> impl Iterator<Item = Move> {
         self.moves_from_lines(self.position.bishop_lines())
@@ -799,7 +799,7 @@ impl PieceWithContext {
     }
     fn king_moves(self) -> impl Iterator<Item = Move> {
         // regular moves
-        self.moves_from_squares(self.position.king_moves()).chain(
+        self.moves_from_positions(self.position.king_moves()).chain(
             // castling
             [-1, 1]
                 .into_iter()
