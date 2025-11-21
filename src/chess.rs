@@ -474,6 +474,16 @@ impl Board {
                 .unwrap(),
         );
     }
+    fn assert_no_move(&mut self, origin: &str, destination: &str) {
+        assert!(
+            self.valid_moves()
+                .find(|movement| {
+                    movement.origin() == origin.parse().unwrap()
+                        && movement.destination() == destination.parse().unwrap()
+                })
+                .is_none()
+        )
+    }
 }
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1232,4 +1242,5 @@ fn lose_of_en_passant_rights() {
             .unwrap()
             .just_moved_twice_as_pawn
     );
+    board.assert_no_move("e5", "f6");
 }
