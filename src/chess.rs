@@ -356,13 +356,13 @@ impl Board {
             Move::Promotion {
                 origin,
                 destination,
-                kind,
+                promotion_piece,
             } => {
                 let mut piece = self[origin].take();
 
                 if let Some(piece) = &mut piece {
                     piece.moved = true;
-                    piece.kind = kind;
+                    piece.kind = promotion_piece;
                     if origin.x == destination.x
                         && match piece.color {
                             Color::White => origin.y + 2 == destination.y,
@@ -704,10 +704,10 @@ impl PieceWithContext {
                                         PieceKind::Rook,
                                         PieceKind::Queen,
                                     ]
-                                    .map(|kind| Move::Promotion {
+                                    .map(|promotion_piece| Move::Promotion {
                                         origin: self.position,
                                         destination,
-                                        kind,
+                                        promotion_piece,
                                     })
                                     .into_iter()
                                     .take(4)
@@ -943,7 +943,7 @@ pub enum Move {
     Promotion {
         origin: Coord,
         destination: Coord,
-        kind: PieceKind,
+        promotion_piece: PieceKind,
     },
 }
 impl Move {
@@ -968,7 +968,7 @@ impl Move {
             Move::Promotion {
                 origin: _,
                 destination,
-                kind: _,
+                promotion_piece: _,
             } => destination,
         }
     }
@@ -977,8 +977,8 @@ impl Move {
             Move::Promotion {
                 origin: _,
                 destination: _,
-                kind,
-            } => Some(kind),
+                promotion_piece,
+            } => Some(promotion_piece),
             _ => None,
         }
     }
@@ -1010,7 +1010,7 @@ impl Display for Move {
             Move::Promotion {
                 origin,
                 destination,
-                kind,
+                promotion_piece: kind,
             } => {
                 write!(f, "{origin}{destination}{}", kind.lowercase())?;
             }

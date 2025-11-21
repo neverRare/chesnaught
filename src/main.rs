@@ -20,7 +20,7 @@ mod tui;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Destination {
     destination: Coord,
-    kind: Option<PieceKind>,
+    promotion_piece: Option<PieceKind>,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Input {
@@ -83,13 +83,16 @@ impl FromStr for Input {
                     .next()
                     .ok_or(ParseInputError::InsufficientLength)?;
                 let destination = Coord::from_char(x, y)?;
-                let kind = characters.next().map(TryInto::try_into).transpose()?;
+                let promotion_piece = characters.next().map(TryInto::try_into).transpose()?;
                 if let Some(c) = characters.next() {
                     return Err(ParseInputError::UnexpectedSymbol(c));
                 }
                 Ok(Input {
                     origin,
-                    destination: Some(Destination { destination, kind }),
+                    destination: Some(Destination {
+                        destination,
+                        promotion_piece,
+                    }),
                 })
             }
             None => Ok(Input {
@@ -168,7 +171,7 @@ fn main() {
             Some(destination) => {
                 let movement = piece.valid_moves().find(|movement| {
                     movement.destination() == destination.destination
-                        && movement.promotion_piece() == destination.kind
+                        && movement.promotion_piece() == destination.promotion_piece
                 });
                 let movement = match movement {
                     Some(movement) => movement,
