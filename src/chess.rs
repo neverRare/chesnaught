@@ -307,83 +307,37 @@ impl Board {
         })
     }
     pub fn move_piece(&mut self, movement: Move) {
+        let piece_movement = movement.movement;
+
         self.current_player = !self.current_player;
         for piece in self.iter_mut() {
             piece.just_moved_twice_as_pawn = false;
         }
-        match movement {
-            Move::RegularMove {
-                origin,
-                destination,
-            } => {
-                let mut piece = self[origin].take();
+        let mut piece = self[piece_movement.origin].take().unwrap();
+        let mut rook = movement
+            .castling_rook
+            .map(|movement| self[movement.origin].take().unwrap());
 
-                if let Some(piece) = &mut piece {
-                    piece.moved = true;
-                    if piece.kind == PieceKind::Pawn
-                        && origin.x == destination.x
-                        && match piece.color {
-                            Color::White => origin.y == destination.y + 2,
-                            Color::Black => origin.y + 2 == destination.y,
-                        }
-                    {
-                        piece.just_moved_twice_as_pawn = true;
-                    }
-                }
-                self[destination] = piece;
+        piece.moved = true;
+        if let Some(promoted_piece) = movement.promotion_piece {
+            piece.kind = promoted_piece;
+        }
+        if piece.kind == PieceKind::Pawn
+            && piece_movement.origin.x == piece_movement.destination.x
+            && match piece.color {
+                Color::White => piece_movement.origin.y == piece_movement.destination.y + 2,
+                Color::Black => piece_movement.origin.y + 2 == piece_movement.destination.y,
             }
-            Move::Castle(CastleMove {
-                king_origin,
-                king_destination,
-                rook_origin,
-                rook_destination,
-            }) => {
-                let mut king = self[king_origin].take();
-                let mut rook = self[rook_origin].take();
-
-                if let Some(piece) = &mut king {
-                    piece.moved = true;
-                }
-                if let Some(piece) = &mut rook {
-                    piece.moved = true;
-                }
-                self[king_destination] = king;
-                self[rook_destination] = rook;
-            }
-            Move::EnPassant {
-                origin: pawn_origin,
-                destination: pawn_destination,
-                captured,
-            } => {
-                let mut piece = self[pawn_origin].take();
-
-                if let Some(piece) = &mut piece {
-                    piece.moved = true;
-                }
-                self[pawn_destination] = self[pawn_origin].take();
-                self[captured] = None;
-            }
-            Move::Promotion {
-                origin,
-                destination,
-                promotion_piece,
-            } => {
-                let mut piece = self[origin].take();
-
-                if let Some(piece) = &mut piece {
-                    piece.moved = true;
-                    piece.kind = promotion_piece;
-                    if origin.x == destination.x
-                        && match piece.color {
-                            Color::White => origin.y == destination.y + 2,
-                            Color::Black => origin.y + 2 == destination.y,
-                        }
-                    {
-                        piece.just_moved_twice_as_pawn = true;
-                    }
-                }
-                self[destination] = self[origin].take();
-            }
+        {
+            piece.just_moved_twice_as_pawn = true;
+        }
+        self[piece_movement.destination] = Some(piece);
+        if let Some(rook) = &mut rook {
+            rook.moved = true;
+            self[movement.castling_rook.unwrap().destination] = Some(piece);
+        }
+        if let Some(captured) = movement.en_passant_capture {
+            self[captured] = None;
         }
     }
     fn into_moved(self, movement: Move) -> Self {
@@ -477,7 +431,7 @@ impl Board {
         self.move_piece(
             piece
                 .valid_moves()
-                .find(|movement| movement.destination() == destination)
+                .find(|movement| movement.movement.destination == destination)
                 .unwrap(),
         );
     }
@@ -485,7 +439,8 @@ impl Board {
         assert!(
             self.valid_moves()
                 .find(|movement| {
-                    movement.origin() == origin && movement.destination() == destination
+                    movement.movement.origin == origin
+                        && movement.movement.destination == destination
                 })
                 .is_none()
         )
@@ -743,18 +698,27 @@ impl PieceWithContext {
                                         PieceKind::Rook,
                                         PieceKind::Queen,
                                     ]
-                                    .map(|promotion_piece| Move::Promotion {
-                                        origin: self.position,
-                                        destination,
-                                        promotion_piece,
+                                    .map(|promotion_piece| Move {
+                                        movement: SimpleMove {
+                                            origin: self.position,
+                                            destination,
+                                        },
+                                        castling_rook: None,
+                                        en_passant_capture: None,
+                                        promotion_piece: Some(promotion_piece),
                                     })
                                     .into_iter()
                                     .take(4)
                                 } else {
                                     [
-                                        Move::RegularMove {
-                                            origin: self.position,
-                                            destination,
+                                        Move {
+                                            movement: SimpleMove {
+                                                origin: self.position,
+                                                destination,
+                                            },
+                                            castling_rook: None,
+                                            en_passant_capture: None,
+                                            promotion_piece: None,
                                         },
                                         Move::dummy(),
                                         Move::dummy(),
@@ -776,11 +740,15 @@ impl PieceWithContext {
                                     })
                                 })
                                 .filter_map(move |captured| {
-                                    Some(Move::EnPassant {
-                                        origin: self.position,
-                                        destination: captured
-                                            .move_by(0, pawn_direction(self.piece.color))?,
-                                        captured,
+                                    Some(Move {
+                                        movement: SimpleMove {
+                                            origin: self.position,
+                                            destination: captured
+                                                .move_by(0, pawn_direction(self.piece.color))?,
+                                        },
+                                        castling_rook: None,
+                                        en_passant_capture: Some(captured),
+                                        promotion_piece: None,
                                     })
                                 }),
                         ),
@@ -792,10 +760,11 @@ impl PieceWithContext {
                     .filter(move |position| {
                         self.board[*position].is_none_or(|piece| piece.color != self.piece.color)
                     })
-                    .map(move |destination| Move::RegularMove {
+                    .map(move |destination| SimpleMove {
                         origin: self.position,
                         destination,
-                    }),
+                    })
+                    .map(SimpleMove::as_simple_move),
             ),
             PieceKind::Bishop => Box::new(
                 self.position
@@ -803,10 +772,11 @@ impl PieceWithContext {
                     .flat_map(move |line| {
                         self.board.possible_squares_on_line(line, self.piece.color)
                     })
-                    .map(move |destination| Move::RegularMove {
+                    .map(move |destination| SimpleMove {
                         origin: self.position,
                         destination,
-                    }),
+                    })
+                    .map(SimpleMove::as_simple_move),
             ),
             PieceKind::Rook => Box::new(
                 self.position
@@ -814,10 +784,11 @@ impl PieceWithContext {
                     .flat_map(move |line| {
                         self.board.possible_squares_on_line(line, self.piece.color)
                     })
-                    .map(move |destination| Move::RegularMove {
+                    .map(move |destination| SimpleMove {
                         origin: self.position,
                         destination,
-                    }),
+                    })
+                    .map(SimpleMove::as_simple_move),
             ),
             PieceKind::Queen => Box::new(
                 self.position
@@ -825,10 +796,11 @@ impl PieceWithContext {
                     .flat_map(move |line| {
                         self.board.possible_squares_on_line(line, self.piece.color)
                     })
-                    .map(move |destination| Move::RegularMove {
+                    .map(move |destination| SimpleMove {
                         origin: self.position,
                         destination,
-                    }),
+                    })
+                    .map(SimpleMove::as_simple_move),
             ),
             PieceKind::King => {
                 Box::new(
@@ -838,10 +810,11 @@ impl PieceWithContext {
                             self.board[*position]
                                 .is_none_or(|piece| piece.color != self.piece.color)
                         })
-                        .map(move |destination| Move::RegularMove {
+                        .map(move |destination| SimpleMove {
                             origin: self.position,
                             destination,
                         })
+                        .map(SimpleMove::as_simple_move)
                         .chain(
                             // castling
                             [-1, 1]
@@ -873,37 +846,41 @@ impl PieceWithContext {
                                                     1 => coord_x!("f"),
                                                     _ => unreachable!(),
                                                 };
-                                                Some(CastleMove {
-                                                    king_origin: self.position,
-                                                    king_destination: Coord {
-                                                        x: king_destination,
-                                                        y: self.position.y,
+                                                Some((
+                                                    SimpleMove {
+                                                        origin: self.position,
+                                                        destination: Coord {
+                                                            x: king_destination,
+                                                            y: self.position.y,
+                                                        },
                                                     },
-                                                    rook_origin: piece.position,
-                                                    rook_destination: Coord {
-                                                        x: rook_destination,
-                                                        y: piece.position.y,
+                                                    SimpleMove {
+                                                        origin: piece.position,
+                                                        destination: Coord {
+                                                            x: rook_destination,
+                                                            y: piece.position.y,
+                                                        },
                                                     },
-                                                })
+                                                ))
                                             } else {
                                                 None
                                             }
                                         })
                                 })
-                                .filter(move |castle_move| {
+                                .filter(move |(king, rook)| {
                                     [
                                         (
                                             PieceKind::Rook,
                                             number_range_inclusive(
-                                                castle_move.rook_origin.x,
-                                                castle_move.rook_destination.x,
+                                                rook.origin.x,
+                                                rook.destination.x,
                                             ),
                                         ),
                                         (
                                             PieceKind::King,
                                             number_range_inclusive(
-                                                castle_move.king_origin.x,
-                                                castle_move.king_destination.x,
+                                                king.origin.x,
+                                                king.destination.x,
                                             ),
                                         ),
                                     ]
@@ -914,12 +891,8 @@ impl PieceWithContext {
                                                 let position = Coord {
                                                     x,
                                                     y: match kind {
-                                                        PieceKind::Rook => {
-                                                            castle_move.rook_origin.y
-                                                        }
-                                                        PieceKind::King => {
-                                                            castle_move.king_origin.y
-                                                        }
+                                                        PieceKind::Rook => rook.origin.y,
+                                                        PieceKind::King => king.origin.y,
                                                         _ => unreachable!(),
                                                     },
                                                 };
@@ -927,10 +900,10 @@ impl PieceWithContext {
                                                     piece.color == self.piece.color
                                                         && match piece.kind {
                                                             PieceKind::Rook => {
-                                                                position == castle_move.rook_origin
+                                                                position == rook.origin
                                                             }
                                                             PieceKind::King => {
-                                                                position == castle_move.king_origin
+                                                                position == king.origin
                                                             }
                                                             _ => false,
                                                         }
@@ -943,7 +916,12 @@ impl PieceWithContext {
                                         },
                                     )
                                 })
-                                .map(Move::Castle),
+                                .map(|(movement, castling_rook)| Move {
+                                    movement,
+                                    castling_rook: Some(castling_rook),
+                                    en_passant_capture: None,
+                                    promotion_piece: None,
+                                }),
                         ),
                 )
             }
@@ -961,92 +939,49 @@ impl Display for PieceWithContext {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CastleMove {
-    king_origin: Coord,
-    king_destination: Coord,
-    rook_origin: Coord,
-    rook_destination: Coord,
+pub struct SimpleMove {
+    pub origin: Coord,
+    pub destination: Coord,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Move {
-    RegularMove {
-        origin: Coord,
-        destination: Coord,
-    },
-    Castle(CastleMove),
-    EnPassant {
-        origin: Coord,
-        destination: Coord,
-        captured: Coord,
-    },
-    Promotion {
-        origin: Coord,
-        destination: Coord,
-        promotion_piece: PieceKind,
-    },
+impl Display for SimpleMove {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.origin, self.destination)?;
+        Ok(())
+    }
 }
-impl Move {
+impl SimpleMove {
     fn dummy() -> Self {
-        Move::RegularMove {
+        SimpleMove {
             origin: Coord::dummy(),
             destination: Coord::dummy(),
         }
     }
-    pub fn origin(self) -> Coord {
-        match self {
-            Move::RegularMove { origin, .. } => origin,
-            Move::Castle(castle_move) => castle_move.king_origin,
-            Move::EnPassant { origin, .. } => origin,
-            Move::Promotion { origin, .. } => origin,
+    fn as_simple_move(self) -> Move {
+        Move {
+            movement: self,
+            castling_rook: None,
+            en_passant_capture: None,
+            promotion_piece: None,
         }
     }
-    pub fn destination(self) -> Coord {
-        match self {
-            Move::RegularMove { destination, .. } => destination,
-            Move::Castle(castle_move) => castle_move.king_destination,
-            Move::EnPassant { destination, .. } => destination,
-            Move::Promotion { destination, .. } => destination,
-        }
-    }
-    pub fn promotion_piece(self) -> Option<PieceKind> {
-        match self {
-            Move::Promotion {
-                promotion_piece, ..
-            } => Some(promotion_piece),
-            _ => None,
-        }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Move {
+    pub movement: SimpleMove,
+    pub castling_rook: Option<SimpleMove>,
+    pub en_passant_capture: Option<Coord>,
+    pub promotion_piece: Option<PieceKind>,
+}
+impl Move {
+    fn dummy() -> Self {
+        SimpleMove::dummy().as_simple_move()
     }
 }
 impl Display for Move {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Move::RegularMove {
-                origin,
-                destination,
-            } => {
-                write!(f, "{origin}{destination}")?;
-            }
-            Move::Castle(CastleMove {
-                king_origin,
-                king_destination,
-                ..
-            }) => {
-                write!(f, "{king_origin}{king_destination}")?;
-            }
-            Move::EnPassant {
-                origin,
-                destination,
-                ..
-            } => {
-                write!(f, "{origin}{destination}")?;
-            }
-            Move::Promotion {
-                origin,
-                destination,
-                promotion_piece: kind,
-            } => {
-                write!(f, "{origin}{destination}{}", kind.lowercase())?;
-            }
+        write!(f, "{}", self.movement)?;
+        if let Some(piece) = self.promotion_piece {
+            write!(f, "{}", piece.lowercase())?;
         }
         Ok(())
     }

@@ -170,8 +170,8 @@ fn main() {
         match input.destination {
             Some(destination) => {
                 let movement = piece.valid_moves().find(|movement| {
-                    movement.destination() == destination.destination
-                        && movement.promotion_piece() == destination.promotion_piece
+                    movement.movement.destination == destination.destination
+                        && movement.promotion_piece == destination.promotion_piece
                 });
                 let movement = match movement {
                     Some(movement) => movement,
@@ -183,7 +183,11 @@ fn main() {
                 };
                 board.move_piece(movement);
             }
-            None => highlighted.extend(piece.valid_moves().map(Move::destination)),
+            None => highlighted.extend(
+                piece
+                    .valid_moves()
+                    .map(|movement| movement.movement.destination),
+            ),
         }
     }
 }
