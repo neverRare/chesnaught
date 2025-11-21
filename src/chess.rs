@@ -6,6 +6,8 @@ use std::{
     str::FromStr,
 };
 
+use crate::tui::Tui;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceKind {
     Pawn,
@@ -203,6 +205,12 @@ pub struct Board {
 impl Board {
     pub fn new() -> Self {
         Default::default()
+    }
+    fn blank(current_player: Color) -> Self {
+        Board {
+            current_player,
+            board: [[None; 8]; 8],
+        }
     }
     // fn iter(&self) -> impl Iterator<Item = &Piece> {
     //     self.board
@@ -450,6 +458,16 @@ impl Board {
                 })
             }
         })
+    }
+    fn move_(&mut self, origin: &str, destination: &str) {
+        self.move_piece(
+            self.valid_moves()
+                .find(|movement| {
+                    movement.origin() == origin.parse().unwrap()
+                        && movement.destination() == destination.parse().unwrap()
+                })
+                .unwrap(),
+        );
     }
 }
 impl Display for Board {
@@ -953,6 +971,14 @@ impl Move {
             destination: Coord::dummy(),
         }
     }
+    pub fn origin(self) -> Coord {
+        match self {
+            Move::RegularMove { origin, .. } => origin,
+            Move::Castle(castle_move) => castle_move.king_origin,
+            Move::EnPassant { origin, .. } => origin,
+            Move::Promotion { origin, .. } => origin,
+        }
+    }
     pub fn destination(self) -> Coord {
         match self {
             Move::RegularMove { destination, .. } => destination,
@@ -1006,4 +1032,139 @@ impl Display for Move {
 }
 fn number_range_inclusive(a: u8, b: u8) -> RangeInclusive<u8> {
     Ord::min(a, b)..=Ord::max(a, b)
+}
+#[test]
+fn checkmate() {
+    let mut board = Board::blank(Color::Black);
+    board["e1".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::King,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["e5".parse().unwrap()] = Some(Piece {
+        color: Color::Black,
+        kind: PieceKind::King,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    board["a6".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Rook,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    board["a5".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Rook,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    board["a4".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Rook,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    assert_eq!(board.state(), Some(EndState::Win(Color::White)));
+}
+#[test]
+fn stalemate() {
+    let mut board = Board::blank(Color::Black);
+    board["e1".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::King,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["e5".parse().unwrap()] = Some(Piece {
+        color: Color::Black,
+        kind: PieceKind::King,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    board["a6".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Rook,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    board["a4".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Rook,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    board["d1".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Rook,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    board["f1".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Rook,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    assert_eq!(board.state(), Some(EndState::Draw));
+}
+#[test]
+fn dead_position() {
+    let mut board = Board::blank(Color::Black);
+    board["e1".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::King,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["e8".parse().unwrap()] = Some(Piece {
+        color: Color::Black,
+        kind: PieceKind::King,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["f1".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Knight,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["f8".parse().unwrap()] = Some(Piece {
+        color: Color::Black,
+        kind: PieceKind::Bishop,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    assert_eq!(board.state(), Some(EndState::Draw));
+}
+#[test]
+fn en_passant() {
+    let mut board = Board::blank(Color::Black);
+    board["e1".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::King,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["e8".parse().unwrap()] = Some(Piece {
+        color: Color::Black,
+        kind: PieceKind::King,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["e5".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Pawn,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    board["f7".parse().unwrap()] = Some(Piece {
+        color: Color::Black,
+        kind: PieceKind::Pawn,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board.move_("f7", "f5");
+    board.move_("e5", "f6");
 }
