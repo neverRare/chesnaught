@@ -206,6 +206,7 @@ impl Board {
     pub fn new() -> Self {
         Default::default()
     }
+    #[cfg(test)]
     fn blank(current_player: Color) -> Self {
         Board {
             current_player,
@@ -420,6 +421,7 @@ impl Board {
             }
         })
     }
+    #[cfg(test)]
     fn move_piece_with_assert(&mut self, origin: Coord, destination: Coord) {
         let piece = self[origin].unwrap();
         assert!(piece.color == self.current_player);
@@ -435,6 +437,7 @@ impl Board {
                 .unwrap(),
         );
     }
+    #[cfg(test)]
     fn assert_no_move(&mut self, origin: Coord, destination: Coord) {
         let piece = self[origin].unwrap();
         assert!(piece.color == self.current_player);
