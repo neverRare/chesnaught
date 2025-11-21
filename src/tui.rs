@@ -25,8 +25,7 @@ where
                 let color = if self
                     .highlighted
                     .into_iter()
-                    .find(|highlighted| **highlighted == position)
-                    .is_some()
+                    .any(|highlighted| *highlighted == position)
                 {
                     HIGHLIGHTED
                 } else {
