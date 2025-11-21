@@ -142,14 +142,14 @@ impl Display for Color {
         Ok(())
     }
 }
-impl Color {
-    fn is_white(self) -> bool {
-        self == Color::Black
-    }
-    fn is_black(self) -> bool {
-        self == Color::Black
-    }
-}
+// impl Color {
+//     fn is_white(self) -> bool {
+//         self == Color::Black
+//     }
+//     fn is_black(self) -> bool {
+//         self == Color::Black
+//     }
+// }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Piece {
     pub color: Color,
@@ -312,8 +312,10 @@ impl Board {
                     piece.moved = true;
                     if piece.kind == PieceKind::Pawn
                         && origin.x == destination.x
-                        && ((piece.color.is_white() && origin.y + 2 == destination.y)
-                            || (piece.color.is_black() && origin.y == destination.y + 2))
+                        && match piece.color {
+                            Color::White => origin.y + 2 == destination.y,
+                            Color::Black => origin.y == destination.y + 2,
+                        }
                     {
                         piece.just_moved_twice_as_pawn = true;
                     }
@@ -360,8 +362,10 @@ impl Board {
                     piece.moved = true;
                     piece.kind = kind;
                     if origin.x == destination.x
-                        && ((piece.color.is_white() && origin.y + 2 == destination.y)
-                            || (piece.color.is_black() && origin.y == destination.y + 2))
+                        && match piece.color {
+                            Color::White => origin.y + 2 == destination.y,
+                            Color::Black => origin.y == destination.y + 2,
+                        }
                     {
                         piece.just_moved_twice_as_pawn = true;
                     }
