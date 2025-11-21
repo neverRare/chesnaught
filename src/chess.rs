@@ -955,29 +955,18 @@ impl Move {
     }
     pub fn destination(self) -> Coord {
         match self {
-            Move::RegularMove {
-                origin: _,
-                destination,
-            } => destination,
+            Move::RegularMove { destination, .. } => destination,
             Move::Castle(castle_move) => castle_move.king_destination,
             Move::EnPassant {
-                pawn_origin: _,
-                pawn_destination,
-                captured_pawn: _,
+                pawn_destination, ..
             } => pawn_destination,
-            Move::Promotion {
-                origin: _,
-                destination,
-                promotion_piece: _,
-            } => destination,
+            Move::Promotion { destination, .. } => destination,
         }
     }
     pub fn promotion_piece(self) -> Option<PieceKind> {
         match self {
             Move::Promotion {
-                origin: _,
-                destination: _,
-                promotion_piece,
+                promotion_piece, ..
             } => Some(promotion_piece),
             _ => None,
         }
@@ -995,15 +984,14 @@ impl Display for Move {
             Move::Castle(CastleMove {
                 king_origin,
                 king_destination,
-                rook_origin: _,
-                rook_destination: _,
+                ..
             }) => {
                 write!(f, "{king_origin}{king_destination}")?;
             }
             Move::EnPassant {
                 pawn_origin,
                 pawn_destination,
-                captured_pawn: _,
+                ..
             } => {
                 write!(f, "{pawn_origin}{pawn_destination}")?;
             }
