@@ -1179,3 +1179,57 @@ fn en_passant() {
     board.move_("e5", "f6");
     assert!(board["f5".parse().unwrap()].is_none());
 }
+#[test]
+fn lose_of_en_passant_rights() {
+    let mut board = Board::blank(Color::Black);
+    board["e1".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::King,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["e8".parse().unwrap()] = Some(Piece {
+        color: Color::Black,
+        kind: PieceKind::King,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["e4".parse().unwrap()] = Some(Piece {
+        color: Color::White,
+        kind: PieceKind::Pawn,
+        moved: true,
+        just_moved_twice_as_pawn: false,
+    });
+    board["d7".parse().unwrap()] = Some(Piece {
+        color: Color::Black,
+        kind: PieceKind::Pawn,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board["f7".parse().unwrap()] = Some(Piece {
+        color: Color::Black,
+        kind: PieceKind::Pawn,
+        moved: false,
+        just_moved_twice_as_pawn: false,
+    });
+    board.move_("d7", "d5");
+    board.move_("e4", "e5");
+    board.move_("f7", "f5");
+    assert!(
+        !board["d5".parse().unwrap()]
+            .unwrap()
+            .just_moved_twice_as_pawn
+    );
+    assert!(
+        board["f5".parse().unwrap()]
+            .unwrap()
+            .just_moved_twice_as_pawn
+    );
+    board.move_("e1", "d1");
+    board.move_("e8", "d8");
+    assert!(
+        !board["f5".parse().unwrap()]
+            .unwrap()
+            .just_moved_twice_as_pawn
+    );
+}
