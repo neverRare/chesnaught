@@ -681,260 +681,225 @@ pub struct PieceWithContext {
     pub board: Board,
 }
 impl PieceWithContext {
+    fn moves_from_squares(
+        self,
+        squares: impl Iterator<Item = Coord>,
+    ) -> impl Iterator<Item = Move> {
+        squares
+            .filter(move |position| {
+                self.board[*position].is_none_or(|piece| piece.color != self.piece.color)
+            })
+            .map(move |destination| SimpleMove {
+                origin: self.position,
+                destination,
+            })
+            .map(SimpleMove::as_simple_move)
+    }
+    fn moves_from_lines(
+        self,
+        lines: impl Iterator<Item = impl Iterator<Item = Coord>>,
+    ) -> impl Iterator<Item = Move> {
+        lines
+            .flat_map(move |line| self.board.possible_squares_on_line(line, self.piece.color))
+            .map(move |destination| SimpleMove {
+                origin: self.position,
+                destination,
+            })
+            .map(SimpleMove::as_simple_move)
+    }
+    fn pawn_moves(self) -> impl Iterator<Item = Move> {
+        // regular forward move
+        self.position
+            .line(0, pawn_direction(self.piece.color))
+            .take_while(move |position| self.board[*position].is_none())
+            .take(if self.piece.moved { 1 } else { 2 })
+            .chain(
+                // regular capture moves
+                self.position
+                    .pawn_captures(self.piece.color)
+                    .filter(move |position| {
+                        self.board[*position].is_some_and(|piece| piece.color != self.piece.color)
+                    }),
+            )
+            .flat_map(
+                // turn into promotion if possible
+                move |destination| {
+                    if destination.y == promotion_rank(self.piece.color) {
+                        [
+                            PieceKind::Knight,
+                            PieceKind::Bishop,
+                            PieceKind::Rook,
+                            PieceKind::Queen,
+                        ]
+                        .map(|promotion_piece| Move {
+                            movement: SimpleMove {
+                                origin: self.position,
+                                destination,
+                            },
+                            castling_rook: None,
+                            en_passant_capture: None,
+                            promotion_piece: Some(promotion_piece),
+                        })
+                        .into_iter()
+                        .take(4)
+                    } else {
+                        [
+                            Move {
+                                movement: SimpleMove {
+                                    origin: self.position,
+                                    destination,
+                                },
+                                castling_rook: None,
+                                en_passant_capture: None,
+                                promotion_piece: None,
+                            },
+                            Move::dummy(),
+                            Move::dummy(),
+                            Move::dummy(),
+                        ]
+                        .into_iter()
+                        .take(1)
+                    }
+                },
+            )
+            .chain(
+                // en passant
+                self.position
+                    .en_passant_target()
+                    .filter(move |position| {
+                        self.board[*position].is_some_and(|piece| {
+                            piece.color != self.piece.color && piece.just_moved_twice_as_pawn
+                        })
+                    })
+                    .filter_map(move |captured| {
+                        Some(Move {
+                            movement: SimpleMove {
+                                origin: self.position,
+                                destination: captured
+                                    .move_by(0, pawn_direction(self.piece.color))?,
+                            },
+                            castling_rook: None,
+                            en_passant_capture: Some(captured),
+                            promotion_piece: None,
+                        })
+                    }),
+            )
+    }
+    fn knight_moves(self) -> impl Iterator<Item = Move> {
+        self.moves_from_squares(self.position.knight_moves())
+    }
+    fn bishop_moves(self) -> impl Iterator<Item = Move> {
+        self.moves_from_lines(self.position.bishop_lines())
+    }
+    fn rook_moves(self) -> impl Iterator<Item = Move> {
+        self.moves_from_lines(self.position.rook_lines())
+    }
+    fn queen_moves(self) -> impl Iterator<Item = Move> {
+        self.moves_from_lines(self.position.queen_lines())
+    }
+    fn king_moves(self) -> impl Iterator<Item = Move> {
+        // regular moves
+        self.moves_from_squares(self.position.king_moves()).chain(
+            // castling
+            [-1, 1]
+                .into_iter()
+                .filter(move |_| !self.piece.moved)
+                .filter_map(move |direction| {
+                    self.position
+                        .line(direction, 0)
+                        .filter_map(|position| {
+                            Some(PieceWithContext {
+                                piece: self.board[position]?,
+                                position,
+                                board: self.board,
+                            })
+                        })
+                        .find_map(|piece| {
+                            if piece.piece.color == self.piece.color
+                                && piece.piece.kind == PieceKind::Rook
+                                && !piece.piece.moved
+                            {
+                                let king_destination = match direction {
+                                    -1 => coord_x!("c"),
+                                    1 => coord_x!("g"),
+                                    _ => unreachable!(),
+                                };
+                                let rook_destination = match direction {
+                                    -1 => coord_x!("d"),
+                                    1 => coord_x!("f"),
+                                    _ => unreachable!(),
+                                };
+                                Some((
+                                    SimpleMove {
+                                        origin: self.position,
+                                        destination: Coord {
+                                            x: king_destination,
+                                            y: self.position.y,
+                                        },
+                                    },
+                                    SimpleMove {
+                                        origin: piece.position,
+                                        destination: Coord {
+                                            x: rook_destination,
+                                            y: piece.position.y,
+                                        },
+                                    },
+                                ))
+                            } else {
+                                None
+                            }
+                        })
+                })
+                .filter(move |(king, rook)| {
+                    [
+                        (
+                            PieceKind::Rook,
+                            number_range_inclusive(rook.origin.x, rook.destination.x),
+                        ),
+                        (
+                            PieceKind::King,
+                            number_range_inclusive(king.origin.x, king.destination.x),
+                        ),
+                    ]
+                    .into_iter()
+                    .all(|(kind, mut range)| {
+                        range.all(|x| {
+                            let position = Coord {
+                                x,
+                                y: match kind {
+                                    PieceKind::Rook => rook.origin.y,
+                                    PieceKind::King => king.origin.y,
+                                    _ => unreachable!(),
+                                },
+                            };
+                            self.board[position].is_none_or(|piece| {
+                                piece.color == self.piece.color
+                                    && match piece.kind {
+                                        PieceKind::Rook => position == rook.origin,
+                                        PieceKind::King => position == king.origin,
+                                        _ => false,
+                                    }
+                            }) && !(kind == PieceKind::King
+                                && self.board.is_attacked_by(position, !self.piece.color))
+                        })
+                    })
+                })
+                .map(|(movement, castling_rook)| Move {
+                    movement,
+                    castling_rook: Some(castling_rook),
+                    en_passant_capture: None,
+                    promotion_piece: None,
+                }),
+        )
+    }
     fn moves(self) -> Box<dyn Iterator<Item = Move>> {
         match self.piece.kind {
-            PieceKind::Pawn => {
-                Box::new(
-                    // regular forward move
-                    self.position
-                        .line(0, pawn_direction(self.piece.color))
-                        .take_while(move |position| self.board[*position].is_none())
-                        .take(if self.piece.moved { 1 } else { 2 })
-                        .chain(
-                            // regular capture moves
-                            self.position
-                                .pawn_captures(self.piece.color)
-                                .filter(move |position| {
-                                    self.board[*position]
-                                        .is_some_and(|piece| piece.color != self.piece.color)
-                                }),
-                        )
-                        .flat_map(
-                            // turn into promotion if possible
-                            move |destination| {
-                                if destination.y == promotion_rank(self.piece.color) {
-                                    [
-                                        PieceKind::Knight,
-                                        PieceKind::Bishop,
-                                        PieceKind::Rook,
-                                        PieceKind::Queen,
-                                    ]
-                                    .map(|promotion_piece| Move {
-                                        movement: SimpleMove {
-                                            origin: self.position,
-                                            destination,
-                                        },
-                                        castling_rook: None,
-                                        en_passant_capture: None,
-                                        promotion_piece: Some(promotion_piece),
-                                    })
-                                    .into_iter()
-                                    .take(4)
-                                } else {
-                                    [
-                                        Move {
-                                            movement: SimpleMove {
-                                                origin: self.position,
-                                                destination,
-                                            },
-                                            castling_rook: None,
-                                            en_passant_capture: None,
-                                            promotion_piece: None,
-                                        },
-                                        Move::dummy(),
-                                        Move::dummy(),
-                                        Move::dummy(),
-                                    ]
-                                    .into_iter()
-                                    .take(1)
-                                }
-                            },
-                        )
-                        .chain(
-                            // en passant
-                            self.position
-                                .en_passant_target()
-                                .filter(move |position| {
-                                    self.board[*position].is_some_and(|piece| {
-                                        piece.color != self.piece.color
-                                            && piece.just_moved_twice_as_pawn
-                                    })
-                                })
-                                .filter_map(move |captured| {
-                                    Some(Move {
-                                        movement: SimpleMove {
-                                            origin: self.position,
-                                            destination: captured
-                                                .move_by(0, pawn_direction(self.piece.color))?,
-                                        },
-                                        castling_rook: None,
-                                        en_passant_capture: Some(captured),
-                                        promotion_piece: None,
-                                    })
-                                }),
-                        ),
-                )
-            }
-            PieceKind::Knight => Box::new(
-                self.position
-                    .knight_moves()
-                    .filter(move |position| {
-                        self.board[*position].is_none_or(|piece| piece.color != self.piece.color)
-                    })
-                    .map(move |destination| SimpleMove {
-                        origin: self.position,
-                        destination,
-                    })
-                    .map(SimpleMove::as_simple_move),
-            ),
-            PieceKind::Bishop => Box::new(
-                self.position
-                    .bishop_lines()
-                    .flat_map(move |line| {
-                        self.board.possible_squares_on_line(line, self.piece.color)
-                    })
-                    .map(move |destination| SimpleMove {
-                        origin: self.position,
-                        destination,
-                    })
-                    .map(SimpleMove::as_simple_move),
-            ),
-            PieceKind::Rook => Box::new(
-                self.position
-                    .rook_lines()
-                    .flat_map(move |line| {
-                        self.board.possible_squares_on_line(line, self.piece.color)
-                    })
-                    .map(move |destination| SimpleMove {
-                        origin: self.position,
-                        destination,
-                    })
-                    .map(SimpleMove::as_simple_move),
-            ),
-            PieceKind::Queen => Box::new(
-                self.position
-                    .queen_lines()
-                    .flat_map(move |line| {
-                        self.board.possible_squares_on_line(line, self.piece.color)
-                    })
-                    .map(move |destination| SimpleMove {
-                        origin: self.position,
-                        destination,
-                    })
-                    .map(SimpleMove::as_simple_move),
-            ),
-            PieceKind::King => {
-                Box::new(
-                    self.position
-                        .king_moves()
-                        .filter(move |position| {
-                            self.board[*position]
-                                .is_none_or(|piece| piece.color != self.piece.color)
-                        })
-                        .map(move |destination| SimpleMove {
-                            origin: self.position,
-                            destination,
-                        })
-                        .map(SimpleMove::as_simple_move)
-                        .chain(
-                            // castling
-                            [-1, 1]
-                                .into_iter()
-                                .filter(move |_| !self.piece.moved)
-                                .filter_map(move |direction| {
-                                    self.position
-                                        .line(direction, 0)
-                                        .filter_map(|position| {
-                                            Some(PieceWithContext {
-                                                piece: self.board[position]?,
-                                                position,
-                                                board: self.board,
-                                            })
-                                        })
-                                        .find_map(|piece| {
-                                            if piece.piece.color == self.piece.color
-                                                && piece.piece.kind == PieceKind::Rook
-                                                && !piece.piece.moved
-                                            {
-                                                let king_destination = match direction {
-                                                    -1 => coord_x!("c"),
-                                                    1 => coord_x!("g"),
-                                                    _ => unreachable!(),
-                                                };
-                                                let rook_destination = match direction {
-                                                    -1 => coord_x!("d"),
-                                                    1 => coord_x!("f"),
-                                                    _ => unreachable!(),
-                                                };
-                                                Some((
-                                                    SimpleMove {
-                                                        origin: self.position,
-                                                        destination: Coord {
-                                                            x: king_destination,
-                                                            y: self.position.y,
-                                                        },
-                                                    },
-                                                    SimpleMove {
-                                                        origin: piece.position,
-                                                        destination: Coord {
-                                                            x: rook_destination,
-                                                            y: piece.position.y,
-                                                        },
-                                                    },
-                                                ))
-                                            } else {
-                                                None
-                                            }
-                                        })
-                                })
-                                .filter(move |(king, rook)| {
-                                    [
-                                        (
-                                            PieceKind::Rook,
-                                            number_range_inclusive(
-                                                rook.origin.x,
-                                                rook.destination.x,
-                                            ),
-                                        ),
-                                        (
-                                            PieceKind::King,
-                                            number_range_inclusive(
-                                                king.origin.x,
-                                                king.destination.x,
-                                            ),
-                                        ),
-                                    ]
-                                    .into_iter()
-                                    .all(
-                                        |(kind, mut range)| {
-                                            range.all(|x| {
-                                                let position = Coord {
-                                                    x,
-                                                    y: match kind {
-                                                        PieceKind::Rook => rook.origin.y,
-                                                        PieceKind::King => king.origin.y,
-                                                        _ => unreachable!(),
-                                                    },
-                                                };
-                                                self.board[position].is_none_or(|piece| {
-                                                    piece.color == self.piece.color
-                                                        && match piece.kind {
-                                                            PieceKind::Rook => {
-                                                                position == rook.origin
-                                                            }
-                                                            PieceKind::King => {
-                                                                position == king.origin
-                                                            }
-                                                            _ => false,
-                                                        }
-                                                }) && !(kind == PieceKind::King
-                                                    && self.board.is_attacked_by(
-                                                        position,
-                                                        !self.piece.color,
-                                                    ))
-                                            })
-                                        },
-                                    )
-                                })
-                                .map(|(movement, castling_rook)| Move {
-                                    movement,
-                                    castling_rook: Some(castling_rook),
-                                    en_passant_capture: None,
-                                    promotion_piece: None,
-                                }),
-                        ),
-                )
-            }
+            PieceKind::Pawn => Box::new(self.pawn_moves()),
+            PieceKind::Knight => Box::new(self.knight_moves()),
+            PieceKind::Bishop => Box::new(self.bishop_moves()),
+            PieceKind::Rook => Box::new(self.rook_moves()),
+            PieceKind::Queen => Box::new(self.queen_moves()),
+            PieceKind::King => Box::new(self.king_moves()),
         }
     }
     pub fn valid_moves(self) -> impl Iterator<Item = Move> {
