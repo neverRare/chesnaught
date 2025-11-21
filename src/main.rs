@@ -8,7 +8,7 @@ mod chess;
 mod tui;
 
 fn main() {
-    let mut board = Board::default();
+    let mut board = Board::new();
     println!(
         "To play, enter the piece origin and destination coordinates like e2e4 without space in between."
     );

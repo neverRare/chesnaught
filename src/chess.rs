@@ -134,7 +134,7 @@ pub struct Board {
     pub board: [[Option<Piece>; 8]; 8],
 }
 impl Board {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Default::default()
     }
     fn iter(&self) -> impl Iterator<Item = &Piece> {
