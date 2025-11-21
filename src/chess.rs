@@ -436,8 +436,16 @@ impl Board {
         );
     }
     fn assert_no_move(&mut self, origin: Coord, destination: Coord) {
+        let piece = self[origin].unwrap();
+        assert!(piece.color == self.current_player);
+        let piece = PieceWithContext {
+            piece,
+            position: origin,
+            board: *self,
+        };
         assert!(
-            self.valid_moves()
+            piece
+                .valid_moves()
                 .find(|movement| {
                     movement.movement.origin == origin
                         && movement.movement.destination == destination
