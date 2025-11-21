@@ -306,9 +306,9 @@ impl Board {
                 origin,
                 destination,
             } => {
-                self[destination] = self[origin].take();
+                let mut piece = self[origin].take();
 
-                if let Some(piece) = &mut self[destination] {
+                if let Some(piece) = &mut piece {
                     piece.moved = true;
                     if piece.kind == PieceKind::Pawn
                         && origin.x == destination.x
@@ -320,6 +320,7 @@ impl Board {
                         piece.just_moved_twice_as_pawn = true;
                     }
                 }
+                self[destination] = piece;
             }
             Move::Castle(CastleMove {
                 king_origin,
@@ -344,11 +345,12 @@ impl Board {
                 pawn_destination,
                 captured_pawn,
             } => {
-                self[pawn_destination] = self[pawn_origin].take();
+                let mut piece = self[pawn_origin].take();
 
-                if let Some(piece) = &mut self[pawn_destination] {
+                if let Some(piece) = &mut piece {
                     piece.moved = true;
                 }
+                self[pawn_destination] = self[pawn_origin].take();
                 self[captured_pawn] = None;
             }
             Move::Promotion {
@@ -356,9 +358,9 @@ impl Board {
                 destination,
                 kind,
             } => {
-                self[destination] = self[origin].take();
+                let mut piece = self[origin].take();
 
-                if let Some(piece) = &mut self[destination] {
+                if let Some(piece) = &mut piece {
                     piece.moved = true;
                     piece.kind = kind;
                     if origin.x == destination.x
@@ -370,6 +372,7 @@ impl Board {
                         piece.just_moved_twice_as_pawn = true;
                     }
                 }
+                self[destination] = self[origin].take();
             }
         }
     }
