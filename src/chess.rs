@@ -6,6 +6,8 @@ use std::{
     str::FromStr,
 };
 
+use crate::{coord, coord_x, coord_y};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceKind {
     Pawn,
@@ -464,22 +466,26 @@ impl Board {
             }
         })
     }
-    fn move_(&mut self, origin: &str, destination: &str) {
+    fn move_piece_with_assert(&mut self, origin: Coord, destination: Coord) {
+        let piece = self[origin].unwrap();
+        assert!(piece.color == self.current_player);
+        let piece = PieceWithContext {
+            piece,
+            position: origin,
+            board: *self,
+        };
         self.move_piece(
-            self.valid_moves()
-                .find(|movement| {
-                    movement.origin() == origin.parse().unwrap()
-                        && movement.destination() == destination.parse().unwrap()
-                })
+            piece
+                .valid_moves()
+                .find(|movement| movement.destination() == destination)
                 .unwrap(),
         );
     }
-    fn assert_no_move(&mut self, origin: &str, destination: &str) {
+    fn assert_no_move(&mut self, origin: Coord, destination: Coord) {
         assert!(
             self.valid_moves()
                 .find(|movement| {
-                    movement.origin() == origin.parse().unwrap()
-                        && movement.destination() == destination.parse().unwrap()
+                    movement.origin() == origin && movement.destination() == destination
                 })
                 .is_none()
         )
@@ -566,7 +572,7 @@ pub struct Coord {
 }
 impl Coord {
     fn dummy() -> Self {
-        Coord { x: 0, y: 0 }
+        coord!("a8")
     }
     pub fn board_color(self) -> Color {
         match (self.x + self.y) % 2 {
@@ -650,8 +656,8 @@ fn pawn_direction(color: Color) -> i8 {
 }
 fn promotion_rank(color: Color) -> u8 {
     match color {
-        Color::White => 0,
-        Color::Black => 7,
+        Color::White => coord_y!("8"),
+        Color::Black => coord_y!("1"),
     }
 }
 impl Display for Coord {
@@ -858,13 +864,13 @@ impl PieceWithContext {
                                                 && !piece.piece.moved
                                             {
                                                 let king_destination = match direction {
-                                                    -1 => 2,
-                                                    1 => 6,
+                                                    -1 => coord_x!("c"),
+                                                    1 => coord_x!("g"),
                                                     _ => unreachable!(),
                                                 };
                                                 let rook_destination = match direction {
-                                                    -1 => 3,
-                                                    1 => 5,
+                                                    -1 => coord_x!("d"),
+                                                    1 => coord_x!("f"),
                                                     _ => unreachable!(),
                                                 };
                                                 Some(CastleMove {
@@ -1051,31 +1057,31 @@ fn number_range_inclusive(a: u8, b: u8) -> RangeInclusive<u8> {
 #[test]
 fn checkmate() {
     let mut board = Board::blank(Color::Black);
-    board["e1".parse().unwrap()] = Some(Piece {
+    board[coord!("e1")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::King,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["e5".parse().unwrap()] = Some(Piece {
+    board[coord!("e5")] = Some(Piece {
         color: Color::Black,
         kind: PieceKind::King,
         moved: true,
         just_moved_twice_as_pawn: false,
     });
-    board["a6".parse().unwrap()] = Some(Piece {
+    board[coord!("a6")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Rook,
         moved: true,
         just_moved_twice_as_pawn: false,
     });
-    board["a5".parse().unwrap()] = Some(Piece {
+    board[coord!("a5")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Rook,
         moved: true,
         just_moved_twice_as_pawn: false,
     });
-    board["a4".parse().unwrap()] = Some(Piece {
+    board[coord!("a4")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Rook,
         moved: true,
@@ -1086,37 +1092,37 @@ fn checkmate() {
 #[test]
 fn stalemate() {
     let mut board = Board::blank(Color::Black);
-    board["e1".parse().unwrap()] = Some(Piece {
+    board[coord!("e1")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::King,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["e5".parse().unwrap()] = Some(Piece {
+    board[coord!("e5")] = Some(Piece {
         color: Color::Black,
         kind: PieceKind::King,
         moved: true,
         just_moved_twice_as_pawn: false,
     });
-    board["a6".parse().unwrap()] = Some(Piece {
+    board[coord!("a6")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Rook,
         moved: true,
         just_moved_twice_as_pawn: false,
     });
-    board["a4".parse().unwrap()] = Some(Piece {
+    board[coord!("a4")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Rook,
         moved: true,
         just_moved_twice_as_pawn: false,
     });
-    board["d1".parse().unwrap()] = Some(Piece {
+    board[coord!("d1")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Rook,
         moved: true,
         just_moved_twice_as_pawn: false,
     });
-    board["f1".parse().unwrap()] = Some(Piece {
+    board[coord!("f1")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Rook,
         moved: true,
@@ -1127,25 +1133,25 @@ fn stalemate() {
 #[test]
 fn dead_position() {
     let mut board = Board::blank(Color::Black);
-    board["e1".parse().unwrap()] = Some(Piece {
+    board[coord!("e1")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::King,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["e8".parse().unwrap()] = Some(Piece {
+    board[coord!("e8")] = Some(Piece {
         color: Color::Black,
         kind: PieceKind::King,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["f1".parse().unwrap()] = Some(Piece {
+    board[coord!("f1")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Knight,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["f8".parse().unwrap()] = Some(Piece {
+    board[coord!("f8")] = Some(Piece {
         color: Color::Black,
         kind: PieceKind::Bishop,
         moved: false,
@@ -1156,91 +1162,75 @@ fn dead_position() {
 #[test]
 fn en_passant() {
     let mut board = Board::blank(Color::Black);
-    board["e1".parse().unwrap()] = Some(Piece {
+    board[coord!("e1")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::King,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["e8".parse().unwrap()] = Some(Piece {
+    board[coord!("e8")] = Some(Piece {
         color: Color::Black,
         kind: PieceKind::King,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["e5".parse().unwrap()] = Some(Piece {
+    board[coord!("e5")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Pawn,
         moved: true,
         just_moved_twice_as_pawn: false,
     });
-    board["f7".parse().unwrap()] = Some(Piece {
+    board[coord!("f7")] = Some(Piece {
         color: Color::Black,
         kind: PieceKind::Pawn,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board.move_("f7", "f5");
-    assert!(
-        board["f5".parse().unwrap()]
-            .unwrap()
-            .just_moved_twice_as_pawn
-    );
-    board.move_("e5", "f6");
-    assert!(board["f5".parse().unwrap()].is_none());
+    board.move_piece_with_assert(coord!("f7"), coord!("f5"));
+    assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
+    board.move_piece_with_assert(coord!("e5"), coord!("f6"));
+    assert!(board[coord!("f5")].is_none());
 }
 #[test]
 fn lose_of_en_passant_rights() {
     let mut board = Board::blank(Color::Black);
-    board["e1".parse().unwrap()] = Some(Piece {
+    board[coord!("e1")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::King,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["e8".parse().unwrap()] = Some(Piece {
+    board[coord!("e8")] = Some(Piece {
         color: Color::Black,
         kind: PieceKind::King,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["e4".parse().unwrap()] = Some(Piece {
+    board[coord!("e4")] = Some(Piece {
         color: Color::White,
         kind: PieceKind::Pawn,
         moved: true,
         just_moved_twice_as_pawn: false,
     });
-    board["d7".parse().unwrap()] = Some(Piece {
+    board[coord!("d7")] = Some(Piece {
         color: Color::Black,
         kind: PieceKind::Pawn,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board["f7".parse().unwrap()] = Some(Piece {
+    board[coord!("f7")] = Some(Piece {
         color: Color::Black,
         kind: PieceKind::Pawn,
         moved: false,
         just_moved_twice_as_pawn: false,
     });
-    board.move_("d7", "d5");
-    board.move_("e4", "e5");
-    board.move_("f7", "f5");
-    assert!(
-        !board["d5".parse().unwrap()]
-            .unwrap()
-            .just_moved_twice_as_pawn
-    );
-    assert!(
-        board["f5".parse().unwrap()]
-            .unwrap()
-            .just_moved_twice_as_pawn
-    );
-    board.move_("e1", "d1");
-    board.move_("e8", "d8");
-    assert!(
-        !board["f5".parse().unwrap()]
-            .unwrap()
-            .just_moved_twice_as_pawn
-    );
-    board.assert_no_move("e5", "f6");
+    board.move_piece_with_assert(coord!("d7"), coord!("d5"));
+    board.move_piece_with_assert(coord!("e4"), coord!("e5"));
+    board.move_piece_with_assert(coord!("f7"), coord!("f5"));
+    assert!(!board[coord!("d5")].unwrap().just_moved_twice_as_pawn);
+    assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
+    board.move_piece_with_assert(coord!("e1"), coord!("d1"));
+    board.move_piece_with_assert(coord!("e8"), coord!("d8"));
+    assert!(!board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
+    board.assert_no_move(coord!("e5"), coord!("f6"));
 }
