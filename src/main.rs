@@ -85,13 +85,12 @@ impl FromStr for Input {
                 let destination = Coord::from_char(x, y)?;
                 let kind = characters.next().map(TryInto::try_into).transpose()?;
                 if let Some(c) = characters.next() {
-                    Err(ParseInputError::UnexpectedSymbol(c))
-                } else {
-                    Ok(Input {
-                        origin,
-                        destination: Some(Destination { destination, kind }),
-                    })
+                    return Err(ParseInputError::UnexpectedSymbol(c));
                 }
+                Ok(Input {
+                    origin,
+                    destination: Some(Destination { destination, kind }),
+                })
             }
             None => Ok(Input {
                 origin,

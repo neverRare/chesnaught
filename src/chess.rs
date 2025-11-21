@@ -95,11 +95,11 @@ impl FromStr for PieceKind {
             .next()
             .ok_or(ParsePieceKindError::Empty)?
             .try_into()?;
+
         if let Some(c) = characters.next() {
-            Err(ParsePieceKindError::UnexpectedSymbol(c))
-        } else {
-            Ok(piece)
+            return Err(ParsePieceKindError::UnexpectedSymbol(c));
         }
+        Ok(piece)
     }
 }
 impl TryFrom<char> for PieceKind {
@@ -654,10 +654,9 @@ impl FromStr for Coord {
         let y = characters.next().ok_or(ParseCoordError::YNotProvided)?;
         let coord = Coord::from_char(x, y)?;
         if let Some(c) = characters.next() {
-            Err(ParseCoordError::UnexpectedSymbol(c))
-        } else {
-            Ok(coord)
+            return Err(ParseCoordError::UnexpectedSymbol(c));
         }
+        Ok(coord)
     }
 }
 
