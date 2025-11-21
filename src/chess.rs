@@ -315,7 +315,7 @@ impl Board {
             piece.just_moved_twice_as_pawn = false;
         }
         let mut piece = self[piece_movement.origin].take().unwrap();
-        let mut rook = movement
+        let rook = movement
             .castling_rook
             .map(|movement| self[movement.origin].take().unwrap());
 
@@ -333,9 +333,9 @@ impl Board {
             piece.just_moved_twice_as_pawn = true;
         }
         self[piece_movement.destination] = Some(piece);
-        if let Some(rook) = &mut rook {
+        if let Some(mut rook) = rook {
             rook.moved = true;
-            self[movement.castling_rook.unwrap().destination] = Some(piece);
+            self[movement.castling_rook.unwrap().destination] = Some(rook);
         }
         if let Some(captured) = movement.en_passant_capture {
             self[captured] = None;
