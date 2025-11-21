@@ -354,7 +354,7 @@ impl Board {
                 destination,
                 kind,
             } => {
-                if let Some(piece) = &mut self[destination] {
+                if let Some(piece) = &mut self[destination].take() {
                     piece.moved = true;
                     piece.kind = kind;
                     if origin.x == destination.x
