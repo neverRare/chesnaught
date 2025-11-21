@@ -321,8 +321,8 @@ impl Board {
                     if piece.kind == PieceKind::Pawn
                         && origin.x == destination.x
                         && match piece.color {
-                            Color::White => origin.y + 2 == destination.y,
-                            Color::Black => origin.y == destination.y + 2,
+                            Color::White => origin.y == destination.y + 2,
+                            Color::Black => origin.y + 2 == destination.y,
                         }
                     {
                         piece.just_moved_twice_as_pawn = true;
@@ -373,8 +373,8 @@ impl Board {
                     piece.kind = promotion_piece;
                     if origin.x == destination.x
                         && match piece.color {
-                            Color::White => origin.y + 2 == destination.y,
-                            Color::Black => origin.y == destination.y + 2,
+                            Color::White => origin.y == destination.y + 2,
+                            Color::Black => origin.y + 2 == destination.y,
                         }
                     {
                         piece.just_moved_twice_as_pawn = true;
@@ -1171,5 +1171,10 @@ fn en_passant() {
         just_moved_twice_as_pawn: false,
     });
     board.move_("f7", "f5");
+    assert!(
+        board["f5".parse().unwrap()]
+            .unwrap()
+            .just_moved_twice_as_pawn
+    );
     board.move_("e5", "f6");
 }
