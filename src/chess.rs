@@ -1177,4 +1177,5 @@ fn en_passant() {
             .just_moved_twice_as_pawn
     );
     board.move_("e5", "f6");
+    assert!(board["f5".parse().unwrap()].is_none());
 }
