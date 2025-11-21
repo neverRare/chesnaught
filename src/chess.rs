@@ -6,8 +6,6 @@ use std::{
     str::FromStr,
 };
 
-use crate::tui::Tui;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceKind {
     Pawn,
@@ -267,7 +265,9 @@ impl Board {
                     .filter(|position| {
                         self[*position].is_none_or(|piece| piece.color != self.current_player)
                     })
-                    .all(|position| self.is_attacked_by(position, !self.current_player))
+                    .all(|position| {
+                        self.is_attacked_after_move(king.position, position, !self.current_player)
+                    })
                 {
                     if self.is_dead() {
                         Some(EndState::Draw)
@@ -405,6 +405,11 @@ impl Board {
             || position
                 .king_moves()
                 .any(|position| self.square_contains(position, color, [PieceKind::King]))
+    }
+    fn is_attacked_after_move(self, origin: Coord, position: Coord, color: Color) -> bool {
+        let mut board = self;
+        board[origin] = None;
+        board.is_attacked_by(position, color)
     }
     fn moves(self) -> impl Iterator<Item = Move> {
         self.pieces_of(self.current_player)
