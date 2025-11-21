@@ -26,29 +26,29 @@ impl PieceKind {
             PieceKind::King => 'k',
         }
     }
-    fn uppercase(self) -> char {
-        self.lowercase().to_ascii_uppercase()
-    }
-    fn algebraic_notation_char(self) -> Option<char> {
-        match self {
-            PieceKind::Pawn => None,
-            PieceKind::Knight => Some('N'),
-            PieceKind::Bishop => Some('B'),
-            PieceKind::Rook => Some('R'),
-            PieceKind::Queen => Some('Q'),
-            PieceKind::King => Some('K'),
-        }
-    }
-    fn algebraic_notation(self) -> &'static str {
-        match self {
-            PieceKind::Pawn => "",
-            PieceKind::Knight => "N",
-            PieceKind::Bishop => "B",
-            PieceKind::Rook => "R",
-            PieceKind::Queen => "Q",
-            PieceKind::King => "K",
-        }
-    }
+    // fn uppercase(self) -> char {
+    //     self.lowercase().to_ascii_uppercase()
+    // }
+    // fn algebraic_notation_char(self) -> Option<char> {
+    //     match self {
+    //         PieceKind::Pawn => None,
+    //         PieceKind::Knight => Some('N'),
+    //         PieceKind::Bishop => Some('B'),
+    //         PieceKind::Rook => Some('R'),
+    //         PieceKind::Queen => Some('Q'),
+    //         PieceKind::King => Some('K'),
+    //     }
+    // }
+    // fn algebraic_notation(self) -> &'static str {
+    //     match self {
+    //         PieceKind::Pawn => "",
+    //         PieceKind::Knight => "N",
+    //         PieceKind::Bishop => "B",
+    //         PieceKind::Rook => "R",
+    //         PieceKind::Queen => "Q",
+    //         PieceKind::King => "K",
+    //     }
+    // }
 }
 impl Display for PieceKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -204,24 +204,24 @@ impl Board {
     pub fn new() -> Self {
         Default::default()
     }
-    fn iter(&self) -> impl Iterator<Item = &Piece> {
-        self.board
-            .iter()
-            .flat_map(|row| row.iter())
-            .flat_map(Option::iter)
-    }
+    // fn iter(&self) -> impl Iterator<Item = &Piece> {
+    //     self.board
+    //         .iter()
+    //         .flat_map(|row| row.iter())
+    //         .flat_map(Option::iter)
+    // }
     fn iter_mut(&mut self) -> impl Iterator<Item = &mut Piece> {
         self.board
             .iter_mut()
             .flat_map(|row| row.iter_mut())
             .flat_map(Option::iter_mut)
     }
-    fn into_iter(self) -> impl Iterator<Item = Piece> {
-        self.board
-            .into_iter()
-            .flat_map(|row| row.into_iter())
-            .flat_map(Option::into_iter)
-    }
+    // fn into_iter(self) -> impl Iterator<Item = Piece> {
+    //     self.board
+    //         .into_iter()
+    //         .flat_map(|row| row.into_iter())
+    //         .flat_map(Option::into_iter)
+    // }
     fn pieces(self) -> impl Iterator<Item = PieceWithContext> {
         self.board.into_iter().zip(0..).flat_map(move |(row, y)| {
             row.into_iter().zip(0..).flat_map(move |(piece, x)| {
