@@ -245,13 +245,12 @@ impl Board {
     pub fn new() -> Self {
         Board::default()
     }
-    #[cfg(test)]
-    fn blank(current_player: Color) -> Self {
-        Board {
-            current_player,
-            board: [[None; 8]; 8],
-        }
-    }
+    // fn blank(current_player: Color) -> Self {
+    //     Board {
+    //         current_player,
+    //         board: [[None; 8]; 8],
+    //     }
+    // }
     // fn iter(&self) -> impl Iterator<Item = &Piece> {
     //     self.board
     //         .iter()
@@ -693,6 +692,12 @@ fn promotion_rank(color: Color) -> u8 {
         Color::Black => coord_y!("1"),
     }
 }
+pub fn pawn_home_rank(color: Color) -> u8 {
+    match color {
+        Color::White => coord_y!("7"),
+        Color::Black => coord_y!("2"),
+    }
+}
 impl Display for Coord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let x = (self.x + b'a') as char;
@@ -1029,183 +1034,48 @@ impl Display for Move {
 fn number_range_inclusive(a: u8, b: u8) -> RangeInclusive<u8> {
     Ord::min(a, b)..=Ord::max(a, b)
 }
-#[test]
-fn checkmate() {
-    let mut board = Board::blank(Color::Black);
-    board[coord!("e1")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::King,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("e5")] = Some(Piece {
-        color: Color::Black,
-        kind: PieceKind::King,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("a6")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Rook,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("a5")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Rook,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("a4")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Rook,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    assert_eq!(board.state(), Some(EndState::Win(Color::White)));
-}
-#[test]
-fn stalemate() {
-    let mut board = Board::blank(Color::Black);
-    board[coord!("e1")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::King,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("e5")] = Some(Piece {
-        color: Color::Black,
-        kind: PieceKind::King,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("a6")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Rook,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("a4")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Rook,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("d1")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Rook,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("f1")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Rook,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    assert_eq!(board.state(), Some(EndState::Draw));
-}
-#[test]
-fn dead_position() {
-    let mut board = Board::blank(Color::Black);
-    board[coord!("e1")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::King,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("e8")] = Some(Piece {
-        color: Color::Black,
-        kind: PieceKind::King,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("f1")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Knight,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("f8")] = Some(Piece {
-        color: Color::Black,
-        kind: PieceKind::Bishop,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    assert_eq!(board.state(), Some(EndState::Draw));
-}
-#[test]
-fn en_passant() {
-    let mut board = Board::blank(Color::Black);
-    board[coord!("e1")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::King,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("e8")] = Some(Piece {
-        color: Color::Black,
-        kind: PieceKind::King,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("e5")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Pawn,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("f7")] = Some(Piece {
-        color: Color::Black,
-        kind: PieceKind::Pawn,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board.move_piece_with_assert(coord!("f7"), coord!("f5"));
-    assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
-    board.move_piece_with_assert(coord!("e5"), coord!("f6"));
-    assert!(board[coord!("f5")].is_none());
-}
-#[test]
-fn lose_of_en_passant_rights() {
-    let mut board = Board::blank(Color::Black);
-    board[coord!("e1")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::King,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("e8")] = Some(Piece {
-        color: Color::Black,
-        kind: PieceKind::King,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("e4")] = Some(Piece {
-        color: Color::White,
-        kind: PieceKind::Pawn,
-        moved: true,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("d7")] = Some(Piece {
-        color: Color::Black,
-        kind: PieceKind::Pawn,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board[coord!("f7")] = Some(Piece {
-        color: Color::Black,
-        kind: PieceKind::Pawn,
-        moved: false,
-        just_moved_twice_as_pawn: false,
-    });
-    board.move_piece_with_assert(coord!("d7"), coord!("d5"));
-    board.move_piece_with_assert(coord!("e4"), coord!("e5"));
-    board.move_piece_with_assert(coord!("f7"), coord!("f5"));
-    assert!(!board[coord!("d5")].unwrap().just_moved_twice_as_pawn);
-    assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
-    board.move_piece_with_assert(coord!("e1"), coord!("d1"));
-    board.move_piece_with_assert(coord!("e8"), coord!("d8"));
-    assert!(!board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
-    board.assert_no_move(coord!("e5"), coord!("f6"));
+#[cfg(test)]
+mod test {
+    use crate::{
+        chess::{Color, EndState},
+        coord,
+        fen::Fen,
+    };
+
+    #[test]
+    fn checkmate() {
+        let Fen(board) = "8/8/R7/R3k3/R7/8/8/4K3 b - - 0 1".parse().unwrap();
+        assert_eq!(board.state(), Some(EndState::Win(Color::White)));
+    }
+    #[test]
+    fn stalemate() {
+        let Fen(board) = "8/8/R7/4k3/R7/8/8/3RKR2 b - - 0 1".parse().unwrap();
+        assert_eq!(board.state(), Some(EndState::Draw));
+    }
+    #[test]
+    fn dead_position() {
+        let Fen(board) = "3bk3/8/8/8/8/8/8/3NK3 w - - 0 1".parse().unwrap();
+        assert_eq!(board.state(), Some(EndState::Draw));
+    }
+    #[test]
+    fn en_passant() {
+        let Fen(mut board) = "4k3/5p2/8/4P3/8/8/8/4K3 b - - 0 1".parse().unwrap();
+        board.move_piece_with_assert(coord!("f7"), coord!("f5"));
+        assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
+        board.move_piece_with_assert(coord!("e5"), coord!("f6"));
+        assert!(board[coord!("f5")].is_none());
+    }
+    #[test]
+    fn lose_of_en_passant_rights() {
+        let Fen(mut board) = "4k3/3p1p2/8/8/4P3/8/8/4K3 w - - 0 1".parse().unwrap();
+        board.move_piece_with_assert(coord!("d7"), coord!("d5"));
+        board.move_piece_with_assert(coord!("e4"), coord!("e5"));
+        board.move_piece_with_assert(coord!("f7"), coord!("f5"));
+        assert!(!board[coord!("d5")].unwrap().just_moved_twice_as_pawn);
+        assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
+        board.move_piece_with_assert(coord!("e1"), coord!("d1"));
+        board.move_piece_with_assert(coord!("e8"), coord!("d8"));
+        assert!(!board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
+        board.assert_no_move(coord!("e5"), coord!("f6"));
+    }
 }
