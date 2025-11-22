@@ -20,7 +20,12 @@ impl Display for Fen {
             }
         }
         write!(f, " {}", board.current_player.lowercase())?;
-        todo!();
+        write!(f, " {}", board.castling_rights())?;
+        if let Some(position) = board.en_passant_destination() {
+            write!(f, " {position}")?;
+        } else {
+            write!(f, " -")?;
+        }
         write!(f, " 0 1")?;
         Ok(())
     }

@@ -205,6 +205,38 @@ impl Display for EndState {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CastlingRights {
+    whiteKingSide: bool,
+    whiteQueenSide: bool,
+    blackKingSide: bool,
+    blackQueenSide: bool,
+}
+impl Display for CastlingRights {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut printed = false;
+        if self.whiteKingSide {
+            printed = true;
+            write!(f, "K")?
+        }
+        if self.whiteQueenSide {
+            printed = true;
+            write!(f, "Q")?
+        }
+        if self.blackKingSide {
+            printed = true;
+            write!(f, "k")?
+        }
+        if self.blackQueenSide {
+            printed = true;
+            write!(f, "q")?;
+        }
+        if !printed {
+            write!(f, "-")?;
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Board {
     pub current_player: Color,
     pub board: [[Option<Piece>; 8]; 8],
@@ -434,6 +466,12 @@ impl Board {
                 })
             }
         })
+    }
+    pub fn castling_rights(self) -> CastlingRights {
+        todo!();
+    }
+    pub fn en_passant_destination(self) -> Option<Coord> {
+        todo!();
     }
     #[cfg(test)]
     fn move_piece_with_assert(&mut self, origin: Coord, destination: Coord) {
