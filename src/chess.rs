@@ -471,8 +471,8 @@ impl Board {
     pub fn castling_rights(self) -> CastlingRights {
         todo!();
     }
-    pub fn en_passant_destination(self) -> Option<Coord> {
-        self.pieces().find_map(|piece| {
+    pub fn en_passant_destinations(self) -> impl Iterator<Item = Coord> {
+        self.pieces().filter_map(|piece| {
             piece.piece.just_moved_twice_as_pawn.then(|| {
                 piece
                     .position

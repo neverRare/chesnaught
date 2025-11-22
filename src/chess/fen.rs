@@ -21,7 +21,7 @@ impl Display for Fen {
         }
         write!(f, " {}", board.current_player.lowercase())?;
         write!(f, " {}", board.castling_rights())?;
-        if let Some(position) = board.en_passant_destination() {
+        if let Some(position) = board.en_passant_destinations().next() {
             write!(f, " {position}")?;
         } else {
             write!(f, " -")?;
