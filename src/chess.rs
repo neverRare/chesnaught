@@ -204,29 +204,30 @@ impl Display for EndState {
         Ok(())
     }
 }
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CastlingRights {
-    whiteKingSide: bool,
-    whiteQueenSide: bool,
-    blackKingSide: bool,
-    blackQueenSide: bool,
+    white_king_side: bool,
+    white_queen_side: bool,
+    black_king_side: bool,
+    black_queen_side: bool,
 }
 impl Display for CastlingRights {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut printed = false;
-        if self.whiteKingSide {
+        if self.white_king_side {
             printed = true;
-            write!(f, "K")?
+            write!(f, "K")?;
         }
-        if self.whiteQueenSide {
+        if self.white_queen_side {
             printed = true;
-            write!(f, "Q")?
+            write!(f, "Q")?;
         }
-        if self.blackKingSide {
+        if self.black_king_side {
             printed = true;
-            write!(f, "k")?
+            write!(f, "k")?;
         }
-        if self.blackQueenSide {
+        if self.black_queen_side {
             printed = true;
             write!(f, "q")?;
         }

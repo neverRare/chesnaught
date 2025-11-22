@@ -56,9 +56,10 @@ where
     type Item = Cell;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|piece| match piece {
-            Some(piece) => Cell::Piece(piece),
-            None => {
+        self.0.next().map(|piece| {
+            if let Some(piece) = piece {
+                Cell::Piece(piece)
+            } else {
                 let mut count = 1;
                 while self.0.peek().is_some_and(Option::is_none) {
                     self.0.next();
