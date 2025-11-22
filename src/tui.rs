@@ -34,9 +34,10 @@ where
                         Color::Black => BLACK,
                     }
                 };
-                let figurine = match piece {
-                    Some(piece) => piece.figurine(),
-                    None => ' ',
+                let figurine = if let Some(piece) = piece {
+                    piece.figurine()
+                } else {
+                    ' '
                 };
                 write!(f, "{color}{figurine} {RESET}")?;
             }

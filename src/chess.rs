@@ -269,7 +269,7 @@ impl Board {
     //     self.board
     //         .into_iter()
     //         .flat_map(|row| row.into_iter())
-    //         .flat_map(Option::into_iter)
+    //         .filter_map(|piece| piece)
     // }
     fn pieces(self) -> impl Iterator<Item = PieceWithContext> {
         self.board.into_iter().zip(0..).flat_map(move |(row, y)| {
@@ -312,21 +312,11 @@ impl Board {
                         self.is_attacked_after_move(king.position, position, !self.current_player)
                     })
                 {
-                    if self.is_dead() {
-                        Some(EndState::Draw)
-                    } else {
-                        None
-                    }
+                    self.is_dead().then_some(EndState::Draw)
                 } else if self.is_attacked_by(king.position, !self.current_player) {
-                    if self.valid_moves().next().is_none() {
-                        Some(EndState::Win(!self.current_player))
-                    } else {
-                        None
-                    }
-                } else if self.is_dead() || self.valid_moves().next().is_none() {
-                    Some(EndState::Draw)
+                    (!self.has_valid_moves()).then_some(EndState::Win(!self.current_player))
                 } else {
-                    None
+                    (self.is_dead() || !self.has_valid_moves()).then_some(EndState::Draw)
                 }
             }
         }
@@ -335,14 +325,11 @@ impl Board {
         [Color::White, Color::Black].into_iter().all(|color| {
             self.pieces_of(color)
                 .try_fold(0, |num, piece| {
-                    if matches!(
+                    matches!(
                         piece.piece.kind,
                         PieceKind::Knight | PieceKind::Bishop | PieceKind::King
-                    ) {
-                        Some(num + 1)
-                    } else {
-                        None
-                    }
+                    )
+                    .then(|| num + 1)
                 })
                 .is_some_and(|count| count <= 2)
         })
@@ -429,6 +416,9 @@ impl Board {
         !moved
             .king_of(current_player)
             .is_some_and(|king| moved.is_attacked_by(king.position, !current_player))
+    }
+    fn has_valid_moves(self) -> bool {
+        self.valid_moves().next().is_some()
     }
     fn position_contains<const N: usize>(
         self,
@@ -607,13 +597,8 @@ impl Coord {
     fn king_moves(self) -> impl Iterator<Item = Self> {
         (-1..=1)
             .flat_map(|x| (-1..=1).map(move |y| (x, y)))
-            .filter_map(move |(x, y)| {
-                if x == 0 && y == 0 {
-                    None
-                } else {
-                    self.move_by(x, y)
-                }
-            })
+            .filter(|(x, y)| *x != 0 || *y != 0)
+            .filter_map(move |(x, y)| self.move_by(x, y))
     }
     fn line(self, x: i8, y: i8) -> impl Iterator<Item = Self> {
         (1..).map_while(move |distance| self.move_by(x * distance, y * distance))
@@ -864,39 +849,37 @@ impl PieceWithContext {
                             })
                         })
                         .find_map(|piece| {
-                            if piece.piece.color == self.piece.color
+                            (piece.piece.color == self.piece.color
                                 && piece.piece.kind == PieceKind::Rook
-                                && !piece.piece.moved
-                            {
-                                let king_destination = match direction {
-                                    -1 => coord_x!("c"),
-                                    1 => coord_x!("g"),
-                                    _ => unreachable!(),
-                                };
-                                let rook_destination = match direction {
-                                    -1 => coord_x!("d"),
-                                    1 => coord_x!("f"),
-                                    _ => unreachable!(),
-                                };
-                                Some((
-                                    SimpleMove {
-                                        origin: self.position,
-                                        destination: Coord {
-                                            x: king_destination,
-                                            y: self.position.y,
+                                && !piece.piece.moved)
+                                .then(|| {
+                                    let king_destination = match direction {
+                                        -1 => coord_x!("c"),
+                                        1 => coord_x!("g"),
+                                        _ => unreachable!(),
+                                    };
+                                    let rook_destination = match direction {
+                                        -1 => coord_x!("d"),
+                                        1 => coord_x!("f"),
+                                        _ => unreachable!(),
+                                    };
+                                    (
+                                        SimpleMove {
+                                            origin: self.position,
+                                            destination: Coord {
+                                                x: king_destination,
+                                                y: self.position.y,
+                                            },
                                         },
-                                    },
-                                    SimpleMove {
-                                        origin: piece.position,
-                                        destination: Coord {
-                                            x: rook_destination,
-                                            y: piece.position.y,
+                                        SimpleMove {
+                                            origin: piece.position,
+                                            destination: Coord {
+                                                x: rook_destination,
+                                                y: piece.position.y,
+                                            },
                                         },
-                                    },
-                                ))
-                            } else {
-                                None
-                            }
+                                    )
+                                })
                         })
                 })
                 .filter(move |(king, rook)| {
