@@ -8,6 +8,8 @@ use std::{
 
 use crate::{coord, coord_x, coord_y};
 
+mod fen;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceKind {
     Pawn,
@@ -28,9 +30,9 @@ impl PieceKind {
             PieceKind::King => 'k',
         }
     }
-    // fn uppercase(self) -> char {
-    //     self.lowercase().to_ascii_uppercase()
-    // }
+    fn uppercase(self) -> char {
+        self.lowercase().to_ascii_uppercase()
+    }
     // fn algebraic_notation_char(self) -> Option<char> {
     //     match self {
     //         PieceKind::Pawn => None,
@@ -174,6 +176,12 @@ impl Piece {
             (Color::Black, PieceKind::Rook) => '♜',
             (Color::Black, PieceKind::Queen) => '♛',
             (Color::Black, PieceKind::King) => '♚',
+        }
+    }
+    pub fn fen(self) -> char {
+        match self.color {
+            Color::White => self.kind.uppercase(),
+            Color::Black => self.kind.lowercase(),
         }
     }
 }
