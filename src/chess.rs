@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     error::Error,
     fmt::Display,
     ops::{Index, IndexMut, Not, RangeInclusive},
@@ -459,7 +460,41 @@ impl Board {
         })
     }
     pub fn castling_rights(self) -> CastlingRights {
-        todo!();
+        let [
+            (white_king_side, white_queen_side),
+            (black_king_side, black_queen_side),
+        ] = [Color::White, Color::Black].map(|color| {
+            if let Some(king) = self.king_of(color) {
+                if king.piece.moved {
+                    (false, false)
+                } else {
+                    let mut king_side = false;
+                    let mut queen_side = false;
+
+                    for piece in self.pieces_of(color) {
+                        if piece.piece.kind == PieceKind::Rook && !piece.piece.moved {
+                            match Ord::cmp(&king.position.x, &piece.position.x) {
+                                Ordering::Less => king_side = true,
+                                Ordering::Equal => (),
+                                Ordering::Greater => queen_side = true,
+                            }
+                            if king_side && queen_side {
+                                break;
+                            }
+                        }
+                    }
+                    (king_side, queen_side)
+                }
+            } else {
+                (false, false)
+            }
+        });
+        CastlingRights {
+            white_king_side,
+            white_queen_side,
+            black_king_side,
+            black_queen_side,
+        }
     }
     pub fn en_passant_destinations(self) -> impl Iterator<Item = Coord> {
         self.pieces().filter_map(|piece| {
