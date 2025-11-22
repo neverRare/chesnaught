@@ -494,14 +494,14 @@ impl Board {
         }
     }
     pub fn en_passant_destinations(self) -> impl Iterator<Item = Coord> {
-        self.pieces().filter_map(|piece| {
-            piece.piece.just_moved_twice_as_pawn.then(|| {
+        self.pieces()
+            .filter(|piece| piece.piece.just_moved_twice_as_pawn)
+            .map(|piece| {
                 piece
                     .position
                     .move_by(0, -pawn_direction(piece.piece.color))
                     .expect("en passant destination shouldn't be out of bounds")
             })
-        })
     }
 }
 impl Index<Coord> for Board {
