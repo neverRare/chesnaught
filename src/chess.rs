@@ -694,8 +694,8 @@ fn promotion_rank(color: Color) -> u8 {
 }
 pub fn pawn_home_rank(color: Color) -> u8 {
     match color {
-        Color::White => coord_y!("7"),
-        Color::Black => coord_y!("2"),
+        Color::White => coord_y!("2"),
+        Color::Black => coord_y!("7"),
     }
 }
 impl Display for Coord {
