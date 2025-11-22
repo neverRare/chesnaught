@@ -373,7 +373,7 @@ impl Board {
             self[captured] = None;
         }
     }
-    fn into_moved(self, movement: Move) -> Self {
+    pub fn into_moved(self, movement: Move) -> Self {
         let mut moved = self;
         moved.move_piece(movement);
         moved
@@ -404,7 +404,7 @@ impl Board {
         self.pieces_of(self.current_player)
             .flat_map(PieceWithContext::moves)
     }
-    fn valid_moves(self) -> impl Iterator<Item = Move> {
+    pub fn valid_moves(self) -> impl Iterator<Item = Move> {
         self.moves()
             .filter(move |movement| self.is_move_valid(*movement))
     }
