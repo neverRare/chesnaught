@@ -19,6 +19,9 @@ impl Display for Fen {
                 write!(f, "{cell}")?;
             }
         }
+        write!(f, " {}", board.current_player.lowercase())?;
+        todo!();
+        write!(f, " 0 1")?;
         Ok(())
     }
 }

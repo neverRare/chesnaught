@@ -126,6 +126,14 @@ pub enum Color {
     White,
     Black,
 }
+impl Color {
+    fn lowercase(self) -> char {
+        match self {
+            Color::White => 'w',
+            Color::Black => 'b',
+        }
+    }
+}
 impl Not for Color {
     type Output = Self;
 
@@ -145,14 +153,6 @@ impl Display for Color {
         Ok(())
     }
 }
-// impl Color {
-//     fn is_white(self) -> bool {
-//         self == Color::Black
-//     }
-//     fn is_black(self) -> bool {
-//         self == Color::Black
-//     }
-// }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Piece {
     pub color: Color,
