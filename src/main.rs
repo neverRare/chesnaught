@@ -14,6 +14,7 @@ use crate::{
 };
 
 mod chess;
+mod fen;
 mod tui;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

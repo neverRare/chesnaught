@@ -8,8 +8,6 @@ use std::{
 
 use crate::{coord, coord_x, coord_y};
 
-mod fen;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceKind {
     Pawn,
@@ -128,7 +126,7 @@ pub enum Color {
     Black,
 }
 impl Color {
-    fn lowercase(self) -> char {
+    pub fn lowercase(self) -> char {
         match self {
             Color::White => 'w',
             Color::Black => 'b',
