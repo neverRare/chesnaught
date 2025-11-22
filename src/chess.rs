@@ -1067,7 +1067,7 @@ mod test {
     }
     #[test]
     fn lose_of_en_passant_rights() {
-        let Fen(mut board) = "4k3/3p1p2/8/8/4P3/8/8/4K3 w - - 0 1".parse().unwrap();
+        let Fen(mut board) = "4k3/3p1p2/8/8/4P3/8/8/4K3 b - - 0 1".parse().unwrap();
         board.move_piece_with_assert(coord!("d7"), coord!("d5"));
         board.move_piece_with_assert(coord!("e4"), coord!("e5"));
         board.move_piece_with_assert(coord!("f7"), coord!("f5"));
