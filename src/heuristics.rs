@@ -2,11 +2,11 @@ use std::cmp::Ordering;
 
 use crate::chess::{Color, EndState};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct Estimated {
-    king_safety: i32,
-    square_control: i32,
-}
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+// pub struct Estimated {
+//     king_safety: i32,
+//     square_control: i32,
+// }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Advantage {
     End(EndState),
