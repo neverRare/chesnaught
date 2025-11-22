@@ -321,10 +321,17 @@ impl Board {
         for piece in self.iter_mut() {
             piece.just_moved_twice_as_pawn = false;
         }
-        let mut piece = self[piece_movement.origin].take().unwrap();
-        let rook = movement
-            .castling_rook
-            .map(|movement| self[movement.origin].take().unwrap());
+        let mut piece = self[piece_movement.origin]
+            .take()
+            .expect("origin position should contain a piece");
+        let rook_and_destination = movement.castling_rook.map(|movement| {
+            (
+                self[movement.origin]
+                    .take()
+                    .expect("origin position should contain a piece"),
+                movement.destination,
+            )
+        });
 
         piece.moved = true;
         if let Some(promoted_piece) = movement.promotion_piece {
@@ -340,9 +347,9 @@ impl Board {
             piece.just_moved_twice_as_pawn = true;
         }
         self[piece_movement.destination] = Some(piece);
-        if let Some(mut rook) = rook {
+        if let Some((mut rook, destination)) = rook_and_destination {
             rook.moved = true;
-            self[movement.castling_rook.unwrap().destination] = Some(rook);
+            self[destination] = Some(rook);
         }
         if let Some(captured) = movement.en_passant_capture {
             self[captured] = None;
@@ -430,8 +437,8 @@ impl Board {
     }
     #[cfg(test)]
     fn move_piece_with_assert(&mut self, origin: Coord, destination: Coord) {
-        let piece = self[origin].unwrap();
-        assert!(piece.color == self.current_player);
+        let piece = self[origin].expect("origin position should contain a piece");
+        assert_eq!(piece.color, self.current_player);
         let piece = PieceWithContext {
             piece,
             position: origin,
@@ -446,8 +453,8 @@ impl Board {
     }
     #[cfg(test)]
     fn assert_no_move(&mut self, origin: Coord, destination: Coord) {
-        let piece = self[origin].unwrap();
-        assert!(piece.color == self.current_player);
+        let piece = self[origin].expect("origin position should contain a piece");
+        assert_eq!(piece.color, self.current_player);
         let piece = PieceWithContext {
             piece,
             position: origin,
