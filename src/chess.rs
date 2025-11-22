@@ -472,7 +472,14 @@ impl Board {
         todo!();
     }
     pub fn en_passant_destination(self) -> Option<Coord> {
-        todo!();
+        self.pieces().find_map(|piece| {
+            piece.piece.just_moved_twice_as_pawn.then(|| {
+                piece
+                    .position
+                    .move_by(0, -pawn_direction(piece.piece.color))
+                    .expect("en passant destination shouldn't be out of bounds")
+            })
+        })
     }
     #[cfg(test)]
     fn move_piece_with_assert(&mut self, origin: Coord, destination: Coord) {
