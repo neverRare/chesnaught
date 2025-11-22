@@ -1,6 +1,6 @@
 use std::{
     fmt::Display,
-    iter::{Peekable, once, repeat},
+    iter::{once, repeat},
     str::FromStr,
 };
 
