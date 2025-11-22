@@ -503,41 +503,6 @@ impl Board {
             })
         })
     }
-    #[cfg(test)]
-    fn move_piece_with_assert(&mut self, origin: Coord, destination: Coord) {
-        let piece = self[origin].expect("origin position should contain a piece");
-        assert_eq!(piece.color, self.current_player);
-        let piece = PieceWithContext {
-            piece,
-            position: origin,
-            board: *self,
-        };
-        self.move_piece(
-            piece
-                .valid_moves()
-                .find(|movement| movement.movement.destination == destination)
-                .unwrap(),
-        );
-    }
-    #[cfg(test)]
-    fn assert_no_move(&mut self, origin: Coord, destination: Coord) {
-        let piece = self[origin].expect("origin position should contain a piece");
-        assert_eq!(piece.color, self.current_player);
-        let piece = PieceWithContext {
-            piece,
-            position: origin,
-            board: *self,
-        };
-        assert!(
-            piece
-                .valid_moves()
-                .find(|movement| {
-                    movement.movement.origin == origin
-                        && movement.movement.destination == destination
-                })
-                .is_none()
-        )
-    }
 }
 impl Index<Coord> for Board {
     type Output = Option<Piece>;
@@ -1037,7 +1002,7 @@ fn number_range_inclusive(a: u8, b: u8) -> RangeInclusive<u8> {
 #[cfg(test)]
 mod test {
     use crate::{
-        chess::{Color, EndState},
+        chess::{Board, Color, Coord, EndState, PieceWithContext},
         coord,
         fen::Fen,
     };
@@ -1060,22 +1025,55 @@ mod test {
     #[test]
     fn en_passant() {
         let Fen(mut board) = "4k3/5p2/8/4P3/8/8/8/4K3 b - - 0 1".parse().unwrap();
-        board.move_piece_with_assert(coord!("f7"), coord!("f5"));
+        move_piece_with_assert(&mut board, coord!("f7"), coord!("f5"));
         assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
-        board.move_piece_with_assert(coord!("e5"), coord!("f6"));
+        move_piece_with_assert(&mut board, coord!("e5"), coord!("f6"));
         assert!(board[coord!("f5")].is_none());
     }
     #[test]
     fn lose_of_en_passant_rights() {
         let Fen(mut board) = "4k3/3p1p2/8/8/4P3/8/8/4K3 b - - 0 1".parse().unwrap();
-        board.move_piece_with_assert(coord!("d7"), coord!("d5"));
-        board.move_piece_with_assert(coord!("e4"), coord!("e5"));
-        board.move_piece_with_assert(coord!("f7"), coord!("f5"));
+        move_piece_with_assert(&mut board, coord!("d7"), coord!("d5"));
+        move_piece_with_assert(&mut board, coord!("e4"), coord!("e5"));
+        move_piece_with_assert(&mut board, coord!("f7"), coord!("f5"));
         assert!(!board[coord!("d5")].unwrap().just_moved_twice_as_pawn);
         assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
-        board.move_piece_with_assert(coord!("e1"), coord!("d1"));
-        board.move_piece_with_assert(coord!("e8"), coord!("d8"));
+        move_piece_with_assert(&mut board, coord!("e1"), coord!("d1"));
+        move_piece_with_assert(&mut board, coord!("e8"), coord!("d8"));
         assert!(!board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
-        board.assert_no_move(coord!("e5"), coord!("f6"));
+        assert_no_move(&mut board, coord!("e5"), coord!("f6"));
+    }
+    fn move_piece_with_assert(board: &mut Board, origin: Coord, destination: Coord) {
+        let piece = board[origin].expect("origin position should contain a piece");
+        assert_eq!(piece.color, board.current_player);
+        let piece = PieceWithContext {
+            piece,
+            position: origin,
+            board: *board,
+        };
+        board.move_piece(
+            piece
+                .valid_moves()
+                .find(|movement| movement.movement.destination == destination)
+                .unwrap(),
+        );
+    }
+    fn assert_no_move(board: &mut Board, origin: Coord, destination: Coord) {
+        let piece = board[origin].expect("origin position should contain a piece");
+        assert_eq!(piece.color, board.current_player);
+        let piece = PieceWithContext {
+            piece,
+            position: origin,
+            board: *board,
+        };
+        assert!(
+            piece
+                .valid_moves()
+                .find(|movement| {
+                    movement.movement.origin == origin
+                        && movement.movement.destination == destination
+                })
+                .is_none()
+        )
     }
 }
