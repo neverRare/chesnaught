@@ -503,6 +503,11 @@ impl Board {
                     .expect("en passant destination shouldn't be out of bounds")
             })
     }
+    pub fn into_switched_color(self, color: Color) -> Self {
+        let mut board = self;
+        board.current_player = color;
+        board
+    }
 }
 impl Index<Coord> for Board {
     type Output = Option<Piece>;
@@ -937,6 +942,7 @@ impl PieceWithContext {
             PieceKind::King => Box::new(self.king_moves()),
         }
     }
+    #[cfg(test)]
     pub fn valid_moves(self) -> impl Iterator<Item = Move> {
         self.moves()
             .filter(move |movement| self.board.is_move_valid(*movement))
