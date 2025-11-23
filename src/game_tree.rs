@@ -1,4 +1,9 @@
-use std::{collections::HashMap, iter::once, thread::scope};
+use std::{
+    collections::HashMap,
+    iter::once,
+    mem::{forget, replace},
+    thread::{scope, spawn},
+};
 
 use crate::{
     chess::{Board, Color, EndState, Move},
@@ -21,13 +26,16 @@ impl GameTree {
             advantage: None,
         }
     }
+    fn drop(self) {
+        spawn(move || forget(self));
+    }
     pub fn move_piece(&mut self, movement: Move) {
         let new = if let Some(children) = &mut self.children {
             children.remove(&movement).unwrap()
         } else {
             GameTree::new(self.board.into_moved(movement))
         };
-        *self = new;
+        replace(self, new).drop();
     }
     pub fn estimate(&self) -> i32 {
         let white: i32 = self
