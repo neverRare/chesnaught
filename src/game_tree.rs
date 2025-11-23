@@ -152,8 +152,8 @@ impl GameTree {
                                 panic!("cannot evaluate non-leaf node as board data are discarded");
                             }
                         },
-                        Advantage::End(EndState::Win(Color::White)),
                         Advantage::End(EndState::Win(Color::Black)),
+                        Advantage::End(EndState::Win(Color::White)),
                     ));
                 });
             }
@@ -161,8 +161,8 @@ impl GameTree {
         self.alpha_beta(
             multithread_depth,
             |game_tree| game_tree.advantage.unwrap(),
-            Advantage::End(EndState::Win(Color::White)),
             Advantage::End(EndState::Win(Color::Black)),
+            Advantage::End(EndState::Win(Color::White)),
         )
         .0
     }
