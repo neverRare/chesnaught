@@ -22,7 +22,7 @@ enum GameTreeData {
 #[derive(Debug, Clone)]
 pub struct GameTree {
     data: GameTreeData,
-    advantage: Option<(Option<Move>, Extended<Advantage>)>,
+    advantage: Option<(Option<Move>, Advantage)>,
 }
 impl GameTree {
     pub fn new(board: Board) -> Self {
@@ -90,12 +90,12 @@ impl GameTree {
     fn alpha_beta(
         &mut self,
         depth: u32,
-        scorer: fn(&mut Self) -> (Option<Move>, Extended<Advantage>),
-        alpha: Extended<Advantage>,
-        beta: Extended<Advantage>,
-    ) -> (Option<Move>, Extended<Advantage>) {
+        scorer: fn(&mut Self) -> (Option<Move>, Advantage),
+        alpha: Advantage,
+        beta: Advantage,
+    ) -> (Option<Move>, Advantage) {
         if let GameTreeData::End(state) = self.data {
-            (None, Extended::Finite(Advantage::End(state)))
+            (None, Advantage::End(state))
         } else if depth == 0 {
             scorer(self)
         } else {
@@ -108,8 +108,8 @@ impl GameTree {
             let mut beta = beta;
             let mut best_movement = None;
             let mut best_score = match current_player {
-                Color::White => Extended::NegInf,
-                Color::Black => Extended::Inf,
+                Color::White => Advantage::End(EndState::Win(Color::Black)),
+                Color::Black => Advantage::End(EndState::Win(Color::White)),
             };
             for (movement, game_tree) in self.children().unwrap() {
                 let score = game_tree.alpha_beta(depth - 1, scorer, alpha, beta).1;
@@ -147,18 +147,13 @@ impl GameTree {
                         depth - multithread_depth,
                         |game_tree| {
                             if let GameTreeData::Board(board) = &game_tree.data {
-                                (
-                                    None,
-                                    Extended::Finite(Advantage::Estimated(estimate(Board::clone(
-                                        board,
-                                    )))),
-                                )
+                                (None, Advantage::Estimated(estimate(Board::clone(board))))
                             } else {
                                 panic!("cannot evaluate non-leaf node as board data are discarded");
                             }
                         },
-                        Extended::NegInf,
-                        Extended::Inf,
+                        Advantage::End(EndState::Win(Color::White)),
+                        Advantage::End(EndState::Win(Color::Black)),
                     ));
                 });
             }
@@ -166,23 +161,9 @@ impl GameTree {
         self.alpha_beta(
             multithread_depth,
             |game_tree| game_tree.advantage.unwrap(),
-            Extended::NegInf,
-            Extended::Inf,
+            Advantage::End(EndState::Win(Color::White)),
+            Advantage::End(EndState::Win(Color::Black)),
         )
         .0
-    }
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Extended<T> {
-    NegInf,
-    Finite(T),
-    Inf,
-}
-impl<T> Default for Extended<T>
-where
-    T: Default,
-{
-    fn default() -> Self {
-        Extended::Finite(T::default())
     }
 }
