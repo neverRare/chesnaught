@@ -1,14 +1,16 @@
-use std::{collections::HashMap, sync::RwLock, thread::scope};
+use std::{collections::HashMap, iter::once, thread::scope};
 
 use crate::{
     chess::{Board, Color, EndState, Move},
     heuristics::Advantage,
 };
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GameTree {
     pub board: Board,
     state: Option<EndState>,
     children: Option<HashMap<Move, GameTree>>,
+    advantage: Option<(Option<Move>, Extended<Advantage>)>,
 }
 impl GameTree {
     pub fn new(board: Board) -> Self {
@@ -16,6 +18,7 @@ impl GameTree {
             board,
             state: board.state(),
             children: None,
+            advantage: None,
         }
     }
     pub fn move_piece(&mut self, movement: Move) {
@@ -43,112 +46,114 @@ impl GameTree {
             .unwrap();
         white - black
     }
+    fn children(&mut self) -> &mut HashMap<Move, GameTree> {
+        self.children.get_or_insert_with(|| {
+            self.board
+                .valid_moves()
+                .map(|movement| (movement, GameTree::new(self.board.into_moved(movement))))
+                .collect()
+        })
+    }
+    fn descendants_of_depth<'a>(
+        &'a mut self,
+        depth: u32,
+    ) -> Box<dyn Iterator<Item = &'a mut Self> + 'a> {
+        if depth == 0 {
+            Box::new(once(self))
+        } else {
+            Box::new(
+                self.children()
+                    .values_mut()
+                    .flat_map(move |game_tree| game_tree.descendants_of_depth(depth - 1)),
+            )
+        }
+    }
     fn alpha_beta(
         &mut self,
         depth: u32,
-        multi_thread_depth: u32,
-
+        scorer: fn(&mut Self, u32) -> Option<(Option<Move>, Extended<Advantage>)>,
         alpha: Extended<Advantage>,
         beta: Extended<Advantage>,
     ) -> (Option<Move>, Extended<Advantage>) {
-        if let Some(state) = self.state {
-            (None, Extended::Finite(Advantage::End(state)))
-        } else if depth == 0 {
-            (
-                None,
-                Extended::Finite(Advantage::Estimated(self.estimate())),
-            )
+        if let Some(best_move) = scorer(self, depth) {
+            best_move
         } else {
-            let children = self.children.get_or_insert_with(|| {
-                self.board
-                    .valid_moves()
-                    .map(|movement| (movement, GameTree::new(self.board.into_moved(movement))))
-                    .collect()
-            });
+            assert_ne!(depth, 0);
             let current_player = self.board.current_player;
+            let children = self.children();
 
-            if multi_thread_depth == 0 {
-                let mut alpha = alpha;
-                let mut beta = beta;
-                let mut best_movement = None;
-                let mut best_score = match current_player {
-                    Color::White => Extended::NegInf,
-                    Color::Black => Extended::Inf,
-                };
-                for (movement, game_tree) in children.iter_mut() {
-                    let score = game_tree.alpha_beta(depth - 1, 0, alpha, beta).1;
-                    match current_player {
-                        Color::White => {
-                            if score > best_score {
-                                best_movement = Some(*movement);
-                                best_score = score;
-                            }
-                            if best_score >= beta {
-                                break;
-                            }
-                            alpha = best_score;
+            let mut alpha = alpha;
+            let mut beta = beta;
+            let mut best_movement = None;
+            let mut best_score = match current_player {
+                Color::White => Extended::NegInf,
+                Color::Black => Extended::Inf,
+            };
+            for (movement, game_tree) in children {
+                let score = game_tree.alpha_beta(depth - 1, scorer, alpha, beta).1;
+                match current_player {
+                    Color::White => {
+                        if score > best_score {
+                            best_score = score;
+                            best_movement = Some(*movement);
                         }
-                        Color::Black => {
-                            if score < best_score {
-                                best_movement = Some(*movement);
-                                best_score = score;
-                            }
-                            if best_score <= alpha {
-                                break;
-                            }
-                            beta = best_score;
+                        if best_score >= beta {
+                            break;
                         }
-                    };
-                }
-                (best_movement, best_score)
-            } else {
-                struct State {
-                    best_movement: Option<Move>,
-                    best_score: Extended<Advantage>,
-                }
-                let state = RwLock::new(State {
-                    best_movement: None,
-                    best_score: match current_player {
-                        Color::White => Extended::NegInf,
-                        Color::Black => Extended::Inf,
-                    },
-                });
-                scope(|scope| {
-                    for (movement, game_tree) in children.iter_mut() {
-                        let state = &state;
-                        scope.spawn(|| {
-                            let read = state.read().unwrap();
-                            let score = game_tree
-                                .alpha_beta(depth - 1, multi_thread_depth - 1, alpha, beta)
-                                .1;
-                            drop(read);
-                            let mut write = state.write().unwrap();
-                            match current_player {
-                                Color::White => {
-                                    if score > write.best_score {
-                                        write.best_movement = Some(*movement);
-                                        write.best_score = score;
-                                    }
-                                }
-                                Color::Black => {
-                                    if score < write.best_score {
-                                        write.best_movement = Some(*movement);
-                                        write.best_score = score;
-                                    }
-                                }
-                            };
-                            drop(write);
-                        });
+                        alpha = best_score;
                     }
-                });
-                let state = state.into_inner().unwrap();
-                (state.best_movement, state.best_score)
+                    Color::Black => {
+                        if score < best_score {
+                            best_score = score;
+                            best_movement = Some(*movement);
+                        }
+                        if best_score <= alpha {
+                            break;
+                        }
+                        beta = best_score;
+                    }
+                };
             }
+            (best_movement, best_score)
         }
     }
     pub fn best(&mut self, depth: u32, multi_thread_depth: u32) -> Option<Move> {
-        self.alpha_beta(depth, multi_thread_depth, Extended::NegInf, Extended::Inf)
-            .0
+        scope(|scope| {
+            for game_tree in self.descendants_of_depth(multi_thread_depth) {
+                scope.spawn(|| {
+                    game_tree.advantage = Some(game_tree.alpha_beta(
+                        depth - multi_thread_depth,
+                        |game_tree, depth| {
+                            if depth == 0 {
+                                Some((
+                                    None,
+                                    Extended::Finite(Advantage::Estimated(game_tree.estimate())),
+                                ))
+                            } else {
+                                game_tree
+                                    .state
+                                    .map(|state| (None, Extended::Finite(Advantage::End(state))))
+                            }
+                        },
+                        Extended::NegInf,
+                        Extended::Inf,
+                    ));
+                });
+            }
+        });
+        self.alpha_beta(
+            multi_thread_depth,
+            |game_tree, depth| {
+                if let Some(state) = game_tree.state {
+                    Some((None, Extended::Finite(Advantage::End(state))))
+                } else {
+                    (depth == 0).then(|| game_tree.advantage.unwrap())
+                }
+            },
+            Extended::NegInf,
+            Extended::Inf,
+        )
+        .0
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
