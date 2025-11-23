@@ -12,6 +12,11 @@ pub enum Advantage {
     End(EndState),
     Estimated(i32),
 }
+impl Default for Advantage {
+    fn default() -> Self {
+        Advantage::Estimated(0)
+    }
+}
 impl PartialOrd for Advantage {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))

@@ -1,10 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::RwLock, thread::scope};
 
 use crate::{
     chess::{Board, Color, EndState, Move},
     heuristics::Advantage,
 };
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GameTree {
     pub board: Board,
@@ -44,11 +43,13 @@ impl GameTree {
             .unwrap();
         white - black
     }
-    pub fn alpha_beta(
+    fn alpha_beta(
         &mut self,
         depth: u32,
-        mut alpha: Extended<Advantage>,
-        mut beta: Extended<Advantage>,
+        multi_thread_depth: u32,
+
+        alpha: Extended<Advantage>,
+        beta: Extended<Advantage>,
     ) -> (Option<Move>, Extended<Advantage>) {
         if let Some(state) = self.state {
             (None, Extended::Finite(Advantage::End(state)))
@@ -64,41 +65,90 @@ impl GameTree {
                     .map(|movement| (movement, GameTree::new(self.board.into_moved(movement))))
                     .collect()
             });
-            let mut best_movement = None;
-            let mut best_score = match self.board.current_player {
-                Color::White => Extended::NegInf,
-                Color::Black => Extended::Inf,
-            };
-            for (movement, game_tree) in children.iter_mut() {
-                let score = game_tree.alpha_beta(depth - 1, alpha, beta).1;
-                match self.board.current_player {
-                    Color::White => {
-                        if score > best_score {
-                            best_movement = Some(*movement);
-                            best_score = score;
+            let current_player = self.board.current_player;
+
+            if multi_thread_depth == 0 {
+                let mut alpha = alpha;
+                let mut beta = beta;
+                let mut best_movement = None;
+                let mut best_score = match current_player {
+                    Color::White => Extended::NegInf,
+                    Color::Black => Extended::Inf,
+                };
+                for (movement, game_tree) in children.iter_mut() {
+                    let score = game_tree.alpha_beta(depth - 1, 0, alpha, beta).1;
+                    match current_player {
+                        Color::White => {
+                            if score > best_score {
+                                best_movement = Some(*movement);
+                                best_score = score;
+                            }
+                            if best_score >= beta {
+                                break;
+                            }
+                            alpha = best_score;
                         }
-                        if best_score >= beta {
-                            break;
+                        Color::Black => {
+                            if score < best_score {
+                                best_movement = Some(*movement);
+                                best_score = score;
+                            }
+                            if best_score <= alpha {
+                                break;
+                            }
+                            beta = best_score;
                         }
-                        alpha = best_score
-                    }
-                    Color::Black => {
-                        if score < best_score {
-                            best_movement = Some(*movement);
-                            best_score = score;
-                        }
-                        if best_score <= alpha {
-                            break;
-                        }
-                        beta = best_score
-                    }
+                    };
                 }
+                (best_movement, best_score)
+            } else {
+                struct State {
+                    best_movement: Option<Move>,
+                    best_score: Extended<Advantage>,
+                }
+                let state = RwLock::new(State {
+                    best_movement: None,
+                    best_score: match current_player {
+                        Color::White => Extended::NegInf,
+                        Color::Black => Extended::Inf,
+                    },
+                });
+                scope(|scope| {
+                    for (movement, game_tree) in children.iter_mut() {
+                        let state = &state;
+                        scope.spawn(|| {
+                            let read = state.read().unwrap();
+                            let score = game_tree
+                                .alpha_beta(depth - 1, multi_thread_depth - 1, alpha, beta)
+                                .1;
+                            drop(read);
+                            let mut write = state.write().unwrap();
+                            match current_player {
+                                Color::White => {
+                                    if score > write.best_score {
+                                        write.best_movement = Some(*movement);
+                                        write.best_score = score;
+                                    }
+                                }
+                                Color::Black => {
+                                    if score < write.best_score {
+                                        write.best_movement = Some(*movement);
+                                        write.best_score = score;
+                                    }
+                                }
+                            };
+                            drop(write);
+                        });
+                    }
+                });
+                let state = state.into_inner().unwrap();
+                (state.best_movement, state.best_score)
             }
-            (best_movement, best_score)
         }
     }
-    pub fn best(&mut self, depth: u32) -> Option<Move> {
-        self.alpha_beta(depth, Extended::NegInf, Extended::Inf).0
+    pub fn best(&mut self, depth: u32, multi_thread_depth: u32) -> Option<Move> {
+        self.alpha_beta(depth, multi_thread_depth, Extended::NegInf, Extended::Inf)
+            .0
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
