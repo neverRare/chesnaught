@@ -118,12 +118,12 @@ impl GameTree {
             (best_movement, best_score)
         }
     }
-    pub fn best(&mut self, depth: u32, multi_thread_depth: u32) -> Option<Move> {
+    pub fn best(&mut self, depth: u32, multithread_depth: u32) -> Option<Move> {
         scope(|scope| {
-            for game_tree in self.descendants_of_depth(multi_thread_depth) {
+            for game_tree in self.descendants_of_depth(multithread_depth) {
                 scope.spawn(|| {
                     game_tree.advantage = Some(game_tree.alpha_beta(
-                        depth - multi_thread_depth,
+                        depth - multithread_depth,
                         |game_tree| {
                             (
                                 None,
@@ -137,7 +137,7 @@ impl GameTree {
             }
         });
         self.alpha_beta(
-            multi_thread_depth,
+            multithread_depth,
             |game_tree| game_tree.advantage.unwrap(),
             Extended::NegInf,
             Extended::Inf,
