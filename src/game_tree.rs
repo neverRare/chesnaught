@@ -64,40 +64,37 @@ impl GameTree {
                     .map(|movement| (movement, GameTree::new(self.board.into_moved(movement))))
                     .collect()
             });
-            match self.board.current_player {
-                Color::White => {
-                    let mut best_movement = None;
-                    let mut max_score = Extended::NegInf;
-                    for (movement, game_tree) in children.iter_mut() {
-                        let score = game_tree.alpha_beta(depth - 1, alpha, beta).1;
-                        if score > max_score {
+            let mut best_movement = None;
+            let mut best_score = match self.board.current_player {
+                Color::White => Extended::NegInf,
+                Color::Black => Extended::Inf,
+            };
+            for (movement, game_tree) in children.iter_mut() {
+                let score = game_tree.alpha_beta(depth - 1, alpha, beta).1;
+                match self.board.current_player {
+                    Color::White => {
+                        if score > best_score {
                             best_movement = Some(*movement);
-                            max_score = score;
+                            best_score = score;
                         }
-                        if max_score >= beta {
+                        if best_score >= beta {
                             break;
                         }
-                        alpha = max_score
+                        alpha = best_score
                     }
-                    (best_movement, max_score)
-                }
-                Color::Black => {
-                    let mut best_movement = None;
-                    let mut min_score = Extended::Inf;
-                    for (movement, game_tree) in children.iter_mut() {
-                        let score = game_tree.alpha_beta(depth - 1, alpha, beta).1;
-                        if score < min_score {
+                    Color::Black => {
+                        if score < best_score {
                             best_movement = Some(*movement);
-                            min_score = score;
+                            best_score = score;
                         }
-                        if min_score <= alpha {
+                        if best_score <= alpha {
                             break;
                         }
-                        beta = min_score
+                        beta = best_score
                     }
-                    (best_movement, min_score)
                 }
             }
+            (best_movement, best_score)
         }
     }
     pub fn best(&mut self, depth: u32) -> Option<Move> {
