@@ -71,14 +71,15 @@ impl GameTree {
     fn alpha_beta(
         &mut self,
         depth: u32,
-        scorer: fn(&mut Self, u32) -> Option<(Option<Move>, Extended<Advantage>)>,
+        scorer: fn(&mut Self) -> (Option<Move>, Extended<Advantage>),
         alpha: Extended<Advantage>,
         beta: Extended<Advantage>,
     ) -> (Option<Move>, Extended<Advantage>) {
-        if let Some(best_move) = scorer(self, depth) {
-            best_move
+        if let Some(state) = self.state {
+            (None, Extended::Finite(Advantage::End(state)))
+        } else if depth == 0 {
+            scorer(self)
         } else {
-            assert_ne!(depth, 0);
             let current_player = self.board.current_player;
             let children = self.children();
 
@@ -123,17 +124,11 @@ impl GameTree {
                 scope.spawn(|| {
                     game_tree.advantage = Some(game_tree.alpha_beta(
                         depth - multi_thread_depth,
-                        |game_tree, depth| {
-                            if depth == 0 {
-                                Some((
-                                    None,
-                                    Extended::Finite(Advantage::Estimated(game_tree.estimate())),
-                                ))
-                            } else {
-                                game_tree
-                                    .state
-                                    .map(|state| (None, Extended::Finite(Advantage::End(state))))
-                            }
+                        |game_tree| {
+                            (
+                                None,
+                                Extended::Finite(Advantage::Estimated(game_tree.estimate())),
+                            )
                         },
                         Extended::NegInf,
                         Extended::Inf,
@@ -143,13 +138,7 @@ impl GameTree {
         });
         self.alpha_beta(
             multi_thread_depth,
-            |game_tree, depth| {
-                if let Some(state) = game_tree.state {
-                    Some((None, Extended::Finite(Advantage::End(state))))
-                } else {
-                    (depth == 0).then(|| game_tree.advantage.unwrap())
-                }
-            },
+            |game_tree| game_tree.advantage.unwrap(),
             Extended::NegInf,
             Extended::Inf,
         )
