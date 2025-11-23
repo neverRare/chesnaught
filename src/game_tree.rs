@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     iter::once,
-    mem::{forget, replace},
+    mem::replace,
     thread::{scope, spawn},
 };
 
@@ -27,7 +27,7 @@ impl GameTree {
         }
     }
     fn drop(self) {
-        spawn(move || forget(self));
+        spawn(move || drop(self));
     }
     pub fn move_piece(&mut self, movement: Move) {
         let new = if let Some(children) = &mut self.children {
