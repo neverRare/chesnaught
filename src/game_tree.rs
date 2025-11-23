@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    iter::once,
+    iter::{empty, once},
     mem::replace,
     thread::{scope, spawn},
 };
@@ -77,13 +77,14 @@ impl GameTree {
     ) -> Box<dyn Iterator<Item = &'a mut Self> + 'a> {
         if depth == 0 {
             Box::new(once(self))
-        } else {
+        } else if let Some(children) = self.children() {
             Box::new(
-                self.children()
-                    .unwrap()
+                children
                     .values_mut()
                     .flat_map(move |game_tree| game_tree.descendants_of_depth(depth - 1)),
             )
+        } else {
+            Box::new(empty())
         }
     }
     fn alpha_beta(
