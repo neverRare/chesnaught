@@ -103,8 +103,6 @@ impl GameTree {
                 GameTreeData::Children { current_player, .. } => *current_player,
                 GameTreeData::End(_) => unreachable!(),
             };
-            let children = self.children().unwrap();
-
             let mut alpha = alpha;
             let mut beta = beta;
             let mut best_movement = None;
@@ -112,7 +110,7 @@ impl GameTree {
                 Color::White => Extended::NegInf,
                 Color::Black => Extended::Inf,
             };
-            for (movement, game_tree) in children {
+            for (movement, game_tree) in self.children().unwrap() {
                 let score = game_tree.alpha_beta(depth - 1, scorer, alpha, beta).1;
                 match current_player {
                     Color::White => {
