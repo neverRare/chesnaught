@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use crate::chess::{Color, EndState};
+use crate::chess::{Board, Color, EndState};
 
 // #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 // pub struct Estimated {
@@ -46,4 +46,19 @@ impl Ord for Advantage {
             (Advantage::End(EndState::Draw), Advantage::End(EndState::Draw)) => Ordering::Equal,
         }
     }
+}
+pub fn estimate(board: Board) -> i32 {
+    let white: i32 = board
+        .into_switched_color(Color::White)
+        .valid_moves()
+        .count()
+        .try_into()
+        .unwrap();
+    let black: i32 = board
+        .into_switched_color(Color::Black)
+        .valid_moves()
+        .count()
+        .try_into()
+        .unwrap();
+    white - black
 }

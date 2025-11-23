@@ -7,64 +7,69 @@ use std::{
 
 use crate::{
     chess::{Board, Color, EndState, Move},
-    heuristics::Advantage,
+    heuristics::{Advantage, estimate},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
+enum GameTreeData {
+    Board(Box<Board>),
+    Children {
+        current_player: Color,
+        children: HashMap<Move, GameTree>,
+    },
+    End(EndState),
+}
+#[derive(Debug, Clone)]
 pub struct GameTree {
-    pub board: Board,
-    state: Option<EndState>,
-    children: Option<HashMap<Move, GameTree>>,
+    data: GameTreeData,
     advantage: Option<(Option<Move>, Extended<Advantage>)>,
 }
 impl GameTree {
     pub fn new(board: Board) -> Self {
+        let data = if let Some(state) = board.state() {
+            GameTreeData::End(state)
+        } else {
+            GameTreeData::Board(Box::new(board))
+        };
         GameTree {
-            board,
-            state: board.state(),
-            children: None,
+            data,
             advantage: None,
         }
     }
     fn drop(self) {
-        if let Some(children) = self.children {
+        if let GameTreeData::Children { children, .. } = self.data {
             for (_, game_tree) in children {
                 spawn(move || drop(game_tree));
             }
         }
     }
     pub fn move_piece(&mut self, movement: Move) {
-        let new = if let Some(children) = &mut self.children {
-            children.remove(&movement).unwrap()
-        } else {
-            GameTree::new(self.board.into_moved(movement))
+        let new = match &mut self.data {
+            GameTreeData::Board(board) => GameTree::new(board.into_moved(movement)),
+            GameTreeData::Children { children, .. } => children.remove(&movement).unwrap(),
+            GameTreeData::End(_) => panic!("cannot move on end state"),
         };
         replace(self, new).drop();
     }
-    pub fn estimate(&self) -> i32 {
-        let white: i32 = self
-            .board
-            .into_switched_color(Color::White)
-            .valid_moves()
-            .count()
-            .try_into()
-            .unwrap();
-        let black: i32 = self
-            .board
-            .into_switched_color(Color::Black)
-            .valid_moves()
-            .count()
-            .try_into()
-            .unwrap();
-        white - black
-    }
-    fn children(&mut self) -> &mut HashMap<Move, GameTree> {
-        self.children.get_or_insert_with(|| {
-            self.board
-                .valid_moves()
-                .map(|movement| (movement, GameTree::new(self.board.into_moved(movement))))
-                .collect()
-        })
+    fn children(&mut self) -> Option<&mut HashMap<Move, GameTree>> {
+        match &mut self.data {
+            GameTreeData::Board(board) => {
+                let board = Board::clone(board);
+                self.data = GameTreeData::Children {
+                    current_player: board.current_player,
+                    children: board
+                        .valid_moves()
+                        .map(|movement| (movement, GameTree::new(board.into_moved(movement))))
+                        .collect(),
+                };
+            }
+            GameTreeData::Children { .. } => (),
+            GameTreeData::End(_) => return None,
+        }
+        let GameTreeData::Children { children, .. } = &mut self.data else {
+            unreachable!()
+        };
+        Some(children)
     }
     fn descendants_of_depth<'a>(
         &'a mut self,
@@ -75,6 +80,7 @@ impl GameTree {
         } else {
             Box::new(
                 self.children()
+                    .unwrap()
                     .values_mut()
                     .flat_map(move |game_tree| game_tree.descendants_of_depth(depth - 1)),
             )
@@ -87,13 +93,17 @@ impl GameTree {
         alpha: Extended<Advantage>,
         beta: Extended<Advantage>,
     ) -> (Option<Move>, Extended<Advantage>) {
-        if let Some(state) = self.state {
+        if let GameTreeData::End(state) = self.data {
             (None, Extended::Finite(Advantage::End(state)))
         } else if depth == 0 {
             scorer(self)
         } else {
-            let current_player = self.board.current_player;
-            let children = self.children();
+            let current_player = match &self.data {
+                GameTreeData::Board(board) => board.current_player,
+                GameTreeData::Children { current_player, .. } => *current_player,
+                GameTreeData::End(_) => unreachable!(),
+            };
+            let children = self.children().unwrap();
 
             let mut alpha = alpha;
             let mut beta = beta;
@@ -137,10 +147,16 @@ impl GameTree {
                     game_tree.advantage = Some(game_tree.alpha_beta(
                         depth - multithread_depth,
                         |game_tree| {
-                            (
-                                None,
-                                Extended::Finite(Advantage::Estimated(game_tree.estimate())),
-                            )
+                            if let GameTreeData::Board(board) = &game_tree.data {
+                                (
+                                    None,
+                                    Extended::Finite(Advantage::Estimated(estimate(Board::clone(
+                                        board,
+                                    )))),
+                                )
+                            } else {
+                                panic!("cannot evaluate non-leaf node as board data are discarded");
+                            }
                         },
                         Extended::NegInf,
                         Extended::Inf,

@@ -10,21 +10,23 @@ mod heuristics;
 mod tui;
 
 fn main() {
-    let mut game_tree = GameTree::new(Board::new());
+    let mut board = Board::new();
+    let mut game_tree = GameTree::new(board);
     println!(
         "{}",
         Tui {
-            board: game_tree.board,
+            board,
             highlighted: []
         }
     );
     while let Some(movement) = game_tree.best(5, 1) {
+        board.move_piece(movement);
         game_tree.move_piece(movement);
         let movements = [movement.movement.origin, movement.movement.destination];
         println!(
             "{}",
             Tui {
-                board: game_tree.board,
+                board,
                 highlighted: &movements
             }
         );
