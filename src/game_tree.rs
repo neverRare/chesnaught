@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    cmp::Ordering,
     iter::{empty, once},
     mem::replace,
     thread::{scope, spawn},
@@ -15,7 +15,7 @@ enum GameTreeData {
     Board(Box<Board>),
     Children {
         current_player: Color,
-        children: HashMap<Move, GameTree>,
+        children: Vec<(Move, GameTree)>,
     },
     End(EndState),
 }
@@ -36,22 +36,28 @@ impl GameTree {
             advantage: None,
         }
     }
-    fn drop(self) {
-        if let GameTreeData::Children { children, .. } = self.data {
-            for (_, game_tree) in children {
-                spawn(move || drop(game_tree));
-            }
-        }
-    }
     pub fn move_piece(&mut self, movement: Move) {
         let new = match &mut self.data {
             GameTreeData::Board(board) => GameTree::new(board.into_moved(movement)),
-            GameTreeData::Children { children, .. } => children.remove(&movement).unwrap(),
+            GameTreeData::Children { children, .. } => {
+                let children = replace(children, Vec::new());
+                children
+                    .into_iter()
+                    .find_map(|(b, game_tree)| {
+                        if movement == b {
+                            Some(game_tree)
+                        } else {
+                            spawn(move || drop(game_tree));
+                            None
+                        }
+                    })
+                    .unwrap()
+            }
             GameTreeData::End(_) => panic!("cannot move on end state"),
         };
-        replace(self, new).drop();
+        *self = new;
     }
-    fn children(&mut self) -> Option<&mut HashMap<Move, GameTree>> {
+    fn children(&mut self) -> Option<&mut Vec<(Move, GameTree)>> {
         match &mut self.data {
             GameTreeData::Board(board) => {
                 let board = Board::clone(board);
@@ -80,8 +86,8 @@ impl GameTree {
         } else if let Some(children) = self.children() {
             Box::new(
                 children
-                    .values_mut()
-                    .flat_map(move |game_tree| game_tree.descendants_of_depth(depth - 1)),
+                    .iter_mut()
+                    .flat_map(move |(_, game_tree)| game_tree.descendants_of_depth(depth - 1)),
             )
         } else {
             Box::new(empty())
@@ -93,8 +99,8 @@ impl GameTree {
         scorer: fn(&mut Self) -> (Option<Move>, Advantage),
         alpha: Advantage,
         beta: Advantage,
-    ) -> (Option<Move>, Advantage) {
-        if let GameTreeData::End(state) = self.data {
+    ) {
+        self.advantage = Some(if let GameTreeData::End(state) = self.data {
             (None, Advantage::End(state))
         } else if depth == 0 {
             scorer(self)
@@ -104,6 +110,8 @@ impl GameTree {
                 GameTreeData::Children { current_player, .. } => *current_player,
                 GameTreeData::End(_) => unreachable!(),
             };
+            let children = self.children().unwrap();
+
             let mut alpha = alpha;
             let mut beta = beta;
             let mut best_movement = None;
@@ -111,8 +119,9 @@ impl GameTree {
                 Color::White => Advantage::End(EndState::Win(Color::Black)),
                 Color::Black => Advantage::End(EndState::Win(Color::White)),
             };
-            for (movement, game_tree) in self.children().unwrap() {
-                let score = game_tree.alpha_beta(depth - 1, scorer, alpha, beta).1;
+            for (movement, game_tree) in children.iter_mut() {
+                game_tree.alpha_beta(depth - 1, scorer, alpha, beta);
+                let score = game_tree.advantage.unwrap().1;
                 match current_player {
                     Color::White => {
                         if score > best_score {
@@ -136,14 +145,23 @@ impl GameTree {
                     }
                 };
             }
+            children.sort_unstable_by(|a, b| match (a.1.advantage, b.1.advantage) {
+                (None, None) => Ordering::Equal,
+                (None, Some(_)) => Ordering::Less,
+                (Some(_), None) => Ordering::Greater,
+                (Some((_, a)), Some((_, b))) => match current_player {
+                    Color::White => Ord::cmp(&a, &b),
+                    Color::Black => Ord::cmp(&b, &a),
+                },
+            });
             (best_movement, best_score)
-        }
+        });
     }
     pub fn best(&mut self, depth: u32, multithread_depth: u32) -> Option<Move> {
         scope(|scope| {
             for game_tree in self.descendants_of_depth(multithread_depth) {
                 scope.spawn(|| {
-                    game_tree.advantage = Some(game_tree.alpha_beta(
+                    game_tree.alpha_beta(
                         depth - multithread_depth,
                         |game_tree| {
                             if let GameTreeData::Board(board) = &game_tree.data {
@@ -154,7 +172,7 @@ impl GameTree {
                         },
                         Advantage::End(EndState::Win(Color::Black)),
                         Advantage::End(EndState::Win(Color::White)),
-                    ));
+                    );
                 });
             }
         });
@@ -163,7 +181,7 @@ impl GameTree {
             |game_tree| game_tree.advantage.unwrap(),
             Advantage::End(EndState::Win(Color::Black)),
             Advantage::End(EndState::Win(Color::White)),
-        )
-        .0
+        );
+        self.advantage.unwrap().0
     }
 }
