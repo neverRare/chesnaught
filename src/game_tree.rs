@@ -28,11 +28,9 @@ impl GameTree {
     }
     fn drop(self) {
         if let Some(children) = self.children {
-            spawn(move || {
-                for (_, game_tree) in children {
-                    spawn(move || drop(game_tree));
-                }
-            });
+            for (_, game_tree) in children {
+                spawn(move || drop(game_tree));
+            }
         }
     }
     pub fn move_piece(&mut self, movement: Move) {
