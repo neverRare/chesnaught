@@ -2,19 +2,19 @@ use std::cmp::Ordering;
 
 use crate::chess::{Board, Color, EndState};
 
-// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-// pub struct Estimated {
-//     king_safety: i32,
-//     square_control: i32,
-// }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct Estimated {
+    king_safety: i32,
+    square_control: i32,
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Advantage {
     End(EndState),
-    Estimated(i32),
+    Estimated(Estimated),
 }
 impl Default for Advantage {
     fn default() -> Self {
-        Advantage::Estimated(0)
+        Advantage::Estimated(Estimated::default())
     }
 }
 impl PartialOrd for Advantage {
@@ -25,9 +25,13 @@ impl PartialOrd for Advantage {
 impl Ord for Advantage {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (Advantage::Estimated(a), Advantage::Estimated(b)) => a.cmp(b),
-            (Advantage::End(EndState::Draw), Advantage::Estimated(advantage)) => 0.cmp(advantage),
-            (Advantage::Estimated(advantage), Advantage::End(EndState::Draw)) => advantage.cmp(&0),
+            (Advantage::Estimated(a), Advantage::Estimated(b)) => Ord::cmp(a, b),
+            (Advantage::End(EndState::Draw), Advantage::Estimated(advantage)) => {
+                Ord::cmp(&Estimated::default(), advantage)
+            }
+            (Advantage::Estimated(advantage), Advantage::End(EndState::Draw)) => {
+                Ord::cmp(advantage, &Estimated::default())
+            }
 
             (
                 Advantage::End(EndState::Win(Color::Black)),
@@ -47,18 +51,28 @@ impl Ord for Advantage {
         }
     }
 }
-pub fn estimate(board: Board) -> i32 {
-    let white: i32 = board
-        .into_switched_color(Color::White)
-        .valid_moves()
-        .count()
-        .try_into()
-        .unwrap();
-    let black: i32 = board
-        .into_switched_color(Color::Black)
-        .valid_moves()
-        .count()
-        .try_into()
-        .unwrap();
-    white - black
+pub fn estimate(board: Board) -> Estimated {
+    let [white, black] = [Color::White, Color::Black].map(|color| {
+        let board = board.into_switched_color(color);
+        let opposing_king = board.king_of(!color).unwrap();
+        let mut king_safety = 0;
+        let mut square_control = 0;
+        for movement in board.moves() {
+            if board.is_move_valid(movement) {
+                let moved_board = board.into_moved(movement);
+                if moved_board.is_attacked_by(opposing_king.position, color) {
+                    king_safety += 1;
+                }
+            }
+            square_control += 1;
+        }
+        Estimated {
+            king_safety,
+            square_control,
+        }
+    });
+    Estimated {
+        king_safety: white.king_safety - black.king_safety,
+        square_control: white.square_control - black.square_control,
+    }
 }

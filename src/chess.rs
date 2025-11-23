@@ -284,7 +284,7 @@ impl Board {
         self.pieces()
             .filter(move |piece| piece.piece.color == color)
     }
-    fn king_of(self, color: Color) -> Option<PieceWithContext> {
+    pub fn king_of(self, color: Color) -> Option<PieceWithContext> {
         self.pieces_of(color)
             .find(|piece| piece.piece.kind == PieceKind::King)
     }
@@ -378,7 +378,7 @@ impl Board {
         moved.move_piece(movement);
         moved
     }
-    fn is_attacked_by(self, position: Coord, color: Color) -> bool {
+    pub fn is_attacked_by(self, position: Coord, color: Color) -> bool {
         position
             .pawn_captures(!color)
             .any(|position| self.position_contains(position, color, [PieceKind::Pawn]))
@@ -400,7 +400,7 @@ impl Board {
         board[origin] = None;
         board.is_attacked_by(position, color)
     }
-    fn moves(self) -> impl Iterator<Item = Move> {
+    pub fn moves(self) -> impl Iterator<Item = Move> {
         self.pieces_of(self.current_player)
             .flat_map(PieceWithContext::moves)
     }
@@ -408,7 +408,7 @@ impl Board {
         self.moves()
             .filter(move |movement| self.is_move_valid(*movement))
     }
-    fn is_move_valid(self, movement: Move) -> bool {
+    pub fn is_move_valid(self, movement: Move) -> bool {
         let current_player = self.current_player;
         let moved = self.into_moved(movement);
         !moved
