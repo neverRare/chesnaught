@@ -44,7 +44,7 @@ fn main() {
             4,
             Some(MultithreadOption {
                 depth: 2,
-                thread_count: 8,
+                thread_count: 16,
             }),
         );
         println!("{advantage}");
