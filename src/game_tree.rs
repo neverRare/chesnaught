@@ -1,7 +1,12 @@
 use std::{
     cmp::Ordering,
-    iter::{empty, from_fn, once},
-    thread::{scope, spawn},
+    iter::from_fn,
+    mem::replace,
+    sync::{
+        LazyLock,
+        mpsc::{Sender, channel},
+    },
+    thread::spawn,
 };
 
 use crate::{
@@ -9,6 +14,15 @@ use crate::{
     heuristics::{Advantage, estimate},
 };
 
+static DROPPER: LazyLock<Sender<SyncDrop>> = LazyLock::new(|| {
+    let (sender, receiver) = channel();
+    spawn(|| {
+        for game_tree in receiver {
+            drop(game_tree);
+        }
+    });
+    sender
+});
 #[derive(Debug, Clone)]
 enum GameTreeData {
     Board(Box<Board>),
@@ -66,22 +80,6 @@ impl GameTree {
             unreachable!()
         };
         Some(children)
-    }
-    fn descendants_of_depth<'a>(
-        &'a mut self,
-        depth: u32,
-    ) -> Box<dyn Iterator<Item = &'a mut Self> + 'a> {
-        if depth == 0 {
-            Box::new(once(self))
-        } else if let Some(children) = self.children() {
-            Box::new(
-                children
-                    .iter_mut()
-                    .flat_map(move |(_, game_tree)| game_tree.descendants_of_depth(depth - 1)),
-            )
-        } else {
-            Box::new(empty())
-        }
     }
     fn alpha_beta(
         &mut self,
@@ -158,34 +156,13 @@ impl GameTree {
             panic!("cannot evaluate non-leaf node as board data are discarded");
         }
     }
-    pub fn best(&mut self, depth: u32, multithread_depth: u32) -> (Option<Move>, Advantage) {
-        if multithread_depth == 0 {
-            self.alpha_beta(
-                depth,
-                |game_tree| GameTree::estimate(game_tree),
-                Advantage::End(EndState::Win(Color::Black)),
-                Advantage::End(EndState::Win(Color::White)),
-            );
-        } else {
-            scope(|scope| {
-                for game_tree in self.descendants_of_depth(multithread_depth) {
-                    scope.spawn(|| {
-                        game_tree.alpha_beta(
-                            depth - multithread_depth,
-                            |game_tree| GameTree::estimate(game_tree),
-                            Advantage::End(EndState::Win(Color::Black)),
-                            Advantage::End(EndState::Win(Color::White)),
-                        );
-                    });
-                }
-            });
-            self.alpha_beta(
-                multithread_depth,
-                |game_tree| game_tree.advantage.unwrap(),
-                Advantage::End(EndState::Win(Color::Black)),
-                Advantage::End(EndState::Win(Color::White)),
-            );
-        }
+    pub fn best(&mut self, depth: u32) -> (Option<Move>, Advantage) {
+        self.alpha_beta(
+            depth,
+            |game_tree| GameTree::estimate(game_tree),
+            Advantage::End(EndState::Win(Color::Black)),
+            Advantage::End(EndState::Win(Color::White)),
+        );
         self.advantage.unwrap()
     }
     pub fn line(&self) -> impl Iterator<Item = Move> {
@@ -207,11 +184,14 @@ impl GameTree {
 }
 impl Drop for GameTree {
     fn drop(&mut self) {
-        if let GameTreeData::Children { children, .. } = &mut self.data {
-            for (_, game_tree) in children.drain(..) {
-                spawn(|| drop(SyncDrop(game_tree)));
-            }
-        }
+        let game_tree = replace(
+            self,
+            GameTree {
+                data: GameTreeData::End(EndState::Draw),
+                advantage: None,
+            },
+        );
+        DROPPER.send(SyncDrop(game_tree)).unwrap();
     }
 }
 struct SyncDrop(GameTree);
