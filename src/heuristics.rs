@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt::Display};
 
 use crate::chess::{Board, Color, EndState};
 
@@ -7,10 +7,30 @@ pub struct Estimated {
     king_safety: i32,
     square_control: i32,
 }
+impl Display for Estimated {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.king_safety == 0 {
+            write!(f, "positional advantage: {}", self.square_control)?;
+        } else {
+            write!(f, "king safety: {}", self.square_control)?;
+        }
+        Ok(())
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Advantage {
     End(EndState),
     Estimated(Estimated),
+}
+impl Display for Advantage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Advantage::End(EndState::Draw) => write!(f, "will draw")?,
+            Advantage::End(EndState::Win(color)) => write!(f, "{color}will draw")?,
+            Advantage::Estimated(estimated) => write!(f, "{estimated}")?,
+        }
+        Ok(())
+    }
 }
 impl Default for Advantage {
     fn default() -> Self {

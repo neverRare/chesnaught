@@ -12,24 +12,35 @@ mod tui;
 fn main() {
     let mut board = Board::new();
     let mut game_tree = GameTree::new(board);
-    println!(
-        "{}",
-        Tui {
-            board,
-            highlighted: []
+    let mut previous_move = None;
+
+    loop {
+        if let Some(previous_move) = &previous_move {
+            println!(
+                "{}",
+                Tui {
+                    board,
+                    highlighted: previous_move
+                }
+            );
+        } else {
+            println!(
+                "{}",
+                Tui {
+                    board,
+                    highlighted: &[]
+                }
+            );
         }
-    );
-    while let Some(movement) = game_tree.best(5) {
-        board.move_piece(movement);
-        game_tree.move_piece(movement);
-        let movements = [movement.movement.origin, movement.movement.destination];
-        println!(
-            "{}",
-            Tui {
-                board,
-                highlighted: &movements
-            }
-        );
+        let (movement, advantage) = game_tree.best(5);
+        println!("{advantage}");
+        if let Some(movement) = movement {
+            board.move_piece(movement);
+            game_tree.move_piece(movement);
+            previous_move = Some([movement.movement.origin, movement.movement.destination]);
+        } else {
+            break;
+        }
     }
 }
 #[macro_export]
