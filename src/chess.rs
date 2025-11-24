@@ -311,7 +311,7 @@ impl Board {
                     })
                 {
                     self.is_dead().then_some(EndState::Draw)
-                } else if self.is_attacked_by(king.position, !self.current_player) {
+                } else if self.is_attacked(king.position, !self.current_player) {
                     (!self.has_valid_moves()).then_some(EndState::Win(!self.current_player))
                 } else {
                     (self.is_dead() || !self.has_valid_moves()).then_some(EndState::Draw)
@@ -378,7 +378,7 @@ impl Board {
         moved.move_piece(movement);
         moved
     }
-    pub fn is_attacked_by(self, position: Coord, color: Color) -> bool {
+    pub fn is_attacked(self, position: Coord, color: Color) -> bool {
         position
             .pawn_captures(!color)
             .any(|position| self.position_contains(position, color, [PieceKind::Pawn]))
@@ -401,14 +401,14 @@ impl Board {
         }) || position.knight_moves().any(|position| {
             position == attacking && self.position_contains(position, color, [PieceKind::Knight])
         }) || position.bishop_lines().any(|line| {
-            self.line_attacked_by(
+            self.line_attacked_from(
                 line,
                 attacking,
                 color,
                 [PieceKind::Bishop, PieceKind::Queen],
             )
         }) || position.rook_lines().any(|line| {
-            self.line_attacked_by(line, attacking, color, [PieceKind::Rook, PieceKind::Queen])
+            self.line_attacked_from(line, attacking, color, [PieceKind::Rook, PieceKind::Queen])
         }) || position.king_moves().any(|position| {
             position == attacking && self.position_contains(position, color, [PieceKind::King])
         })
@@ -416,7 +416,7 @@ impl Board {
     fn is_attacked_after_move(self, origin: Coord, position: Coord, color: Color) -> bool {
         let mut board = self;
         board[origin] = None;
-        board.is_attacked_by(position, color)
+        board.is_attacked(position, color)
     }
     pub fn moves(self) -> impl Iterator<Item = Move> {
         self.pieces_of(self.current_player)
@@ -431,7 +431,7 @@ impl Board {
         let moved = self.into_moved(movement);
         !moved
             .king_of(current_player)
-            .is_some_and(|king| moved.is_attacked_by(king.position, !current_player))
+            .is_some_and(|king| moved.is_attacked(king.position, !current_player))
     }
     fn has_valid_moves(self) -> bool {
         self.valid_moves().next().is_some()
@@ -453,7 +453,7 @@ impl Board {
         line.find_map(|position| self[position])
             .is_some_and(|piece| piece.color == color && pieces.contains(&piece.kind))
     }
-    fn line_attacked_by<const N: usize>(
+    fn line_attacked_from<const N: usize>(
         self,
         mut line: impl Iterator<Item = Coord>,
         attacking: Coord,
@@ -950,7 +950,7 @@ impl PieceWithContext {
                                         _ => false,
                                     }
                             }) && !(kind == PieceKind::King
-                                && self.board.is_attacked_by(position, !self.piece.color))
+                                && self.board.is_attacked(position, !self.piece.color))
                         })
                     })
                 })
