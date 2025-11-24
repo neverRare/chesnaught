@@ -151,35 +151,41 @@ impl GameTree {
             (best_movement, best_score)
         });
     }
-    pub fn best(&mut self, depth: u32) -> (Option<Move>, Advantage) {
-        let multithread_depth = match depth {
-            0..=1 => 0,
-            2.. => 1,
-        };
-        scope(|scope| {
-            for game_tree in self.descendants_of_depth(multithread_depth) {
-                scope.spawn(|| {
-                    game_tree.alpha_beta(
-                        depth - multithread_depth,
-                        |game_tree| {
-                            if let GameTreeData::Board(board) = &game_tree.data {
-                                (None, Advantage::Estimated(estimate(Board::clone(board))))
-                            } else {
-                                panic!("cannot evaluate non-leaf node as board data are discarded");
-                            }
-                        },
-                        Advantage::End(EndState::Win(Color::Black)),
-                        Advantage::End(EndState::Win(Color::White)),
-                    );
-                });
-            }
-        });
-        self.alpha_beta(
-            multithread_depth,
-            |game_tree| game_tree.advantage.unwrap(),
-            Advantage::End(EndState::Win(Color::Black)),
-            Advantage::End(EndState::Win(Color::White)),
-        );
+    fn estimate(&self) -> (Option<Move>, Advantage) {
+        if let GameTreeData::Board(board) = &self.data {
+            (None, Advantage::Estimated(estimate(Board::clone(board))))
+        } else {
+            panic!("cannot evaluate non-leaf node as board data are discarded");
+        }
+    }
+    pub fn best(&mut self, depth: u32, multithread_depth: u32) -> (Option<Move>, Advantage) {
+        if multithread_depth == 0 {
+            self.alpha_beta(
+                depth,
+                |game_tree| GameTree::estimate(game_tree),
+                Advantage::End(EndState::Win(Color::Black)),
+                Advantage::End(EndState::Win(Color::White)),
+            );
+        } else {
+            scope(|scope| {
+                for game_tree in self.descendants_of_depth(multithread_depth) {
+                    scope.spawn(|| {
+                        game_tree.alpha_beta(
+                            depth - multithread_depth,
+                            |game_tree| GameTree::estimate(game_tree),
+                            Advantage::End(EndState::Win(Color::Black)),
+                            Advantage::End(EndState::Win(Color::White)),
+                        );
+                    });
+                }
+            });
+            self.alpha_beta(
+                multithread_depth,
+                |game_tree| game_tree.advantage.unwrap(),
+                Advantage::End(EndState::Win(Color::Black)),
+                Advantage::End(EndState::Win(Color::White)),
+            );
+        }
         self.advantage.unwrap()
     }
     pub fn line(&self) -> impl Iterator<Item = Move> {
