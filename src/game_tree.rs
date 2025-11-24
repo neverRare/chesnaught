@@ -81,6 +81,13 @@ impl GameTree {
         };
         Some(children)
     }
+    fn current_player(&self) -> Option<Color> {
+        match &self.data {
+            GameTreeData::Board(board) => Some(board.current_player),
+            GameTreeData::Children { current_player, .. } => Some(*current_player),
+            GameTreeData::End(_) => None,
+        }
+    }
     fn alpha_beta(
         &mut self,
         depth: u32,
@@ -93,11 +100,7 @@ impl GameTree {
         } else if depth == 0 {
             scorer(self)
         } else {
-            let current_player = match &self.data {
-                GameTreeData::Board(board) => board.current_player,
-                GameTreeData::Children { current_player, .. } => *current_player,
-                GameTreeData::End(_) => unreachable!(),
-            };
+            let current_player = self.current_player().unwrap();
             let children = self.children().unwrap();
 
             let mut alpha = alpha;
