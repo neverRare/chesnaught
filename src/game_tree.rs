@@ -6,7 +6,7 @@ use std::{
         LazyLock,
         mpsc::{Sender, channel},
     },
-    thread::{scope, spawn},
+    thread::{available_parallelism, scope, spawn},
 };
 
 use crate::{
@@ -14,11 +14,6 @@ use crate::{
     heuristics::{Advantage, estimate},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct MultithreadOption {
-    pub depth: u32,
-    pub thread_count: usize,
-}
 #[derive(Debug, Clone)]
 enum GameTreeData {
     Board(Box<Board>),
@@ -98,7 +93,7 @@ impl GameTree {
     fn alpha_beta(
         &mut self,
         depth: u32,
-        multithread_option: Option<MultithreadOption>,
+        multithread_depth: Option<u32>,
         scorer: fn(&mut Self) -> (Option<Move>, Advantage),
         alpha: Advantage,
         beta: Advantage,
@@ -118,12 +113,8 @@ impl GameTree {
                 Color::White => Advantage::End(EndState::Win(Color::Black)),
                 Color::Black => Advantage::End(EndState::Win(Color::White)),
             };
-            if let Some(MultithreadOption {
-                depth: 0,
-                thread_count,
-            }) = multithread_option
-            {
-                for chunk in children.chunks_mut(thread_count) {
+            if multithread_depth == Some(0) {
+                for chunk in children.chunks_mut(available_parallelism().unwrap().get()) {
                     let (movement, score) = scope(|scope| {
                         let handles: Vec<_> = chunk
                             .iter_mut()
@@ -168,10 +159,7 @@ impl GameTree {
                 for (movement, game_tree) in children.iter_mut() {
                     game_tree.alpha_beta(
                         depth - 1,
-                        multithread_option.map(|option| MultithreadOption {
-                            depth: option.depth - 1,
-                            thread_count: option.thread_count,
-                        }),
+                        multithread_depth.map(|multithread_depth| multithread_depth - 1),
                         scorer,
                         alpha,
                         beta,
@@ -220,14 +208,10 @@ impl GameTree {
             panic!("cannot evaluate non-leaf node as board data are discarded");
         }
     }
-    pub fn best(
-        &mut self,
-        depth: u32,
-        multithread_option: Option<MultithreadOption>,
-    ) -> (Option<Move>, Advantage) {
+    pub fn best(&mut self, depth: u32) -> (Option<Move>, Advantage) {
         self.alpha_beta(
             depth,
-            multithread_option,
+            Some(depth / 2),
             |game_tree| GameTree::estimate(game_tree),
             Advantage::End(EndState::Win(Color::Black)),
             Advantage::End(EndState::Win(Color::White)),
