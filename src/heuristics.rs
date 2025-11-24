@@ -26,7 +26,7 @@ impl Display for Advantage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Advantage::End(EndState::Draw) => write!(f, "will draw")?,
-            Advantage::End(EndState::Win(color)) => write!(f, "{color}will draw")?,
+            Advantage::End(EndState::Win(color)) => write!(f, "{color} will win")?,
             Advantage::Estimated(estimated) => write!(f, "{estimated}")?,
         }
         Ok(())
