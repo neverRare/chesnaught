@@ -41,7 +41,6 @@ impl GameTree {
             GameTreeData::Board(board) => GameTree::new(board.into_moved(movement)),
             GameTreeData::Children { children, .. } => children
                 .drain(..)
-                .into_iter()
                 .find_map(|(b, game_tree)| {
                     if movement == b {
                         Some(game_tree)
