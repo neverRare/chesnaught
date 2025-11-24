@@ -39,20 +39,18 @@ impl GameTree {
     pub fn move_piece(&mut self, movement: Move) {
         let new = match &mut self.data {
             GameTreeData::Board(board) => GameTree::new(board.into_moved(movement)),
-            GameTreeData::Children { children, .. } => {
-                let children = replace(children, Vec::new());
-                children
-                    .into_iter()
-                    .find_map(|(b, game_tree)| {
-                        if movement == b {
-                            Some(game_tree)
-                        } else {
-                            spawn(move || drop(game_tree));
-                            None
-                        }
-                    })
-                    .unwrap()
-            }
+            GameTreeData::Children { children, .. } => children
+                .drain(..)
+                .into_iter()
+                .find_map(|(b, game_tree)| {
+                    if movement == b {
+                        Some(game_tree)
+                    } else {
+                        spawn(move || drop(game_tree));
+                        None
+                    }
+                })
+                .unwrap(),
             GameTreeData::End(_) => panic!("cannot move on end state"),
         };
         *self = new;
