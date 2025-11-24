@@ -34,6 +34,11 @@ fn main() {
         }
         let (movement, advantage) = game_tree.best(5);
         println!("{advantage}");
+        print!("idea:");
+        for movement in game_tree.line() {
+            print!(" {movement}");
+        }
+        println!();
         if let Some(movement) = movement {
             board.move_piece(movement);
             game_tree.move_piece(movement);

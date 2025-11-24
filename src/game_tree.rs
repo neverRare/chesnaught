@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    iter::{empty, once},
+    iter::{empty, from_fn, once},
     mem::replace,
     thread::{scope, spawn},
 };
@@ -187,5 +187,21 @@ impl GameTree {
             Advantage::End(EndState::Win(Color::White)),
         );
         self.advantage.unwrap()
+    }
+    pub fn line(&self) -> impl Iterator<Item = Move> {
+        let mut game_tree = self;
+        from_fn(move || {
+            game_tree.advantage.unwrap().0.map(|movement| {
+                if let GameTreeData::Children { children, .. } = &game_tree.data {
+                    game_tree = children
+                        .iter()
+                        .find_map(|(b, game_tree)| (movement == *b).then_some(game_tree))
+                        .unwrap();
+                    movement
+                } else {
+                    panic!()
+                }
+            })
+        })
     }
 }
