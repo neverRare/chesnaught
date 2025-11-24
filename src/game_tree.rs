@@ -121,7 +121,9 @@ impl GameTree {
                         if best_score >= beta {
                             break;
                         }
-                        alpha = best_score;
+                        if alpha > best_score {
+                            alpha = best_score;
+                        }
                     }
                     Color::Black => {
                         if score < best_score {
@@ -131,7 +133,9 @@ impl GameTree {
                         if best_score <= alpha {
                             break;
                         }
-                        beta = best_score;
+                        if beta < best_score {
+                            beta = best_score;
+                        }
                     }
                 };
             }
