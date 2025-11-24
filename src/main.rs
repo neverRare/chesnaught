@@ -1,7 +1,11 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic)]
 
-use crate::{chess::Board, game_tree::GameTree, tui::Tui};
+use crate::{
+    chess::Board,
+    game_tree::{GameTree, MultithreadOption},
+    tui::Tui,
+};
 
 mod chess;
 mod fen;
@@ -36,7 +40,13 @@ fn main() {
         if end {
             break;
         }
-        let (movement, advantage) = game_tree.best(5, Some(8));
+        let (movement, advantage) = game_tree.best(
+            4,
+            Some(MultithreadOption {
+                depth: 2,
+                thread_count: 8,
+            }),
+        );
         println!("{advantage}");
         print!("idea:");
         for movement in game_tree.line() {

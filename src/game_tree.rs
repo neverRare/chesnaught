@@ -14,6 +14,11 @@ use crate::{
     heuristics::{Advantage, estimate},
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MultithreadOption {
+    pub depth: u32,
+    pub thread_count: usize,
+}
 #[derive(Debug, Clone)]
 enum GameTreeData {
     Board(Box<Board>),
@@ -82,7 +87,7 @@ impl GameTree {
     fn alpha_beta(
         &mut self,
         depth: u32,
-        thread_count: Option<usize>,
+        multithread_option: Option<MultithreadOption>,
         scorer: fn(&mut Self) -> (Option<Move>, Advantage),
         alpha: Advantage,
         beta: Advantage,
@@ -102,7 +107,11 @@ impl GameTree {
                 Color::White => Advantage::End(EndState::Win(Color::Black)),
                 Color::Black => Advantage::End(EndState::Win(Color::White)),
             };
-            if let Some(thread_count) = thread_count {
+            if let Some(MultithreadOption {
+                depth: 0,
+                thread_count,
+            }) = multithread_option
+            {
                 for chunk in children.chunks_mut(thread_count) {
                     let (movement, score) = scope(|scope| {
                         let handles: Vec<_> = chunk
@@ -146,7 +155,16 @@ impl GameTree {
                 }
             } else {
                 for (movement, game_tree) in children.iter_mut() {
-                    game_tree.alpha_beta(depth - 1, None, scorer, alpha, beta);
+                    game_tree.alpha_beta(
+                        depth - 1,
+                        multithread_option.map(|option| MultithreadOption {
+                            depth: option.depth - 1,
+                            thread_count: option.thread_count,
+                        }),
+                        scorer,
+                        alpha,
+                        beta,
+                    );
                     let score = game_tree.advantage.unwrap().1;
                     match current_player {
                         Color::White => {
@@ -191,10 +209,14 @@ impl GameTree {
             panic!("cannot evaluate non-leaf node as board data are discarded");
         }
     }
-    pub fn best(&mut self, depth: u32, thread_count: Option<usize>) -> (Option<Move>, Advantage) {
+    pub fn best(
+        &mut self,
+        depth: u32,
+        multithread_option: Option<MultithreadOption>,
+    ) -> (Option<Move>, Advantage) {
         self.alpha_beta(
             depth,
-            thread_count,
+            multithread_option,
             |game_tree| GameTree::estimate(game_tree),
             Advantage::End(EndState::Win(Color::Black)),
             Advantage::End(EndState::Win(Color::White)),
