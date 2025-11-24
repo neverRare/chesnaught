@@ -58,9 +58,7 @@ pub fn estimate(board: Board) -> Estimated {
         let mut king_safety = 0;
         let mut square_control = 0;
         for movement in board.moves() {
-            if board.is_move_valid(movement)
-                && !board.is_attacked(movement.movement.destination, !color)
-            {
+            if !board.is_attacked(movement.movement.destination, !color) {
                 let moved_board = board.into_moved(movement);
                 if moved_board.is_attacked_from(
                     opposing_king.position,
