@@ -13,6 +13,7 @@ fn main() {
     let mut board = Board::new();
     let mut game_tree = GameTree::new(board);
     let mut previous_move = None;
+    let mut end = false;
 
     loop {
         if let Some(previous_move) = &previous_move {
@@ -32,6 +33,9 @@ fn main() {
                 }
             );
         }
+        if end {
+            break;
+        }
         let (movement, advantage) = game_tree.best(5, 1);
         println!("{advantage}");
         print!("idea:");
@@ -44,7 +48,7 @@ fn main() {
             game_tree.move_piece(movement);
             previous_move = Some([movement.movement.origin, movement.movement.destination]);
         } else {
-            break;
+            end = true;
         }
     }
 }
