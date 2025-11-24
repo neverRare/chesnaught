@@ -36,7 +36,7 @@ fn main() {
         if end {
             break;
         }
-        let (movement, advantage) = game_tree.best(4);
+        let (movement, advantage) = game_tree.best(5);
         println!("{advantage}");
         print!("idea:");
         for movement in game_tree.line() {

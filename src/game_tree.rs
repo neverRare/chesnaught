@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     iter::from_fn,
     mem::replace,
+    num::NonZero,
     sync::{
         LazyLock,
         mpsc::{Sender, channel},
@@ -94,6 +95,7 @@ impl GameTree {
         &mut self,
         depth: u32,
         multithread_depth: Option<u32>,
+        thread_count: usize,
         scorer: fn(&mut Self) -> (Option<Move>, Advantage),
         alpha: Advantage,
         beta: Advantage,
@@ -114,13 +116,20 @@ impl GameTree {
                 Color::Black => Advantage::End(EndState::Win(Color::White)),
             };
             if multithread_depth == Some(0) {
-                for chunk in children.chunks_mut(available_parallelism().unwrap().get()) {
+                for chunk in children.chunks_mut(thread_count) {
                     let (movement, score) = scope(|scope| {
                         let handles: Vec<_> = chunk
                             .iter_mut()
                             .map(|(movement, game_tree)| {
                                 scope.spawn(|| {
-                                    game_tree.alpha_beta(depth - 1, None, scorer, alpha, beta);
+                                    game_tree.alpha_beta(
+                                        depth - 1,
+                                        None,
+                                        thread_count,
+                                        scorer,
+                                        alpha,
+                                        beta,
+                                    );
                                     (*movement, game_tree.advantage.unwrap().1)
                                 })
                             })
@@ -160,6 +169,7 @@ impl GameTree {
                     game_tree.alpha_beta(
                         depth - 1,
                         multithread_depth.map(|multithread_depth| multithread_depth - 1),
+                        thread_count,
                         scorer,
                         alpha,
                         beta,
@@ -209,9 +219,11 @@ impl GameTree {
         }
     }
     pub fn best(&mut self, depth: u32) -> (Option<Move>, Advantage) {
+        let thread_count = available_parallelism().map(NonZero::get);
         self.alpha_beta(
             depth,
-            Some(depth / 2),
+            thread_count.is_ok().then_some(depth / 2),
+            thread_count.unwrap_or_default(),
             |game_tree| GameTree::estimate(game_tree),
             Advantage::End(EndState::Win(Color::Black)),
             Advantage::End(EndState::Win(Color::White)),
