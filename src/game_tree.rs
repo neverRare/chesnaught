@@ -1,7 +1,6 @@
 use std::{
     cmp::Ordering,
     iter::{empty, from_fn, once},
-    mem::replace,
     thread::{scope, spawn},
 };
 
@@ -39,17 +38,11 @@ impl GameTree {
     pub fn move_piece(&mut self, movement: Move) {
         let new = match &mut self.data {
             GameTreeData::Board(board) => GameTree::new(board.into_moved(movement)),
-            GameTreeData::Children { children, .. } => children
-                .drain(..)
-                .find_map(|(b, game_tree)| {
-                    if movement == b {
-                        Some(game_tree)
-                    } else {
-                        spawn(move || drop(game_tree));
-                        None
-                    }
-                })
-                .unwrap(),
+            GameTreeData::Children { children, .. } => {
+                children
+                    .remove(children.iter().position(|(b, _)| movement == *b).unwrap())
+                    .1
+            }
             GameTreeData::End(_) => panic!("cannot move on end state"),
         };
         *self = new;
@@ -200,5 +193,25 @@ impl GameTree {
                 }
             })
         })
+    }
+}
+impl Drop for GameTree {
+    fn drop(&mut self) {
+        if let GameTreeData::Children { children, .. } = &mut self.data {
+            for (_, game_tree) in children.drain(..) {
+                spawn(|| drop(SyncDrop(game_tree)));
+            }
+        }
+    }
+}
+struct SyncDrop(GameTree);
+
+impl Drop for SyncDrop {
+    fn drop(&mut self) {
+        if let GameTreeData::Children { children, .. } = &mut self.0.data {
+            for (_, game_tree) in children.drain(..) {
+                drop(SyncDrop(game_tree));
+            }
+        }
     }
 }
