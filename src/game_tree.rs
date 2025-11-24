@@ -157,7 +157,11 @@ impl GameTree {
             (best_movement, best_score)
         });
     }
-    pub fn best(&mut self, depth: u32, multithread_depth: u32) -> Option<Move> {
+    pub fn best(&mut self, depth: u32) -> Option<Move> {
+        let multithread_depth = match depth {
+            0 => 0,
+            1.. => 1,
+        };
         scope(|scope| {
             for game_tree in self.descendants_of_depth(multithread_depth) {
                 scope.spawn(|| {
