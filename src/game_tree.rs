@@ -14,15 +14,6 @@ use crate::{
     heuristics::{Advantage, estimate},
 };
 
-static DROPPER: LazyLock<Sender<SyncDrop>> = LazyLock::new(|| {
-    let (sender, receiver) = channel();
-    spawn(|| {
-        for game_tree in receiver {
-            drop(game_tree);
-        }
-    });
-    sender
-});
 #[derive(Debug, Clone)]
 enum GameTreeData {
     Board(Box<Board>),
@@ -181,8 +172,18 @@ impl GameTree {
         })
     }
 }
+
 impl Drop for GameTree {
     fn drop(&mut self) {
+        static DROPPER: LazyLock<Sender<SyncDrop>> = LazyLock::new(|| {
+            let (sender, receiver) = channel();
+            spawn(|| {
+                for game_tree in receiver {
+                    drop(game_tree);
+                }
+            });
+            sender
+        });
         let game_tree = replace(
             self,
             GameTree {
