@@ -19,7 +19,7 @@ fn main() {
             highlighted: []
         }
     );
-    while let Some(movement) = game_tree.best(5) {
+    while let Some(movement) = game_tree.best(1) {
         board.move_piece(movement);
         game_tree.move_piece(movement);
         let movements = [movement.movement.origin, movement.movement.destination];

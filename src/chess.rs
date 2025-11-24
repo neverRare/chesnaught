@@ -395,6 +395,24 @@ impl Board {
                 .king_moves()
                 .any(|position| self.position_contains(position, color, [PieceKind::King]))
     }
+    pub fn is_attacked_from(self, position: Coord, attacking: Coord, color: Color) -> bool {
+        position.pawn_captures(!color).any(|position| {
+            position == attacking && self.position_contains(position, color, [PieceKind::Pawn])
+        }) || position.knight_moves().any(|position| {
+            position == attacking && self.position_contains(position, color, [PieceKind::Knight])
+        }) || position.bishop_lines().any(|line| {
+            self.line_attacked_by(
+                line,
+                attacking,
+                color,
+                [PieceKind::Bishop, PieceKind::Queen],
+            )
+        }) || position.rook_lines().any(|line| {
+            self.line_attacked_by(line, attacking, color, [PieceKind::Rook, PieceKind::Queen])
+        }) || position.king_moves().any(|position| {
+            position == attacking && self.position_contains(position, color, [PieceKind::King])
+        })
+    }
     fn is_attacked_after_move(self, origin: Coord, position: Coord, color: Color) -> bool {
         let mut board = self;
         board[origin] = None;
@@ -434,6 +452,18 @@ impl Board {
     ) -> bool {
         line.find_map(|position| self[position])
             .is_some_and(|piece| piece.color == color && pieces.contains(&piece.kind))
+    }
+    fn line_attacked_by<const N: usize>(
+        self,
+        mut line: impl Iterator<Item = Coord>,
+        attacking: Coord,
+        color: Color,
+        pieces: [PieceKind; N],
+    ) -> bool {
+        line.find_map(|position| self[position].map(|piece| (piece, position)))
+            .is_some_and(|(piece, position)| {
+                position == attacking && piece.color == color && pieces.contains(&piece.kind)
+            })
     }
     fn moveable_position_on_line(
         self,
