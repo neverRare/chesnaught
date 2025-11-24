@@ -6,7 +6,7 @@ use std::{
         LazyLock,
         mpsc::{Sender, channel},
     },
-    thread::spawn,
+    thread::{scope, spawn},
 };
 
 use crate::{
@@ -82,6 +82,7 @@ impl GameTree {
     fn alpha_beta(
         &mut self,
         depth: u32,
+        thread_count: Option<usize>,
         scorer: fn(&mut Self) -> (Option<Move>, Advantage),
         alpha: Advantage,
         beta: Advantage,
@@ -101,31 +102,75 @@ impl GameTree {
                 Color::White => Advantage::End(EndState::Win(Color::Black)),
                 Color::Black => Advantage::End(EndState::Win(Color::White)),
             };
-            for (movement, game_tree) in children.iter_mut() {
-                game_tree.alpha_beta(depth - 1, scorer, alpha, beta);
-                let score = game_tree.advantage.unwrap().1;
-                match current_player {
-                    Color::White => {
-                        if score > best_score {
-                            best_score = score;
-                            best_movement = Some(*movement);
+            if let Some(thread_count) = thread_count {
+                for chunk in children.chunks_mut(thread_count) {
+                    let (movement, score) = scope(|scope| {
+                        let handles: Vec<_> = chunk
+                            .iter_mut()
+                            .map(|(movement, game_tree)| {
+                                scope.spawn(|| {
+                                    game_tree.alpha_beta(depth - 1, None, scorer, alpha, beta);
+                                    (*movement, game_tree.advantage.unwrap().1)
+                                })
+                            })
+                            .collect();
+                        while !handles.iter().all(|handle| handle.is_finished()) {}
+                        let iter = handles.into_iter().map(|handle| handle.join().unwrap());
+                        match current_player {
+                            Color::White => iter.max_by_key(|(_, advantage)| *advantage).unwrap(),
+                            Color::Black => iter.min_by_key(|(_, advantage)| *advantage).unwrap(),
                         }
-                        if best_score >= beta {
-                            break;
+                    });
+                    match current_player {
+                        Color::White => {
+                            if score > best_score {
+                                best_score = score;
+                                best_movement = Some(movement);
+                            }
+                            if best_score >= beta {
+                                break;
+                            }
+                            alpha = Ord::max(alpha, best_score);
                         }
-                        alpha = Ord::max(alpha, best_score);
+                        Color::Black => {
+                            if score < best_score {
+                                best_score = score;
+                                best_movement = Some(movement);
+                            }
+                            if best_score <= alpha {
+                                break;
+                            }
+                            beta = Ord::min(beta, best_score);
+                        }
                     }
-                    Color::Black => {
-                        if score < best_score {
-                            best_score = score;
-                            best_movement = Some(*movement);
+                }
+            } else {
+                for (movement, game_tree) in children.iter_mut() {
+                    game_tree.alpha_beta(depth - 1, None, scorer, alpha, beta);
+                    let score = game_tree.advantage.unwrap().1;
+                    match current_player {
+                        Color::White => {
+                            if score > best_score {
+                                best_score = score;
+                                best_movement = Some(*movement);
+                            }
+                            if best_score >= beta {
+                                break;
+                            }
+                            alpha = Ord::max(alpha, best_score);
                         }
-                        if best_score <= alpha {
-                            break;
+                        Color::Black => {
+                            if score < best_score {
+                                best_score = score;
+                                best_movement = Some(*movement);
+                            }
+                            if best_score <= alpha {
+                                break;
+                            }
+                            beta = Ord::min(beta, best_score);
                         }
-                        beta = Ord::min(beta, best_score);
                     }
-                };
+                }
             }
             children.sort_unstable_by(|a, b| match (a.1.advantage, b.1.advantage) {
                 (None, None) => Ordering::Equal,
@@ -146,9 +191,10 @@ impl GameTree {
             panic!("cannot evaluate non-leaf node as board data are discarded");
         }
     }
-    pub fn best(&mut self, depth: u32) -> (Option<Move>, Advantage) {
+    pub fn best(&mut self, depth: u32, thread_count: Option<usize>) -> (Option<Move>, Advantage) {
         self.alpha_beta(
             depth,
+            thread_count,
             |game_tree| GameTree::estimate(game_tree),
             Advantage::End(EndState::Win(Color::Black)),
             Advantage::End(EndState::Win(Color::White)),
