@@ -28,6 +28,7 @@ enum GameTreeData {
     },
     End(EndState),
 }
+
 #[derive(Debug, Clone)]
 pub struct GameTree {
     data: GameTreeData,
@@ -46,6 +47,15 @@ impl GameTree {
         }
     }
     pub fn move_piece(&mut self, movement: Move) {
+        static DROPPER: LazyLock<Sender<GameTree>> = LazyLock::new(|| {
+            let (sender, receiver) = channel();
+            spawn(|| {
+                for game_tree in receiver {
+                    drop(game_tree);
+                }
+            });
+            sender
+        });
         let new = match &mut self.data {
             GameTreeData::Board(board) => GameTree::new(board.into_moved(movement)),
             GameTreeData::Children { children, .. } => {
@@ -55,7 +65,8 @@ impl GameTree {
             }
             GameTreeData::End(_) => panic!("cannot move on end state"),
         };
-        *self = new;
+        let game_tree = replace(self, new);
+        DROPPER.send(game_tree).unwrap();
     }
     fn children(&mut self) -> Option<&mut Vec<(Move, GameTree)>> {
         match &mut self.data {
@@ -238,38 +249,5 @@ impl GameTree {
                 }
             })
         })
-    }
-}
-
-impl Drop for GameTree {
-    fn drop(&mut self) {
-        static DROPPER: LazyLock<Sender<SyncDrop>> = LazyLock::new(|| {
-            let (sender, receiver) = channel();
-            spawn(|| {
-                for game_tree in receiver {
-                    drop(game_tree);
-                }
-            });
-            sender
-        });
-        let game_tree = replace(
-            self,
-            GameTree {
-                data: GameTreeData::End(EndState::Draw),
-                advantage: None,
-            },
-        );
-        DROPPER.send(SyncDrop(game_tree)).unwrap();
-    }
-}
-struct SyncDrop(GameTree);
-
-impl Drop for SyncDrop {
-    fn drop(&mut self) {
-        if let GameTreeData::Children { children, .. } = &mut self.0.data {
-            for (_, game_tree) in children.drain(..) {
-                drop(SyncDrop(game_tree));
-            }
-        }
     }
 }
