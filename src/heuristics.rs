@@ -12,7 +12,7 @@ impl Display for Estimated {
         if self.king_safety == 0 {
             write!(f, "positional advantage: {}", self.square_control)?;
         } else {
-            write!(f, "king safety: {}", self.square_control)?;
+            write!(f, "king safety: {}", self.king_safety)?;
         }
         Ok(())
     }
