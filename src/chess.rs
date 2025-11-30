@@ -4,7 +4,7 @@ use std::{
     error::Error,
     fmt::{self, Display, Formatter},
     hash::Hash,
-    iter::{FusedIterator, empty},
+    iter::FusedIterator,
     num::NonZero,
     ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Neg, Not, Range, Sub, SubAssign},
     rc::Rc,
@@ -50,6 +50,12 @@ pub enum PieceKind {
     King,
 }
 impl PieceKind {
+    pub const PROMOTION_CHOICES: [Self; 4] = [
+        PieceKind::Queen,
+        PieceKind::Rook,
+        PieceKind::Bishop,
+        PieceKind::Knight,
+    ];
     pub const STARTING_CONFIGURATION: [Self; 8] = [
         PieceKind::Rook,
         PieceKind::Knight,
@@ -407,6 +413,18 @@ pub fn home_rank(color: Color) -> u8 {
         Color::Black => coord_y!("8"),
     }
 }
+pub fn pawn_home_rank(color: Color) -> u8 {
+    match color {
+        Color::White => coord_y!("2"),
+        Color::Black => coord_y!("7"),
+    }
+}
+pub fn pawn_promotion_rank(color: Color) -> u8 {
+    match color {
+        Color::White => coord_y!("8"),
+        Color::Black => coord_y!("1"),
+    }
+}
 impl Display for Coord {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let x = (self.x() + b'a') as char;
@@ -517,6 +535,21 @@ impl Vector {
             x: 0,
             y: pawn_direction(color),
         }
+    }
+    pub fn pawn_double_move(color: Color) -> Self {
+        Vector::pawn_single_move(color) * 2
+    }
+    pub fn pawn_attacks(color: Color) -> [Self; 2] {
+        [
+            Vector {
+                x: -1,
+                y: pawn_direction(color),
+            },
+            Vector {
+                x: 1,
+                y: pawn_direction(color),
+            },
+        ]
     }
     pub fn as_unit(self) -> Self {
         Vector {
@@ -667,8 +700,90 @@ impl Piece {
             .flat_map(move |direction| self.directional_moves(index, board, direction))
     }
     fn pawn_moves(self, index: PieceIndex, board: &Board) -> impl Iterator<Item = Move> {
-        todo!();
-        empty()
+        static PROMOTION_CHOICES: [Option<PieceKind>; 4] = [
+            Some(PieceKind::Queen),
+            Some(PieceKind::Rook),
+            Some(PieceKind::Bishop),
+            Some(PieceKind::Knight),
+        ];
+        static NON_PROMOTION_CHOICES: [Option<PieceKind>; 1] = [None];
+        let forward_jumps = if self.position.y() == pawn_home_rank(self.piece.color()) {
+            2
+        } else {
+            1
+        };
+        self.position
+            .line(Vector::pawn_single_move(self.piece.color()), 1)
+            .take(forward_jumps)
+            .take_while(|position| board[*position].is_none())
+            .map(move |destination| Move {
+                movement: SimpleMove {
+                    index,
+                    destination,
+                    capture: None,
+                },
+                castling_rook: None,
+                promotion: None,
+                en_passant_target: ((destination - self.position)
+                    == Vector::pawn_double_move(self.piece.color()))
+                .then(|| {
+                    self.position
+                        .move_by(Vector::pawn_single_move(self.piece.color()))
+                        .unwrap()
+                })
+                .filter(|en_passant_target| {
+                    board.any_moves_has(
+                        *en_passant_target,
+                        &Vector::pawn_attacks(self.piece.color()),
+                        !self.piece.color(),
+                        PieceKind::Pawn,
+                    )
+                }),
+                castling_right: board.castling_right,
+            })
+            .chain(
+                Vector::pawn_attacks(self.piece.color())
+                    .into_iter()
+                    .filter_map(move |movement| self.position.move_by(movement))
+                    .filter_map(move |destination| {
+                        let capture = if Some(destination) == board.en_passant_target {
+                            let (capture_index, _) = board
+                                .get_with_kind_indexed(
+                                    destination
+                                        .move_by(Vector::pawn_single_move(!self.piece.color()))
+                                        .unwrap(),
+                                    !self.piece.color(),
+                                    PieceKind::Pawn,
+                                )
+                                .unwrap();
+                            capture_index
+                        } else {
+                            board[destination]?
+                        };
+                        Some(SimpleMove {
+                            index,
+                            destination,
+                            capture: Some(capture),
+                        })
+                    })
+                    .map(|movement| movement.to_simple_move(board.castling_right)),
+            )
+            .flat_map(move |movement| {
+                let promotion_choices: &[_] = if movement.movement.destination.y()
+                    == pawn_promotion_rank(self.piece.color())
+                {
+                    &PROMOTION_CHOICES
+                } else {
+                    &NON_PROMOTION_CHOICES
+                };
+                promotion_choices
+                    .iter()
+                    .copied()
+                    .map(move |promotion| Move {
+                        promotion,
+                        ..movement
+                    })
+            })
     }
     fn non_castling_moves(self, index: PieceIndex, board: &Board) -> impl Iterator<Item = Move> {
         let moves: Box<dyn Iterator<Item = Move>> = match self.piece.piece() {
@@ -1105,6 +1220,31 @@ impl Board {
         } else {
             self.pieces_by_kind(color, piece)
                 .any(|piece| piece.position == position)
+        }
+    }
+    fn any_moves_has(
+        &self,
+        position: Coord,
+        moves: &[Vector],
+        color: Color,
+        piece: PieceKind,
+    ) -> bool {
+        if let Some(indices) = self.indices.get() {
+            moves
+                .iter()
+                .copied()
+                .filter_map(|movement| position.move_by(movement))
+                .any(|position| {
+                    indices[position.y() as usize * 8 + position.x() as usize].is_some_and(
+                        |index| {
+                            let b = self[index].unwrap();
+                            b.piece.color() == color && b.piece.piece() == piece
+                        },
+                    )
+                })
+        } else {
+            self.pieces_by_kind(color, piece)
+                .any(|piece| moves.contains(&(piece.position - position)))
         }
     }
     fn indices(&self) -> &[Option<PieceIndex>; 64] {
