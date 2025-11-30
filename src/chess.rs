@@ -516,6 +516,21 @@ impl Vector {
     ];
     pub const QUEEN_DIRECTIONS: [Self; 8] = Vector::KING_MOVES;
 
+    pub fn pawn_single_move(color: Color) -> Self {
+        Vector {
+            x: 0,
+            y: pawn_direction(color),
+        }
+    }
+    pub fn pawn_double_move(color: Color) -> Self {
+        Vector::pawn_single_move(color) * 2
+    }
+    pub fn pawn_attacks(color: Color) -> [Self; 2] {
+        [-1, 1].map(|x| Vector {
+            x,
+            y: pawn_direction(color),
+        })
+    }
     pub fn is_aligned(self, other: Self) -> bool {
         self.as_unit() == other.as_unit() && self.x * other.y == other.x * self.y
     }
@@ -529,27 +544,6 @@ impl Vector {
     }
     pub fn is_pawn_attack(self, color: Color) -> bool {
         self.x.abs() == 1 && self.y == pawn_direction(color)
-    }
-    pub fn pawn_single_move(color: Color) -> Self {
-        Vector {
-            x: 0,
-            y: pawn_direction(color),
-        }
-    }
-    pub fn pawn_double_move(color: Color) -> Self {
-        Vector::pawn_single_move(color) * 2
-    }
-    pub fn pawn_attacks(color: Color) -> [Self; 2] {
-        [
-            Vector {
-                x: -1,
-                y: pawn_direction(color),
-            },
-            Vector {
-                x: 1,
-                y: pawn_direction(color),
-            },
-        ]
     }
     pub fn as_unit(self) -> Self {
         Vector {
@@ -1034,7 +1028,7 @@ impl FromStr for StandardCastlingRight {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum InvalidBoard {
+pub enum InvalidBoard {
     NoKing,
     NonPlayerInCheck,
     MoreThanTwoCheckers,
@@ -1105,7 +1099,7 @@ impl Board {
     pub fn starting_position() -> Self {
         Board::from_configuration(PieceKind::STARTING_CONFIGURATION)
     }
-    fn from_configuration(configuration: [PieceKind; 8]) -> Self {
+    pub fn from_configuration(configuration: [PieceKind; 8]) -> Self {
         HashableBoard::from_configuration(configuration)
             .try_into()
             .unwrap()
@@ -1281,7 +1275,7 @@ impl Board {
         self.range(original_piece_range(color, PieceKind::Pawn))
             .filter(|item| item.piece.piece() == PieceKind::Pawn)
     }
-    fn validate(&self) -> Result<(), InvalidBoard> {
+    pub fn validate(&self) -> Result<(), InvalidBoard> {
         let (Some(king), Some(opponent_king)) = (
             self.king(self.current_player),
             self.king(!self.current_player),
@@ -1671,10 +1665,10 @@ pub struct HashableBoard {
     pub en_passant_target: Option<Coord>,
 }
 impl HashableBoard {
-    fn starting_position() -> Self {
+    pub fn starting_position() -> Self {
         HashableBoard::from_configuration(PieceKind::STARTING_CONFIGURATION)
     }
-    fn from_configuration(configuration: [PieceKind; 8]) -> Self {
+    pub fn from_configuration(configuration: [PieceKind; 8]) -> Self {
         let castling_right = CastlingRight::from_configuration(configuration);
         let board = [
             configuration.map(|piece| Some(ColoredPieceKind::new(Color::Black, piece))),
