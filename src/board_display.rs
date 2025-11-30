@@ -10,14 +10,14 @@ const RESET: &str = "\x1b[0m";
 pub trait IndexableBoard {
     fn index(&self, position: Coord) -> Option<ColoredPieceKind>;
 }
-pub struct BoardDisplay<'a, 'b, T> {
-    pub board: T,
+pub struct BoardDisplay<'board, 'highlighted, 'info, T> {
+    pub board: &'board T,
     pub view: Color,
     pub show_coordinates: bool,
-    pub highlighted: &'a [Coord],
-    pub info: &'b str,
+    pub highlighted: &'highlighted [Coord],
+    pub info: &'info str,
 }
-impl<T> Display for BoardDisplay<'_, '_, T>
+impl<T> Display for BoardDisplay<'_, '_, '_, T>
 where
     T: IndexableBoard,
 {
