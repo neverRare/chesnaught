@@ -160,7 +160,8 @@ impl Display for Fen {
                         _ => return false,
                     };
                     !range.into_iter().any(|x| {
-                        row[x as usize] == Some(ColoredPieceKind::new(color, PieceKind::Rook))
+                        let x: usize = x.try_into().unwrap();
+                        row[x] == Some(ColoredPieceKind::new(color, PieceKind::Rook))
                     })
                 } else {
                     false
