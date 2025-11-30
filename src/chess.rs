@@ -11,7 +11,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{coord_x, coord_y};
+use crate::{board_display::IndexableBoard, coord_x, coord_y};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InvalidFenPiece(pub char);
@@ -244,6 +244,22 @@ impl ColoredPieceKind {
             Color::Black
         };
         Ok(ColoredPieceKind::new(color, piece))
+    }
+    pub fn figurine(self) -> char {
+        match (self.color(), self.piece()) {
+            (Color::White, PieceKind::Pawn) => '♙',
+            (Color::White, PieceKind::Knight) => '♘',
+            (Color::White, PieceKind::Bishop) => '♗',
+            (Color::White, PieceKind::Rook) => '♖',
+            (Color::White, PieceKind::Queen) => '♕',
+            (Color::White, PieceKind::King) => '♔',
+            (Color::Black, PieceKind::Pawn) => '♟',
+            (Color::Black, PieceKind::Knight) => '♞',
+            (Color::Black, PieceKind::Bishop) => '♝',
+            (Color::Black, PieceKind::Rook) => '♜',
+            (Color::Black, PieceKind::Queen) => '♛',
+            (Color::Black, PieceKind::King) => '♚',
+        }
     }
 }
 impl Display for ColoredPieceKind {
@@ -1468,6 +1484,11 @@ impl IndexMut<PieceIndex> for Board {
         &mut self.pieces[index]
     }
 }
+impl IndexableBoard for Board {
+    fn index(&self, position: Coord) -> Option<ColoredPieceKind> {
+        self[position].map(|index| self[index].unwrap().piece)
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ExceededPieces {
     PromotedPiece,
@@ -1577,6 +1598,23 @@ impl TryFrom<HashableBoard> for Board {
             board.en_passant_target = None;
         }
         Ok(board)
+    }
+}
+impl Index<Coord> for HashableBoard {
+    type Output = Option<ColoredPieceKind>;
+
+    fn index(&self, index: Coord) -> &Self::Output {
+        &self.board[index.y() as usize][index.x() as usize]
+    }
+}
+impl IndexMut<Coord> for HashableBoard {
+    fn index_mut(&mut self, index: Coord) -> &mut Self::Output {
+        &mut self.board[index.y() as usize][index.x() as usize]
+    }
+}
+impl IndexableBoard for HashableBoard {
+    fn index(&self, position: Coord) -> Option<ColoredPieceKind> {
+        self[position]
     }
 }
 pub trait Moveable {

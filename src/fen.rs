@@ -3,13 +3,15 @@ use std::{
     fmt::Display,
     iter::{from_fn, once, repeat},
     num::ParseIntError,
+    ops::{Index, IndexMut},
     str::FromStr,
 };
 
 use crate::{
+    board_display::IndexableBoard,
     chess::{
-        Board, Color, ColoredPieceKind, ExceededPieces, HashableBoard, InvalidCastlingCharacter,
-        InvalidFenPiece, ParseColorError, ParseCoordError, PieceKind,
+        Board, Color, ColoredPieceKind, Coord, ExceededPieces, HashableBoard,
+        InvalidCastlingCharacter, InvalidFenPiece, ParseColorError, ParseCoordError, PieceKind,
     },
     coord_x, coord_y,
 };
@@ -230,6 +232,23 @@ impl FromStr for Fen {
             half_move,
             full_move,
         })
+    }
+}
+impl Index<Coord> for Fen {
+    type Output = Option<ColoredPieceKind>;
+
+    fn index(&self, index: Coord) -> &Self::Output {
+        &self.board[index]
+    }
+}
+impl IndexMut<Coord> for Fen {
+    fn index_mut(&mut self, index: Coord) -> &mut Self::Output {
+        &mut self.board[index]
+    }
+}
+impl IndexableBoard for Fen {
+    fn index(&self, position: Coord) -> Option<ColoredPieceKind> {
+        self[position]
     }
 }
 fn parse_board(src: &str) -> Result<[[Option<ColoredPieceKind>; 8]; 8], ParseFenError> {

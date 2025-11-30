@@ -2,6 +2,7 @@
 #![warn(clippy::pedantic)]
 #![allow(dead_code)]
 
+mod board_display;
 mod chess;
 mod fen;
 mod game_tree;
