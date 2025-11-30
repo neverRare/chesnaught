@@ -7,7 +7,7 @@ use std::{
         LazyLock,
         mpsc::{Sender, channel},
     },
-    thread::{available_parallelism, scope, spawn},
+    thread::{ScopedJoinHandle, available_parallelism, scope, spawn},
 };
 
 use crate::{
@@ -135,7 +135,7 @@ impl GameTree {
                                 })
                             })
                             .collect();
-                        while !handles.iter().all(|handle| handle.is_finished()) {}
+                        while !handles.iter().all(ScopedJoinHandle::is_finished) {}
                         let iter = handles.into_iter().map(|handle| handle.join().unwrap());
                         match current_player {
                             Color::White => iter.max_by_key(|(_, advantage)| *advantage).unwrap(),

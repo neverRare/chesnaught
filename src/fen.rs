@@ -8,8 +8,8 @@ use std::{
 
 use crate::{
     chess::{
-        Board, Color, ColoredPieceKind, HashableBoard, InvalidCastlingCharacter, InvalidFenPiece,
-        ParseColorError, ParseCoordError, PieceKind, ExceededPieces,
+        Board, Color, ColoredPieceKind, ExceededPieces, HashableBoard, InvalidCastlingCharacter,
+        InvalidFenPiece, ParseColorError, ParseCoordError, PieceKind,
     },
     coord_x, coord_y,
 };
@@ -33,19 +33,19 @@ impl Display for ParseFenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ParseFenError::ExceededRowCount => {
-                write!(f, "exceeded number of rows, 8 were expected")?
+                write!(f, "exceeded number of rows, 8 were expected")?;
             }
             ParseFenError::ExceededSquareCount => {
-                write!(f, "exceeded number of squares, 8 were expected")?
+                write!(f, "exceeded number of squares, 8 were expected")?;
             }
             ParseFenError::InvalidRowCount(rows) => {
-                write!(f, "found {rows} rows, 8 were expected instead")?
+                write!(f, "found {rows} rows, 8 were expected instead")?;
             }
             ParseFenError::InvalidSquareCount(squares) => {
-                write!(f, "found {squares} squares, 8 were expected instead")?
+                write!(f, "found {squares} squares, 8 were expected instead")?;
             }
             ParseFenError::InvalidSpaceCharacter(c) => {
-                write!(f, "found {c}, numbers from 1 to 8 were expected instead")?
+                write!(f, "found {c}, numbers from 1 to 8 were expected instead")?;
             }
             ParseFenError::InvalidFenPiece(err) => write!(f, "{err}")?,
             ParseFenError::ParseColorError(err) => write!(f, "{err}")?,
@@ -159,9 +159,7 @@ impl Display for Fen {
                 .position(|piece| piece == Some(ColoredPieceKind::new(color, PieceKind::King)))
                 == Some(coord_x!("e"));
             self.board.castling_right.all(color).all(|rook| {
-                if !king_in_position {
-                    false
-                } else {
+                if king_in_position {
                     let range = match rook {
                         coord_x!("a") => coord_x!("b")..=coord_x!("d"),
                         coord_x!("h") => coord_x!("f")..=coord_x!("g"),
@@ -170,6 +168,8 @@ impl Display for Fen {
                     !range.into_iter().any(|x| {
                         row[x as usize] == Some(ColoredPieceKind::new(color, PieceKind::Rook))
                     })
+                } else {
+                    false
                 }
             })
         });

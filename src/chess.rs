@@ -300,7 +300,7 @@ impl Coord {
             _ => return Err(ParseCoordError::InvalidX(x)),
         };
         let y = match y {
-            '1'..='8' => 7 - (x as u8 - b'1'),
+            '1'..='8' => 7 - (x - b'1'),
             _ => return Err(ParseCoordError::InvalidY(y)),
         };
         Ok(Coord::new(x, y))
@@ -347,9 +347,7 @@ impl Coord {
         self.is_aligned(other, &Vector::QUEEN_DIRECTIONS)
     }
     pub fn line(self, direction: Vector, start: i8) -> impl Iterator<Item = Self> {
-        (start..)
-            .into_iter()
-            .map_while(move |difference| self.move_by(direction * difference))
+        (start..).map_while(move |difference| self.move_by(direction * difference))
     }
     pub fn line_until_exclusive(
         self,
@@ -416,7 +414,7 @@ impl FromStr for Coord {
         if let Some(c) = chars.next() {
             return Err(ParseCoordError::Unexpected(c));
         }
-        Ok(Coord::from_chars(x, y)?)
+        Coord::from_chars(x, y)
     }
 }
 impl TryFrom<u8> for Coord {
@@ -594,7 +592,7 @@ impl Piece {
             .filter_map(move |movement| self.position.move_by(movement))
             .filter_map(move |destination| {
                 if let Some(capture) = board[destination] {
-                    (board[capture].unwrap().piece.color() != self.piece.color()).then(|| {
+                    (board[capture].unwrap().piece.color() != self.piece.color()).then_some({
                         SimpleMove {
                             index,
                             destination,
@@ -623,7 +621,7 @@ impl Piece {
                 if resume {
                     if let Some(capture) = board[destination] {
                         resume = false;
-                        (board[capture].unwrap().piece.color() != self.piece.color()).then(|| {
+                        (board[capture].unwrap().piece.color() != self.piece.color()).then_some({
                             SimpleMove {
                                 index,
                                 destination,
@@ -778,7 +776,7 @@ impl CastlingRight {
         castling_right
     }
     pub fn all(self, color: Color) -> impl Iterator<Item = u8> {
-        (0..8).into_iter().filter(move |x| self.get(color, *x))
+        (0..8).filter(move |x| self.get(color, *x))
     }
     pub fn get(self, color: Color, x: u8) -> bool {
         assert!(x < 8);
@@ -798,7 +796,7 @@ impl CastlingRight {
             Color::White => &mut self.white,
             Color::Black => &mut self.black,
         };
-        *byte = *byte | (0b_1 << x);
+        *byte |= (0b_1 << x);
     }
     pub fn to_added(self, color: Color, x: u8) -> Self {
         let mut new = self;
@@ -811,7 +809,7 @@ impl CastlingRight {
             Color::White => &mut self.white,
             Color::Black => &mut self.black,
         };
-        *byte = *byte & !(0b_1 << x);
+        *byte &= !(0b_1 << x);
     }
     pub fn to_removed(self, color: Color, x: u8) -> Self {
         let mut new = self;
@@ -843,7 +841,7 @@ impl Display for CastlingRight {
             };
             for x in self.all(color) {
                 written = true;
-                let c: char = (x + start).try_into().unwrap();
+                let c: char = (x + start).into();
                 write!(f, "{c}")?;
             }
         }
@@ -902,7 +900,7 @@ impl FromStr for StandardCastlingRight {
     type Err = InvalidCastlingCharacter;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(s.parse()?)
+        s.parse()
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -920,7 +918,7 @@ impl Display for InvalidBoard {
             InvalidBoard::NoKing => write!(f, "no kings found")?,
             InvalidBoard::NonPlayerInCheck => write!(f, "non-player in check")?,
             InvalidBoard::MoreThanTwoCheckers => {
-                write!(f, "found more than 2 pieces delivering check")?
+                write!(f, "found more than 2 pieces delivering check")?;
             }
             InvalidBoard::InvalidCastlingRight => write!(f, "invalid castling right")?,
             InvalidBoard::InvalidEnPassantTarget => write!(f, "invalid en passant target")?,
@@ -986,7 +984,7 @@ impl Board {
         self.current_player
     }
     fn from_range(&self, range: Range<usize>) -> impl Iterator<Item = Piece> {
-        self.pieces[range].iter().copied().filter_map(|piece| piece)
+        self.pieces[range].iter().copied().flatten()
     }
     fn from_range_indexed(&self, range: Range<usize>) -> impl Iterator<Item = (PieceIndex, Piece)> {
         let slice = &self.pieces[range.clone()];
@@ -997,7 +995,7 @@ impl Board {
             .filter_map(|(index, piece)| piece.map(|piece| (index, piece)))
     }
     fn all_pieces(&self) -> impl Iterator<Item = Piece> {
-        self.pieces.iter().copied().filter_map(|piece| piece)
+        self.pieces.iter().copied().flatten()
     }
     fn all_pieces_indexed(&self) -> impl Iterator<Item = (PieceIndex, Piece)> {
         self.pieces
@@ -1006,19 +1004,19 @@ impl Board {
             .enumerate()
             .filter_map(|(i, piece)| piece.map(|piece| (i.try_into().unwrap(), piece)))
     }
-    fn pieces(&self, color: Color) -> impl Iterator<Item = Piece> + FusedIterator {
+    fn pieces(&self, color: Color) -> impl FusedIterator<Item = Piece> {
         let slice = match color {
             Color::White => &self.pieces[0..16],
             Color::Black => &self.pieces[16..32],
         };
-        slice.iter().copied().filter_map(|piece| piece)
+        slice.iter().copied().flatten()
     }
     fn non_kings(&self, color: Color) -> impl Iterator<Item = Piece> {
         let slice = match color {
             Color::White => &self.pieces[1..16],
             Color::Black => &self.pieces[17..32],
         };
-        slice.iter().copied().filter_map(|piece| piece)
+        slice.iter().copied().flatten()
     }
     fn pieces_indexed(&self, color: Color) -> impl Iterator<Item = (PieceIndex, Piece)> {
         match color {
@@ -1131,8 +1129,7 @@ impl Board {
         }
         if self
             .attackers(king.position, !self.current_player)
-            .skip(2)
-            .next()
+            .nth(2)
             .is_some()
         {
             return Err(InvalidBoard::MoreThanTwoCheckers);
@@ -1153,14 +1150,14 @@ impl Board {
         }) {
             return Err(InvalidBoard::InvalidCastlingRight);
         }
-        if let Some(en_passant_target) = self.en_passant_target {
-            if ![Color::White, Color::Black].into_iter().any(|color| {
+        if let Some(en_passant_target) = self.en_passant_target
+            && ![Color::White, Color::Black].into_iter().any(|color| {
                 self.pawns(color).any(|pawn| {
                     (pawn.position - en_passant_target) == Vector::pawn_single_move(color)
                 })
-            }) {
-                return Err(InvalidBoard::InvalidEnPassantTarget);
-            }
+            })
+        {
+            return Err(InvalidBoard::InvalidEnPassantTarget);
         }
         if [Color::White, Color::Black]
             .into_iter()
@@ -1176,7 +1173,7 @@ impl Board {
         position: Coord,
         color: Color,
         checker: impl Fn(Coord) -> bool + Clone,
-    ) -> impl Iterator<Item = Piece> + FusedIterator {
+    ) -> impl FusedIterator<Item = Piece> {
         self.pieces(color)
             .filter(move |piece| match piece.piece.piece() {
                 PieceKind::Pawn => (piece.position - position).is_pawn_attack(color),
@@ -1196,11 +1193,7 @@ impl Board {
                 PieceKind::King => (piece.position - position).is_king_move(),
             })
     }
-    fn attackers(
-        &self,
-        position: Coord,
-        color: Color,
-    ) -> impl Iterator<Item = Piece> + FusedIterator {
+    fn attackers(&self, position: Coord, color: Color) -> impl FusedIterator<Item = Piece> {
         self.attackers_with_inspect(position, color, |position| self[position].is_some())
     }
     fn is_move_attacked(&self, index: PieceIndex, destination: Coord, color: Color) -> bool {
@@ -1223,10 +1216,12 @@ impl Board {
             .any(|valid_direction| direction.is_aligned(*valid_direction))
         {
             let direction = direction.as_unit();
-            if !position
+            if position
                 .line_until_exclusive(-direction, 1, king)
                 .any(checker.clone())
             {
+                None
+            } else {
                 let pieces = if Vector::BISHOP_DIRECTIONS.contains(&direction) {
                     &[PieceKind::Bishop, PieceKind::Queen]
                 } else {
@@ -1245,8 +1240,6 @@ impl Board {
                         None
                     }
                 })
-            } else {
-                None
             }
         } else {
             None
@@ -1363,7 +1356,7 @@ impl Board {
                                     ))
                         })
                 })
-                .then(|| Move {
+                .then_some(Move {
                     movement: SimpleMove {
                         index: king_index,
                         destination: king_destination,
@@ -1390,18 +1383,18 @@ impl Board {
             .all_pieces_indexed()
             .flat_map(move |(index, piece)| {
                 let valid_destination_when_pinned: Option<Rc<[_]>> =
-                    if piece.piece.piece() != PieceKind::King {
+                    if piece.piece.piece() == PieceKind::King {
+                        None
+                    } else {
                         self.valid_destinations_when_pinned(
                             king.position,
                             piece.position,
                             self.current_player,
                         )
                         .map(Iterator::collect)
-                    } else {
-                        None
                     };
                 piece
-                    .non_castling_moves(index, &self)
+                    .non_castling_moves(index, self)
                     .map(move |movement| (movement, piece, valid_destination_when_pinned.clone()))
             })
             .filter(move |(movement, piece, valid_destination_when_pinned)| {
@@ -1487,11 +1480,11 @@ impl Display for ExceededPieces {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ExceededPieces::PromotedPiece => {
-                write!(f, "exceeded allowable number of promoted pieces")?
+                write!(f, "exceeded allowable number of promoted pieces")?;
             }
             ExceededPieces::Pawn => write!(f, "found more than 8 pawns")?,
             ExceededPieces::King => write!(f, "found more than 1 kings")?,
-        };
+        }
         Ok(())
     }
 }
@@ -1560,9 +1553,8 @@ impl TryFrom<HashableBoard> for Board {
                                 .all(|piece| piece.unwrap().piece.piece() == PieceKind::Pawn)
                             {
                                 return Err(ExceededPieces::Pawn);
-                            } else {
-                                return Err(ExceededPieces::PromotedPiece);
                             }
+                            return Err(ExceededPieces::PromotedPiece);
                         }
                         PieceKind::King => return Err(ExceededPieces::King),
                         _ => return Err(ExceededPieces::PromotedPiece),
@@ -1577,14 +1569,14 @@ impl TryFrom<HashableBoard> for Board {
             castling_right: value.castling_right,
             en_passant_target: value.en_passant_target,
         };
-        if let Some(en_passant_target) = board.en_passant_target {
-            if ![Color::White, Color::Black].into_iter().any(|color| {
+        if let Some(en_passant_target) = board.en_passant_target
+            && ![Color::White, Color::Black].into_iter().any(|color| {
                 board
                     .pawns(color)
                     .any(|piece| (en_passant_target - piece.position).is_pawn_attack(color))
-            }) {
-                board.en_passant_target = None;
-            }
+            })
+        {
+            board.en_passant_target = None;
         }
         Ok(board)
     }
