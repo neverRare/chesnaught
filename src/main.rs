@@ -81,19 +81,19 @@ fn main() {
                     let long_algebraic_notation = match input.parse() {
                         Ok(movement) => movement,
                         Err(err) => {
-                            println!("Error: {err}");
-                            println!();
-                            println!("This chess program uses long algebraic notation:");
-                            println!("- e2e4");
-                            println!("- e7e8q for promotion");
-                            println!("- e1g1 for castling");
-                            println!();
-                            println!("To view valid moves, just enter a coordinate");
+                            eprintln!("Error: {err}");
+                            eprintln!();
+                            eprintln!("This chess program uses long algebraic notation:");
+                            eprintln!("- e2e4");
+                            eprintln!("- e7e8q for promotion");
+                            eprintln!("- e1g1 for castling");
+                            eprintln!();
+                            eprintln!("To view valid moves, just enter a coordinate");
                             continue;
                         }
                     };
                     let Some(movement) = valid_moves.get(&long_algebraic_notation) else {
-                        println!("Error: {input} is an invalid move");
+                        eprintln!("Error: {input} is an invalid move");
                         continue;
                     };
                     board.move_piece(movement);
