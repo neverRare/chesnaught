@@ -13,6 +13,7 @@ pub trait IndexableBoard {
 pub struct BoardDisplay<'a, 'b, T> {
     pub board: T,
     pub view: Color,
+    pub show_coordinates: bool,
     pub highlighted: &'a [Coord],
     pub info: &'b str,
 }
@@ -48,22 +49,31 @@ where
                     .unwrap_or(' ');
                 write!(f, "{color}{figurine} {RESET}")?;
             }
-            write!(f, "{}", 8 - y)?;
+            if self.show_coordinates {
+                write!(f, "{}", 8 - y)?;
+            }
             if let Some(line) = lines.next() {
-                write!(f, " {line}")?;
+                write!(f, "  {line}")?;
             }
             writeln!(f)?;
         }
-        match self.view {
-            Color::White => write!(f, "a b c d e f g h")?,
-            Color::Black => write!(f, "h g f e d c b a")?,
+        if self.show_coordinates {
+            match self.view {
+                Color::White => write!(f, "a b c d e f g h")?,
+                Color::Black => write!(f, "h g f e d c b a")?,
+            }
+            if let Some(line) = lines.next() {
+                write!(f, "    {line}")?;
+            }
+            writeln!(f)?;
         }
-        if let Some(line) = lines.next() {
-            write!(f, "   {line}")?;
-        }
-        writeln!(f)?;
+        let spaces = if self.show_coordinates {
+            "                   "
+        } else {
+            "                  "
+        };
         for line in lines {
-            writeln!(f, "                  {line}")?;
+            writeln!(f, "{spaces}{line}")?;
         }
         Ok(())
     }
