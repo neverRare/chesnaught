@@ -768,8 +768,8 @@ impl CastlingRight {
         let mut castling_right = CastlingRight::none();
         for (i, piece) in configuration.into_iter().enumerate() {
             if piece == PieceKind::Rook {
-                castling_right.add(Color::White, i as u8);
-                castling_right.add(Color::Black, i as u8);
+                castling_right.add(Color::White, i.try_into().unwrap());
+                castling_right.add(Color::Black, i.try_into().unwrap());
             }
         }
         castling_right
@@ -982,10 +982,10 @@ impl Board {
     pub fn current_player(&self) -> Color {
         self.current_player
     }
-    fn from_range(&self, range: Range<usize>) -> impl Iterator<Item = Piece> {
+    fn range(&self, range: Range<usize>) -> impl Iterator<Item = Piece> {
         self.pieces[range].iter().copied().flatten()
     }
-    fn from_range_indexed(&self, range: Range<usize>) -> impl Iterator<Item = (PieceIndex, Piece)> {
+    fn range_indexed(&self, range: Range<usize>) -> impl Iterator<Item = (PieceIndex, Piece)> {
         let slice = &self.pieces[range.clone()];
         range
             .into_iter()
@@ -1019,18 +1019,18 @@ impl Board {
     }
     fn pieces_indexed(&self, color: Color) -> impl Iterator<Item = (PieceIndex, Piece)> {
         match color {
-            Color::White => self.from_range_indexed(0..16),
-            Color::Black => self.from_range_indexed(16..32),
+            Color::White => self.range_indexed(0..16),
+            Color::Black => self.range_indexed(16..32),
         }
     }
     fn pieces_by_kind(&self, color: Color, piece: PieceKind) -> impl Iterator<Item = Piece> {
         let definite_pieces = if piece == PieceKind::Pawn {
-            self.from_range(0..0)
+            self.range(0..0)
         } else {
-            self.from_range(original_piece_range(color, piece))
+            self.range(original_piece_range(color, piece))
         };
         definite_pieces.chain(
-            self.from_range(original_piece_range(color, PieceKind::Pawn))
+            self.range(original_piece_range(color, PieceKind::Pawn))
                 .filter(move |item| item.piece.piece() == piece),
         )
     }
@@ -1044,8 +1044,8 @@ impl Board {
         } else {
             original_piece_range(color, piece)
         };
-        self.from_range_indexed(range).chain(
-            self.from_range_indexed(original_piece_range(color, PieceKind::Pawn))
+        self.range_indexed(range).chain(
+            self.range_indexed(original_piece_range(color, PieceKind::Pawn))
                 .filter(move |(_, item)| item.piece.piece() == piece),
         )
     }
@@ -1060,9 +1060,9 @@ impl Board {
                     original_piece_range(color, piece)
                 }
             })
-            .flat_map(|range| self.from_range(range))
+            .flat_map(|range| self.range(range))
             .chain(
-                self.from_range(original_piece_range(color, PieceKind::Pawn))
+                self.range(original_piece_range(color, PieceKind::Pawn))
                     .filter(move |piece| pieces.contains(&piece.piece.piece())),
             )
     }
@@ -1108,16 +1108,15 @@ impl Board {
         }
     }
     fn pawns(&self, color: Color) -> impl Iterator<Item = Piece> {
-        self.from_range(original_piece_range(color, PieceKind::Pawn))
+        self.range(original_piece_range(color, PieceKind::Pawn))
             .filter(|item| item.piece.piece() == PieceKind::Pawn)
     }
     fn validate(&self) -> Result<(), InvalidBoard> {
-        let (king, opponent_king) = match (
+        let (Some(king), Some(opponent_king)) = (
             self.king(self.current_player),
             self.king(!self.current_player),
-        ) {
-            (Some(king), Some(opponent_king)) => (king, opponent_king),
-            _ => return Err(InvalidBoard::NoKing),
+        ) else {
+            return Err(InvalidBoard::NoKing);
         };
         if self
             .attackers(opponent_king.position, self.current_player)

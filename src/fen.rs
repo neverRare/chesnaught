@@ -61,18 +61,12 @@ impl Display for ParseFenError {
 impl Error for ParseFenError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            ParseFenError::ExceededRowCount => None,
-            ParseFenError::ExceededSquareCount => None,
-            ParseFenError::InvalidRowCount(_) => None,
-            ParseFenError::InvalidSquareCount(_) => None,
-            ParseFenError::InvalidSpaceCharacter(_) => None,
             ParseFenError::InvalidFenPiece(err) => Some(err),
             ParseFenError::ParseColorError(err) => Some(err),
             ParseFenError::InvalidCastlingCharacter(err) => Some(err),
             ParseFenError::ParseCoordError(err) => Some(err),
             ParseFenError::ParseIntError(err) => Some(err),
-            ParseFenError::Unexpected(_) => None,
-            ParseFenError::UnexpectedEol => None,
+            _ => None,
         }
     }
 }
@@ -115,16 +109,16 @@ impl TryFrom<Fen> for Board {
 }
 impl Display for Fen {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        enum Item {
+            Piece(ColoredPieceKind),
+            Space(u8),
+        }
         for (first, row) in once(true)
             .chain(repeat(false))
             .zip(self.board.board.into_iter())
         {
             if !first {
                 write!(f, "/")?;
-            }
-            enum Item {
-                Piece(ColoredPieceKind),
-                Space(u8),
             }
             let mut row = row.into_iter().peekable();
             let items = from_fn(|| {
