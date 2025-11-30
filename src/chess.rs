@@ -1906,6 +1906,11 @@ struct LongAlgebraicNotation {
     destination: Coord,
     promotion: Option<PieceKind>,
 }
+impl LongAlgebraicNotation {
+    fn as_move(self, board: &Board) -> Move {
+        todo!()
+    }
+}
 impl Display for LongAlgebraicNotation {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.origin, self.destination)?;
@@ -1940,6 +1945,6 @@ impl FromStr for LongAlgebraicNotation {
 }
 impl Moveable for LongAlgebraicNotation {
     fn move_board(&self, board: &mut Board) {
-        todo!()
+        board.move_piece(&self.as_move(board));
     }
 }
