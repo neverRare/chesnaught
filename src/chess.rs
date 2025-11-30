@@ -1553,7 +1553,7 @@ impl Board {
         let mut attackers_iter = self.attackers(king.position, self.current_player).fuse();
         let attackers = [attackers_iter.next(), attackers_iter.next()];
         debug_assert!(attackers_iter.next().is_none());
-        let check = !attackers.is_empty();
+        let check = attackers[0].is_some();
         let non_castling_moves = self
             .all_pieces_indexed()
             .flat_map(move |(index, piece)| {
