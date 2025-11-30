@@ -2,6 +2,17 @@
 #![warn(clippy::pedantic)]
 #![allow(dead_code)]
 
+use std::{
+    collections::HashMap,
+    fmt::Write,
+    io::{stdin, stdout},
+};
+
+use crate::{
+    board_display::BoardDisplay,
+    chess::{Board, Color},
+};
+
 mod board_display;
 mod chess;
 mod fen;
@@ -9,7 +20,79 @@ mod game_tree;
 mod heuristics;
 mod temporal;
 
-fn main() {}
+fn main() {
+    let mut board = Board::starting_position();
+    let mut info = String::new();
+    let mut highlighted = Vec::new();
+    let mut valid_moves = HashMap::new();
+    loop {
+        valid_moves.clear();
+        info.clear();
+        match board.valid_moves() {
+            Ok(moves) => {
+                valid_moves.extend(
+                    moves.map(|movement| (movement.as_long_algebraic_notation(&board), movement)),
+                );
+                write!(&mut info, "{} plays", board.current_player()).unwrap();
+            }
+            Err(end_state) => {
+                write!(&mut info, "{end_state}").unwrap();
+            }
+        }
+        print!(
+            "{}",
+            BoardDisplay {
+                board: &board,
+                view: Color::White,
+                show_coordinates: true,
+                highlighted: &highlighted,
+                info: &info,
+            },
+        );
+        if valid_moves.is_empty() {
+            break;
+        } else {
+            loop {
+                print!("> ");
+                {
+                    use std::io::Write;
+                    stdout().flush().unwrap();
+                }
+                let mut input = String::new();
+                stdin().read_line(&mut input).unwrap();
+
+                let input = input.trim();
+                if let Ok(position) = input.parse() {
+                    highlighted.clear();
+                    highlighted.extend(
+                        valid_moves
+                            .keys()
+                            .copied()
+                            .filter(|movement| movement.origin == position)
+                            .map(|movement| movement.destination),
+                    );
+                } else {
+                    let long_algebraic_notation = match input.parse() {
+                        Ok(movement) => movement,
+                        Err(err) => {
+                            println!("Error: {err}");
+                            continue;
+                        }
+                    };
+                    let Some(movement) = valid_moves.get(&long_algebraic_notation) else {
+                        println!("Error: {input} is an invalid move");
+                        continue;
+                    };
+                    board.move_piece(movement);
+                    highlighted.clear();
+                    highlighted.push(long_algebraic_notation.origin);
+                    highlighted.push(long_algebraic_notation.destination);
+                }
+                break;
+            }
+        }
+    }
+}
 #[macro_export]
 macro_rules! coord_x {
     ("a") => {

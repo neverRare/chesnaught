@@ -1605,7 +1605,7 @@ impl Board {
             .map(|(movement, _, _)| movement);
         (non_castling_moves.chain(self.castling_moves(check)), check)
     }
-    fn move_piece(&mut self, movement: &impl Moveable) {
+    pub fn move_piece(&mut self, movement: &impl Moveable) {
         movement.move_board(self);
     }
     pub fn clone_and_move(&self, movement: &impl Moveable) -> Self {
@@ -1797,7 +1797,7 @@ pub struct Move {
     castling_right: CastlingRight,
 }
 impl Move {
-    fn as_long_algebraic_notation(self, board: &Board) -> LongAlgebraicNotation {
+    pub fn as_long_algebraic_notation(self, board: &Board) -> LongAlgebraicNotation {
         let piece = board[self.movement.index].unwrap();
         if let Some(rook) = self.castling_rook {
             let rook = board[rook.index].unwrap();
@@ -1824,7 +1824,7 @@ impl Move {
             }
         }
     }
-    fn as_long_algebraic_notation_chess_960(self, board: &Board) -> LongAlgebraicNotation {
+    pub fn as_long_algebraic_notation_chess_960(self, board: &Board) -> LongAlgebraicNotation {
         let piece = board[self.movement.index].unwrap();
         if let Some(rook) = self.castling_rook {
             LongAlgebraicNotation {
@@ -1863,7 +1863,7 @@ impl Moveable for Move {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum ParseMoveError {
+pub enum ParseMoveError {
     InvalidChar,
     ParseCoordError(ParseCoordError),
     InvalidFenPiece(InvalidFenPiece),
@@ -1901,13 +1901,13 @@ impl Error for ParseMoveError {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct LongAlgebraicNotation {
-    origin: Coord,
-    destination: Coord,
-    promotion: Option<PieceKind>,
+pub struct LongAlgebraicNotation {
+    pub origin: Coord,
+    pub destination: Coord,
+    pub promotion: Option<PieceKind>,
 }
 impl LongAlgebraicNotation {
-    fn as_move(self, board: &Board) -> Move {
+    pub fn as_move(self, board: &Board) -> Move {
         todo!()
     }
 }
