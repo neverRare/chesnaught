@@ -25,7 +25,7 @@ fn main() {
     let mut info = String::new();
     let mut highlighted = Vec::new();
     let mut valid_moves = HashMap::new();
-    let mut reset_state = false;
+    let mut reset_state = true;
     loop {
         if reset_state {
             valid_moves.clear();
