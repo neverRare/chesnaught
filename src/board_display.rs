@@ -52,8 +52,9 @@ where
             if self.show_coordinates {
                 write!(f, "{}", 8 - y)?;
             }
+            let space = if self.show_coordinates { "  " } else { " " };
             if let Some(line) = lines.next() {
-                write!(f, "  {line}")?;
+                write!(f, "{space}{line}")?;
             }
             writeln!(f)?;
         }
@@ -70,7 +71,7 @@ where
         let spaces = if self.show_coordinates {
             "                   "
         } else {
-            "                  "
+            "                 "
         };
         for line in lines {
             writeln!(f, "{spaces}{line}")?;
