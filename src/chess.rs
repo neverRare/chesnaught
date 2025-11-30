@@ -1574,7 +1574,7 @@ impl Board {
             })
             .filter(move |(movement, piece, valid_destination_when_pinned)| {
                 if piece.piece.piece() == PieceKind::King {
-                    self.is_move_attacked(
+                    !self.is_move_attacked(
                         movement.movement.index,
                         piece.position,
                         !self.current_player,
