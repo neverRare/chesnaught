@@ -111,14 +111,13 @@ impl TryFrom<u8> for PieceKind {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         let piece = match value {
-            0 => return Err(InvalidByte),
+            0 | 7.. => return Err(InvalidByte),
             1 => PieceKind::Pawn,
             2 => PieceKind::Knight,
             3 => PieceKind::Bishop,
             4 => PieceKind::Rook,
             5 => PieceKind::Queen,
             6 => PieceKind::King,
-            7.. => return Err(InvalidByte),
         };
         Ok(piece)
     }
@@ -177,7 +176,7 @@ impl FromStr for Color {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let color = match s {
             "w" | "W" | "white" => Color::White,
-            "b" | "B" | "black" => Color::White,
+            "b" | "B" | "black" => Color::Black,
             _ => return Err(ParseColorError),
         };
         Ok(color)
@@ -765,10 +764,10 @@ impl CastlingRight {
     pub fn none() -> Self {
         CastlingRight { white: 0, black: 0 }
     }
-    pub fn from_configuration(configuration: &[PieceKind; 8]) -> Self {
+    pub fn from_configuration(configuration: [PieceKind; 8]) -> Self {
         let mut castling_right = CastlingRight::none();
-        for (i, piece) in configuration.iter().enumerate() {
-            if *piece == PieceKind::Rook {
+        for (i, piece) in configuration.into_iter().enumerate() {
+            if piece == PieceKind::Rook {
                 castling_right.add(Color::White, i as u8);
                 castling_right.add(Color::Black, i as u8);
             }
@@ -1502,7 +1501,7 @@ impl HashableBoard {
         HashableBoard::from_configuration(PieceKind::STARTING_CONFIGURATION)
     }
     fn from_configuration(configuration: [PieceKind; 8]) -> Self {
-        let castling_right = CastlingRight::from_configuration(&configuration);
+        let castling_right = CastlingRight::from_configuration(configuration);
         let board = [
             configuration.map(|piece| Some(ColoredPieceKind::new(Color::Black, piece))),
             [Some(ColoredPieceKind::new(Color::Black, PieceKind::Pawn)); 8],
