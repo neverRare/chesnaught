@@ -193,31 +193,21 @@ impl FromStr for Fen {
         };
         let board = parse_board(board)?;
 
-        let Some(current_player) = sections.next() else {
-            return Err(ParseFenError::UnexpectedEol);
-        };
+        let current_player = sections.next().ok_or(ParseFenError::UnexpectedEol)?;
         let current_player = current_player.parse()?;
 
-        let Some(castling_right) = sections.next() else {
-            return Err(ParseFenError::UnexpectedEol);
-        };
+        let castling_right = sections.next().ok_or(ParseFenError::UnexpectedEol)?;
         let castling_right = castling_right.parse()?;
 
-        let Some(en_passant_target) = sections.next() else {
-            return Err(ParseFenError::UnexpectedEol);
-        };
+        let en_passant_target = sections.next().ok_or(ParseFenError::UnexpectedEol)?;
         let en_passant_target = (en_passant_target != "-")
             .then(|| en_passant_target.parse())
             .transpose()?;
 
-        let Some(half_move) = sections.next() else {
-            return Err(ParseFenError::UnexpectedEol);
-        };
+        let half_move = sections.next().ok_or(ParseFenError::UnexpectedEol)?;
         let half_move = half_move.parse()?;
 
-        let Some(full_move) = sections.next() else {
-            return Err(ParseFenError::UnexpectedEol);
-        };
+        let full_move = sections.next().ok_or(ParseFenError::UnexpectedEol)?;
         let full_move = full_move.parse()?;
 
         if let Some(section) = sections.next() {
