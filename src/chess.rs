@@ -1555,7 +1555,7 @@ impl Board {
         debug_assert!(attackers_iter.next().is_none());
         let check = attackers[0].is_some();
         let non_castling_moves = self
-            .all_pieces_indexed()
+            .pieces_indexed(self.current_player)
             .flat_map(move |(index, piece)| {
                 let valid_destination_when_pinned: Option<Rc<[_]>> =
                     if piece.piece.piece() == PieceKind::King {
