@@ -45,7 +45,6 @@ fn main() {
             }
         }
         update = false;
-        reset_state = false;
         print!(
             "{}",
             BoardDisplay {
