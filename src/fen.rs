@@ -1,6 +1,6 @@
 use std::{
     error::Error,
-    fmt::Display,
+    fmt::{self, Display, Formatter},
     iter::{from_fn, once, repeat},
     num::ParseIntError,
     ops::{Index, IndexMut},
@@ -32,7 +32,7 @@ pub enum ParseFenError {
     UnexpectedEol,
 }
 impl Display for ParseFenError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ParseFenError::ExceededRowCount => {
                 write!(f, "exceeded number of rows, 8 were expected")?;
@@ -110,7 +110,7 @@ impl TryFrom<Fen> for Board {
     }
 }
 impl Display for Fen {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for (first, row) in once(true)
             .chain(repeat(false))
             .zip(self.board.board.into_iter())

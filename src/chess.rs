@@ -2,7 +2,7 @@ use std::{
     cell::OnceCell,
     cmp::Ordering,
     error::Error,
-    fmt::Display,
+    fmt::{self, Display, Formatter},
     hash::Hash,
     iter::{FusedIterator, empty},
     num::NonZero,
@@ -16,7 +16,7 @@ use crate::{board_display::IndexableBoard, coord_x, coord_y};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InvalidFenPiece(pub char);
 impl Display for InvalidFenPiece {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "found `{}`, expected one of `p`, `n`, `b`, `r`, `k`, `q`, or uppercase forms of these letters",
@@ -31,7 +31,7 @@ impl Error for InvalidFenPiece {}
 pub struct InvalidByte;
 
 impl Display for InvalidByte {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "invalid byte")?;
         Ok(())
     }
@@ -94,7 +94,7 @@ impl PieceKind {
     }
 }
 impl Display for PieceKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             PieceKind::Pawn => write!(f, "pawn")?,
             PieceKind::Knight => write!(f, "knight")?,
@@ -137,7 +137,7 @@ impl From<PieceKind> for u8 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ParseColorError;
 impl Display for ParseColorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "provided string was not `w`, `b`, `W`, `B`, `white`, or `black`"
@@ -162,7 +162,7 @@ impl Color {
     }
 }
 impl Display for Color {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Color::White => write!(f, "white")?,
             Color::Black => write!(f, "black")?,
@@ -263,7 +263,7 @@ impl ColoredPieceKind {
     }
 }
 impl Display for ColoredPieceKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.color(), self.piece())?;
         Ok(())
     }
@@ -276,7 +276,7 @@ pub enum ParseCoordError {
     Unexpected(char),
 }
 impl Display for ParseCoordError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ParseCoordError::InvalidX(x) => write!(
                 f,
@@ -408,7 +408,7 @@ pub fn home_rank(color: Color) -> u8 {
     }
 }
 impl Display for Coord {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let x = (self.x() + b'a') as char;
         let y = 8 - self.y();
         write!(f, "{x}{y}")?;
@@ -737,7 +737,7 @@ impl Piece {
     }
 }
 impl Display for Piece {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{} on {}", self.piece, self.position)?;
         Ok(())
     }
@@ -748,7 +748,7 @@ pub enum EndState {
     Draw,
 }
 impl Display for EndState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             EndState::Win(color) => write!(f, "{color} wins")?,
             EndState::Draw => write!(f, "draw")?,
@@ -760,7 +760,7 @@ impl Display for EndState {
 pub struct InvalidCastlingCharacter(pub char);
 
 impl Display for InvalidCastlingCharacter {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "found {}, expected one of `k`, `q`, letters from `a` to `h`, or uppercase forms of these letters",
@@ -847,7 +847,7 @@ impl CastlingRight {
     }
 }
 impl Display for CastlingRight {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut written = false;
         for color in [Color::White, Color::Black] {
             let start = match color {
@@ -890,7 +890,7 @@ impl FromStr for CastlingRight {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StandardCastlingRight(pub CastlingRight);
 impl Display for StandardCastlingRight {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut written = false;
         for color in [Color::White, Color::Black] {
             for x in self.0.all(color) {
@@ -928,7 +928,7 @@ enum InvalidBoard {
     PawnInHomeRank,
 }
 impl Display for InvalidBoard {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             InvalidBoard::NoKing => write!(f, "no kings found")?,
             InvalidBoard::NonPlayerInCheck => write!(f, "non-player in check")?,
@@ -1496,7 +1496,7 @@ pub enum ExceededPieces {
     King,
 }
 impl Display for ExceededPieces {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ExceededPieces::PromotedPiece => {
                 write!(f, "exceeded allowable number of promoted pieces")?;

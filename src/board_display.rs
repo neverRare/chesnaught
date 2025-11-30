@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{self, Display, Formatter};
 
 use crate::chess::{Color, ColoredPieceKind, Coord};
 
@@ -20,7 +20,7 @@ impl<T> Display for BoardDisplay<'_, '_, T>
 where
     T: IndexableBoard,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut lines = self.info.lines().fuse();
         for y in 0..8 {
             let y = match self.view {
