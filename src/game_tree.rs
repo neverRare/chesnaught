@@ -214,7 +214,7 @@ impl GameTree {
     }
     fn estimate(&self) -> (Option<Move>, Advantage) {
         if let GameTreeData::Board(board) = &self.data {
-            (None, Advantage::Estimated(estimate(Board::clone(board))))
+            (None, Advantage::Estimated(estimate(board)))
         } else {
             panic!("cannot evaluate non-leaf node as board data are discarded");
         }

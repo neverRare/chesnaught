@@ -57,53 +57,52 @@ fn main() {
         );
         if valid_moves.is_empty() {
             break;
-        } else {
-            loop {
-                print!("> ");
-                {
-                    use std::io::Write;
-                    stdout().flush().unwrap();
-                }
-                let mut input = String::new();
-                stdin().read_line(&mut input).unwrap();
-
-                let input = input.trim();
-                if let Ok(position) = input.parse() {
-                    highlighted.clear();
-                    highlighted.extend(
-                        valid_moves
-                            .keys()
-                            .copied()
-                            .filter(|movement| movement.origin == position)
-                            .map(|movement| movement.destination),
-                    );
-                } else {
-                    let long_algebraic_notation = match input.parse() {
-                        Ok(movement) => movement,
-                        Err(err) => {
-                            eprintln!("Error: {err}");
-                            eprintln!();
-                            eprintln!("This chess program uses long algebraic notation:");
-                            eprintln!("- e2e4");
-                            eprintln!("- e7e8q for promotion");
-                            eprintln!("- e1g1 for castling");
-                            eprintln!();
-                            eprintln!("To view valid moves, just enter a coordinate");
-                            continue;
-                        }
-                    };
-                    let Some(movement) = valid_moves.get(&long_algebraic_notation) else {
-                        eprintln!("Error: {input} is an invalid move");
-                        continue;
-                    };
-                    board.move_piece(movement);
-                    highlighted.clear();
-                    highlighted.push(long_algebraic_notation.origin);
-                    highlighted.push(long_algebraic_notation.destination);
-                    update = true;
-                }
-                break;
+        }
+        loop {
+            print!("> ");
+            {
+                use std::io::Write;
+                stdout().flush().unwrap();
             }
+            let mut input = String::new();
+            stdin().read_line(&mut input).unwrap();
+
+            let input = input.trim();
+            if let Ok(position) = input.parse() {
+                highlighted.clear();
+                highlighted.extend(
+                    valid_moves
+                        .keys()
+                        .copied()
+                        .filter(|movement| movement.origin == position)
+                        .map(|movement| movement.destination),
+                );
+            } else {
+                let long_algebraic_notation = match input.parse() {
+                    Ok(movement) => movement,
+                    Err(err) => {
+                        eprintln!("Error: {err}");
+                        eprintln!();
+                        eprintln!("This chess program uses long algebraic notation:");
+                        eprintln!("- e2e4");
+                        eprintln!("- e7e8q for promotion");
+                        eprintln!("- e1g1 for castling");
+                        eprintln!();
+                        eprintln!("To view valid moves, just enter a coordinate");
+                        continue;
+                    }
+                };
+                let Some(movement) = valid_moves.get(&long_algebraic_notation) else {
+                    eprintln!("Error: {input} is an invalid move");
+                    continue;
+                };
+                board.move_piece(movement);
+                highlighted.clear();
+                highlighted.push(long_algebraic_notation.origin);
+                highlighted.push(long_algebraic_notation.destination);
+                update = true;
+            }
+            break;
         }
     }
 }

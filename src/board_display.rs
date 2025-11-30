@@ -45,8 +45,7 @@ where
                 let figurine = self
                     .board
                     .index(position)
-                    .map(ColoredPieceKind::figurine)
-                    .unwrap_or(' ');
+                    .map_or(' ', ColoredPieceKind::figurine);
                 write!(f, "{color}{figurine} {RESET}")?;
             }
             if self.show_coordinates {

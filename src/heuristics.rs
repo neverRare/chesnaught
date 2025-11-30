@@ -47,6 +47,7 @@ impl PartialOrd for Advantage {
 }
 impl Ord for Advantage {
     fn cmp(&self, other: &Self) -> Ordering {
+        #[allow(clippy::match_same_arms)]
         match (self, other) {
             (Advantage::Estimated(a), Advantage::Estimated(b)) => Ord::cmp(a, b),
             (Advantage::End(EndState::Draw), Advantage::Estimated(advantage)) => {
@@ -74,6 +75,6 @@ impl Ord for Advantage {
         }
     }
 }
-pub fn estimate(board: Board) -> Estimated {
+pub fn estimate(board: &Board) -> Estimated {
     todo!()
 }
