@@ -1712,10 +1712,80 @@ impl Moveable for Move {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ParseMoveError {
+    InvalidChar,
+    ParseCoordError(ParseCoordError),
+    InvalidFenPiece(InvalidFenPiece),
+    Unexpected(char),
+}
+impl From<ParseCoordError> for ParseMoveError {
+    fn from(value: ParseCoordError) -> Self {
+        ParseMoveError::ParseCoordError(value)
+    }
+}
+impl From<InvalidFenPiece> for ParseMoveError {
+    fn from(value: InvalidFenPiece) -> Self {
+        ParseMoveError::InvalidFenPiece(value)
+    }
+}
+impl Display for ParseMoveError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseMoveError::InvalidChar => write!(f, "provided string contains invalid character")?,
+            ParseMoveError::ParseCoordError(err) => write!(f, "{err}")?,
+            ParseMoveError::InvalidFenPiece(err) => write!(f, "{err}")?,
+            ParseMoveError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParseMoveError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParseMoveError::ParseCoordError(err) => Some(err),
+            ParseMoveError::InvalidFenPiece(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct LongAlgebraicNotation {
     origin: Coord,
     destination: Coord,
     promotion: Option<PieceKind>,
+}
+impl Display for LongAlgebraicNotation {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{}", self.origin, self.destination)?;
+        if let Some(promotion) = self.promotion {
+            write!(f, "{}", promotion.lowercase())?;
+        }
+        Ok(())
+    }
+}
+impl FromStr for LongAlgebraicNotation {
+    type Err = ParseMoveError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let origin = s.get(0..2).ok_or(ParseMoveError::InvalidChar)?.parse()?;
+        let destination = s.get(2..4).ok_or(ParseMoveError::InvalidChar)?.parse()?;
+        let mut rest = s
+            .get(4..)
+            .ok_or(ParseMoveError::InvalidChar)?
+            .chars()
+            .fuse();
+        let promotion = rest.next().map(PieceKind::from_fen).transpose()?;
+
+        if let Some(c) = rest.next() {
+            return Err(ParseMoveError::Unexpected(c));
+        }
+        Ok(LongAlgebraicNotation {
+            origin,
+            destination,
+            promotion,
+        })
+    }
 }
 impl Moveable for LongAlgebraicNotation {
     fn move_board(&self, board: &mut Board) {
