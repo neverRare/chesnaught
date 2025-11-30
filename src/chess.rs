@@ -1113,6 +1113,9 @@ impl Board {
     pub fn current_player(&self) -> Color {
         self.current_player
     }
+    pub fn as_hashable(&self) -> HashableBoard {
+        todo!()
+    }
     fn range(&self, range: Range<usize>) -> impl Iterator<Item = Piece> {
         self.pieces[range].iter().copied().flatten()
     }
