@@ -741,16 +741,15 @@ impl Piece {
                     .filter_map(move |movement| self.position.move_by(movement))
                     .filter_map(move |destination| {
                         let capture = if Some(destination) == board.en_passant_target {
-                            let (capture_index, _) = board
-                                .get_with_kind_indexed(
+                            board
+                                .get_index_with_kind(
                                     destination
                                         .move_by(Vector::pawn_single_move(!self.piece.color()))
                                         .unwrap(),
                                     !self.piece.color(),
                                     PieceKind::Pawn,
                                 )
-                                .unwrap();
-                            capture_index
+                                .unwrap()
                         } else {
                             board[destination]?
                         };
@@ -1206,6 +1205,20 @@ impl Board {
         } else {
             self.pieces_by_kind_indexed(color, piece)
                 .find(|(_, piece)| piece.position == position)
+        }
+    }
+    fn get_index_with_kind(
+        &self,
+        position: Coord,
+        color: Color,
+        piece: PieceKind,
+    ) -> Option<PieceIndex> {
+        if let Some(indices) = self.indices.get() {
+            indices[position.y() as usize * 8 + position.x() as usize]
+        } else {
+            self.pieces_by_kind_indexed(color, piece)
+                .find(|(_, piece)| piece.position == position)
+                .map(|(index, _)| index)
         }
     }
     fn position_has(&self, position: Coord, color: Color, piece: PieceKind) -> bool {
