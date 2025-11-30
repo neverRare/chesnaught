@@ -15,13 +15,13 @@ impl History {
 }
 pub struct TemporalBoard {
     board: Board,
-    hashable_board: HashableBoard,
     history: History,
+    three_fold_repetition: bool,
     half_move: u32,
 }
 impl TemporalBoard {
     pub fn valid_moves(&self) -> Result<impl Iterator<Item = Move>, EndState> {
-        if self.half_move > 50 || self.history.count(self.hashable_board) > 2 {
+        if self.half_move > 50 || self.three_fold_repetition {
             Err(EndState::Draw)
         } else {
             self.board.valid_moves()
