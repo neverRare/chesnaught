@@ -1958,3 +1958,28 @@ impl Moveable for LongAlgebraicNotation {
         board.move_piece(&self.as_move(board));
     }
 }
+#[cfg(test)]
+mod test {
+    use crate::{
+        chess::{Board, LongAlgebraicNotation},
+        fen::Fen,
+    };
+
+    #[test]
+    fn king_moves() {
+        let board: Fen = "4k3/8/8/8/4K3/8/8/R7 w - - 0 1".parse().unwrap();
+        let board: Board = board.try_into().unwrap();
+        let valid_moves: Vec<_> = board
+            .valid_moves()
+            .unwrap()
+            .map(|movement| movement.as_long_algebraic_notation(&board))
+            .collect();
+        let expected_valid_moves: [LongAlgebraicNotation; _] = [
+            "e4d5", "e4f5", "e4g5", "e4d4", "e4g4", "e4d3", "e4f3", "e4g3",
+        ]
+        .map(|movement| movement.parse().unwrap());
+        for expected in expected_valid_moves {
+            assert!(valid_moves.contains(&expected))
+        }
+    }
+}
