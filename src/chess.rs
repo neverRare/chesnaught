@@ -1096,6 +1096,17 @@ impl Board {
                 .find(|(_, piece)| piece.position == position)
         }
     }
+    fn position_has(&self, position: Coord, color: Color, piece: PieceKind) -> bool {
+        if let Some(indices) = self.indices.get() {
+            indices[position.y() as usize * 8 + position.x() as usize].is_some_and(|index| {
+                let b = self[index].unwrap();
+                b.piece.color() == color && b.piece.piece() == piece
+            })
+        } else {
+            self.pieces_by_kind(color, piece)
+                .any(|piece| piece.position == position)
+        }
+    }
     fn indices(&self) -> &[Option<PieceIndex>; 64] {
         self.indices.get_or_init(|| {
             let mut board = [None; 64];
@@ -1166,9 +1177,9 @@ impl Board {
         }
         if let Some(en_passant_target) = self.en_passant_target
             && ![Color::White, Color::Black].into_iter().any(|color| {
-                self.pawns(color).any(|pawn| {
-                    (pawn.position - en_passant_target) == Vector::pawn_single_move(color)
-                })
+                en_passant_target
+                    .move_by(Vector::pawn_single_move(color))
+                    .is_some_and(|position| self.position_has(position, color, PieceKind::Pawn))
             })
         {
             return Err(InvalidBoard::InvalidEnPassantTarget);
