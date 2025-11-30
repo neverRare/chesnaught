@@ -188,10 +188,7 @@ impl FromStr for Fen {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut sections = s.split(' ');
 
-        let Some(board) = sections.next() else {
-            return Err(ParseFenError::UnexpectedEol);
-        };
-        let board = parse_board(board)?;
+        let board = parse_board(sections.next().ok_or(ParseFenError::UnexpectedEol)?)?;
 
         let current_player = sections
             .next()
