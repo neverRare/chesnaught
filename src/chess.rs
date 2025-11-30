@@ -796,7 +796,7 @@ impl CastlingRight {
             Color::White => &mut self.white,
             Color::Black => &mut self.black,
         };
-        *byte |= (0b_1 << x);
+        *byte |= 0b_1 << x;
     }
     pub fn to_added(self, color: Color, x: u8) -> Self {
         let mut new = self;
