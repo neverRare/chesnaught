@@ -25,9 +25,9 @@ fn main() {
     let mut info = String::new();
     let mut highlighted = Vec::new();
     let mut valid_moves = HashMap::new();
-    let mut reset_state = true;
+    let mut update = true;
     loop {
-        if reset_state {
+        if update {
             valid_moves.clear();
             info.clear();
             match board.valid_moves() {
@@ -44,6 +44,7 @@ fn main() {
                 }
             }
         }
+        update = false;
         reset_state = false;
         print!(
             "{}",
@@ -100,7 +101,7 @@ fn main() {
                     highlighted.clear();
                     highlighted.push(long_algebraic_notation.origin);
                     highlighted.push(long_algebraic_notation.destination);
-                    reset_state = true;
+                    update = true;
                 }
                 break;
             }
