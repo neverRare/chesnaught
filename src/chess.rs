@@ -321,7 +321,7 @@ impl Coord {
             _ => return Err(ParseCoordError::InvalidX(x)),
         };
         let y = match y {
-            '1'..='8' => 7 - (x - b'1'),
+            '1'..='8' => 7 - (y as u8 - b'1'),
             _ => return Err(ParseCoordError::InvalidY(y)),
         };
         Ok(Coord::new(x, y))
