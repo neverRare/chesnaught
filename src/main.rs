@@ -25,20 +25,26 @@ fn main() {
     let mut info = String::new();
     let mut highlighted = Vec::new();
     let mut valid_moves = HashMap::new();
+    let mut reset_state = false;
     loop {
-        valid_moves.clear();
-        info.clear();
-        match board.valid_moves() {
-            Ok(moves) => {
-                valid_moves.extend(
-                    moves.map(|movement| (movement.as_long_algebraic_notation(&board), movement)),
-                );
-                write!(&mut info, "{} plays", board.current_player()).unwrap();
-            }
-            Err(end_state) => {
-                write!(&mut info, "{end_state}").unwrap();
+        if reset_state {
+            valid_moves.clear();
+            info.clear();
+            match board.valid_moves() {
+                Ok(moves) => {
+                    valid_moves.extend(
+                        moves.map(|movement| {
+                            (movement.as_long_algebraic_notation(&board), movement)
+                        }),
+                    );
+                    write!(&mut info, "{} plays", board.current_player()).unwrap();
+                }
+                Err(end_state) => {
+                    write!(&mut info, "{end_state}").unwrap();
+                }
             }
         }
+        reset_state = false;
         print!(
             "{}",
             BoardDisplay {
@@ -94,6 +100,7 @@ fn main() {
                     highlighted.clear();
                     highlighted.push(long_algebraic_notation.origin);
                     highlighted.push(long_algebraic_notation.destination);
+                    reset_state = true;
                 }
                 break;
             }
