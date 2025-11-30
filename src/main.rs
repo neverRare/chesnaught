@@ -76,6 +76,13 @@ fn main() {
                         Ok(movement) => movement,
                         Err(err) => {
                             println!("Error: {err}");
+                            println!();
+                            println!("This chess program uses long algebraic notation:");
+                            println!("- e2e4");
+                            println!("- e7e8q for promotion");
+                            println!("- e1g1 for castling");
+                            println!();
+                            println!("To view valid moves, just enter a coordinate");
                             continue;
                         }
                     };
