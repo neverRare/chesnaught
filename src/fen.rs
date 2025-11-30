@@ -109,14 +109,14 @@ impl TryFrom<Fen> for Board {
 }
 impl Display for Fen {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        enum Item {
-            Piece(ColoredPieceKind),
-            Space(u8),
-        }
         for (first, row) in once(true)
             .chain(repeat(false))
             .zip(self.board.board.into_iter())
         {
+            enum Item {
+                Piece(ColoredPieceKind),
+                Space(u8),
+            }
             if !first {
                 write!(f, "/")?;
             }
