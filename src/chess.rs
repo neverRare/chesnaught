@@ -1023,7 +1023,7 @@ impl FromStr for StandardCastlingRight {
     type Err = InvalidCastlingCharacter;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.parse()
+        s.parse().map(StandardCastlingRight)
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
