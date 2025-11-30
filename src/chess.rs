@@ -1,16 +1,48 @@
 use std::{
+    cell::OnceCell,
     cmp::Ordering,
     error::Error,
     fmt::Display,
-    ops::{Index, IndexMut, Not, RangeInclusive},
+    hash::Hash,
+    iter::{FusedIterator, empty},
+    num::NonZero,
+    ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Neg, Not, Range, Sub, SubAssign},
+    rc::Rc,
     str::FromStr,
 };
 
-use crate::{coord, coord_x, coord_y};
+use crate::{coord_x, coord_y};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct InvalidFenPiece(pub char);
+impl Display for InvalidFenPiece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "found `{}`, expected one of `p`, `n`, `b`, `r`, `k`, `q`, or uppercase forms of these letters",
+            self.0
+        )?;
+        Ok(())
+    }
+}
+impl Error for InvalidFenPiece {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct InvalidByte;
+
+impl Display for InvalidByte {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "invalid byte")?;
+        Ok(())
+    }
+}
+impl Error for InvalidByte {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(u8)]
 pub enum PieceKind {
-    Pawn,
+    // other types relies on `PieceKind` being non-zero
+    Pawn = 1,
     Knight,
     Bishop,
     Rook,
@@ -18,7 +50,27 @@ pub enum PieceKind {
     King,
 }
 impl PieceKind {
-    fn lowercase(self) -> char {
+    pub const STARTING_CONFIGURATION: [Self; 8] = [
+        PieceKind::Rook,
+        PieceKind::Knight,
+        PieceKind::Bishop,
+        PieceKind::Queen,
+        PieceKind::King,
+        PieceKind::Bishop,
+        PieceKind::Knight,
+        PieceKind::Rook,
+    ];
+    pub fn uppercase(self) -> char {
+        match self {
+            PieceKind::Pawn => 'P',
+            PieceKind::Knight => 'N',
+            PieceKind::Bishop => 'B',
+            PieceKind::Rook => 'R',
+            PieceKind::Queen => 'Q',
+            PieceKind::King => 'K',
+        }
+    }
+    pub fn lowercase(self) -> char {
         match self {
             PieceKind::Pawn => 'p',
             PieceKind::Knight => 'n',
@@ -28,29 +80,18 @@ impl PieceKind {
             PieceKind::King => 'k',
         }
     }
-    fn uppercase(self) -> char {
-        self.lowercase().to_ascii_uppercase()
+    pub fn from_fen(c: char) -> Result<Self, InvalidFenPiece> {
+        let piece = match c {
+            'p' | 'P' => PieceKind::Pawn,
+            'n' | 'N' => PieceKind::Knight,
+            'b' | 'B' => PieceKind::Bishop,
+            'r' | 'R' => PieceKind::Rook,
+            'q' | 'Q' => PieceKind::Queen,
+            'k' | 'K' => PieceKind::King,
+            c => return Err(InvalidFenPiece(c)),
+        };
+        Ok(piece)
     }
-    // fn algebraic_notation_char(self) -> Option<char> {
-    //     match self {
-    //         PieceKind::Pawn => None,
-    //         PieceKind::Knight => Some('N'),
-    //         PieceKind::Bishop => Some('B'),
-    //         PieceKind::Rook => Some('R'),
-    //         PieceKind::Queen => Some('Q'),
-    //         PieceKind::King => Some('K'),
-    //     }
-    // }
-    // fn algebraic_notation(self) -> &'static str {
-    //     match self {
-    //         PieceKind::Pawn => "",
-    //         PieceKind::Knight => "N",
-    //         PieceKind::Bishop => "B",
-    //         PieceKind::Rook => "R",
-    //         PieceKind::Queen => "Q",
-    //         PieceKind::King => "K",
-    //     }
-    // }
 }
 impl Display for PieceKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -65,71 +106,100 @@ impl Display for PieceKind {
         Ok(())
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ParsePieceKindError {
-    Empty,
-    UnknownSymbol(char),
-    UnexpectedSymbol(char),
-}
-impl Display for ParsePieceKindError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ParsePieceKindError::Empty => write!(f, "expected one character, found none instead")?,
-            ParsePieceKindError::UnknownSymbol(c) => write!(
-                f,
-                "`{c}` is neither of `p`, `n`, `b`, `r`, `q`, `k`, uppercase letter of any of these, or unicode chess symbols"
-            )?,
-            ParsePieceKindError::UnexpectedSymbol(c) => {
-                write!(f, "unexpected `{c}`, only one character is expected")?;
-            }
-        }
-        Ok(())
-    }
-}
-impl Error for ParsePieceKindError {}
+impl TryFrom<u8> for PieceKind {
+    type Error = InvalidByte;
 
-impl FromStr for PieceKind {
-    type Err = ParsePieceKindError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut characters = s.chars();
-        let piece = characters
-            .next()
-            .ok_or(ParsePieceKindError::Empty)?
-            .try_into()?;
-
-        if let Some(c) = characters.next() {
-            return Err(ParsePieceKindError::UnexpectedSymbol(c));
-        }
-        Ok(piece)
-    }
-}
-impl TryFrom<char> for PieceKind {
-    type Error = ParsePieceKindError;
-
-    fn try_from(value: char) -> Result<Self, Self::Error> {
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
         let piece = match value {
-            'p' | 'P' | '♙' | '♟' => PieceKind::Pawn,
-            'n' | 'N' | '♘' | '♞' => PieceKind::Knight,
-            'b' | 'B' | '♗' | '♝' => PieceKind::Bishop,
-            'r' | 'R' | '♖' | '♜' => PieceKind::Rook,
-            'q' | 'Q' | '♕' | '♛' => PieceKind::Queen,
-            'k' | 'K' | '♔' | '♚' => PieceKind::King,
-            c => return Err(ParsePieceKindError::UnknownSymbol(c)),
+            0 => return Err(InvalidByte),
+            1 => PieceKind::Pawn,
+            2 => PieceKind::Knight,
+            3 => PieceKind::Bishop,
+            4 => PieceKind::Rook,
+            5 => PieceKind::Queen,
+            6 => PieceKind::King,
+            7.. => return Err(InvalidByte),
         };
         Ok(piece)
     }
 }
+impl From<PieceKind> for u8 {
+    fn from(value: PieceKind) -> Self {
+        match value {
+            PieceKind::Pawn => 1,
+            PieceKind::Knight => 2,
+            PieceKind::Bishop => 3,
+            PieceKind::Rook => 4,
+            PieceKind::Queen => 5,
+            PieceKind::King => 6,
+        }
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ParseColorError;
+impl Display for ParseColorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "provided string was not `w`, `b`, `W`, `B`, `white`, or `black`"
+        )?;
+        Ok(())
+    }
+}
+impl Error for ParseColorError {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(u8)]
 pub enum Color {
-    White,
-    Black,
+    White = 1,
+    Black = 0,
 }
 impl Color {
     pub fn lowercase(self) -> char {
         match self {
             Color::White => 'w',
             Color::Black => 'b',
+        }
+    }
+}
+impl Display for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Color::White => write!(f, "white")?,
+            Color::Black => write!(f, "black")?,
+        }
+        Ok(())
+    }
+}
+impl FromStr for Color {
+    type Err = ParseColorError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let color = match s {
+            "w" | "W" | "white" => Color::White,
+            "b" | "B" | "black" => Color::White,
+            _ => return Err(ParseColorError),
+        };
+        Ok(color)
+    }
+}
+impl TryFrom<u8> for Color {
+    type Error = InvalidByte;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        let color = match value {
+            0 => Color::Black,
+            1 => Color::White,
+            2.. => return Err(InvalidByte),
+        };
+        Ok(color)
+    }
+}
+impl From<Color> for u8 {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::White => 1,
+            Color::Black => 0,
         }
     }
 }
@@ -143,49 +213,519 @@ impl Not for Color {
         }
     }
 }
-impl Display for Color {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Color::White => write!(f, "white")?,
-            Color::Black => write!(f, "black")?,
+// Bit structure: 0000CPPP
+// C - Color
+// P - Piece kind
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ColoredPieceKind(NonZero<u8>);
+impl ColoredPieceKind {
+    pub fn new(color: Color, piece: PieceKind) -> Self {
+        let color: u8 = color.into();
+        let piece: u8 = piece.into();
+        let data = (color << 3) | (piece);
+        ColoredPieceKind(NonZero::new(data).unwrap())
+    }
+    pub fn color(self) -> Color {
+        ((self.0.get() >> 3) & 0b_1).try_into().unwrap()
+    }
+    pub fn piece(self) -> PieceKind {
+        (self.0.get() & 0b_111).try_into().unwrap()
+    }
+    pub fn fen(self) -> char {
+        match self.color() {
+            Color::White => self.piece().uppercase(),
+            Color::Black => self.piece().lowercase(),
         }
+    }
+    pub fn from_fen(c: char) -> Result<Self, InvalidFenPiece> {
+        let piece = PieceKind::from_fen(c)?;
+        let color = if c.is_ascii_uppercase() {
+            Color::White
+        } else {
+            Color::Black
+        };
+        Ok(ColoredPieceKind::new(color, piece))
+    }
+}
+impl Display for ColoredPieceKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.color(), self.piece())?;
         Ok(())
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Piece {
-    pub color: Color,
-    pub kind: PieceKind,
-    pub moved: bool,
-    pub just_moved_twice_as_pawn: bool,
+pub enum ParseCoordError {
+    InvalidX(char),
+    InvalidY(char),
+    NotEnoughCharacter(u8),
+    Unexpected(char),
 }
-impl Piece {
-    pub fn figurine(self) -> char {
-        match (self.color, self.kind) {
-            (Color::White, PieceKind::Pawn) => '♙',
-            (Color::White, PieceKind::Knight) => '♘',
-            (Color::White, PieceKind::Bishop) => '♗',
-            (Color::White, PieceKind::Rook) => '♖',
-            (Color::White, PieceKind::Queen) => '♕',
-            (Color::White, PieceKind::King) => '♔',
-            (Color::Black, PieceKind::Pawn) => '♟',
-            (Color::Black, PieceKind::Knight) => '♞',
-            (Color::Black, PieceKind::Bishop) => '♝',
-            (Color::Black, PieceKind::Rook) => '♜',
-            (Color::Black, PieceKind::Queen) => '♛',
-            (Color::Black, PieceKind::King) => '♚',
+impl Display for ParseCoordError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseCoordError::InvalidX(x) => write!(
+                f,
+                "found `{x}`, characters from `a` to `h` were expected instead"
+            )?,
+            ParseCoordError::InvalidY(y) => write!(
+                f,
+                "found `{y}`, characters from `1` to `8` were expected instead"
+            )?,
+            ParseCoordError::NotEnoughCharacter(len) => write!(
+                f,
+                "provided string have length of {len} characters, 2 were expected"
+            )?,
+            ParseCoordError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParseCoordError {}
+
+// Bit structure: 10XXXYYY
+// first two bits is always `10` for `NonZero` size optimizations
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Coord(NonZero<u8>);
+
+impl Coord {
+    pub fn new(x: u8, y: u8) -> Self {
+        assert!(x < 8);
+        assert!(y < 8);
+        let byte = 0b1000_0000 | (y << 3) | x;
+        Coord(NonZero::new(byte).unwrap())
+    }
+    pub fn from_chars(x: char, y: char) -> Result<Self, ParseCoordError> {
+        let x = match x {
+            'a'..='h' => x as u8 - b'a',
+            _ => return Err(ParseCoordError::InvalidX(x)),
+        };
+        let y = match y {
+            '1'..='8' => 7 - (x as u8 - b'1'),
+            _ => return Err(ParseCoordError::InvalidY(y)),
+        };
+        Ok(Coord::new(x, y))
+    }
+    pub fn new_checked(x: u8, y: u8) -> Option<Self> {
+        if x >= 8 || y >= 8 {
+            None
+        } else {
+            Some(Self::new(x, y))
         }
     }
-    pub fn fen(self) -> char {
-        match self.color {
-            Color::White => self.kind.uppercase(),
-            Color::Black => self.kind.lowercase(),
+    pub fn x(self) -> u8 {
+        (self.0.get() >> 3) & 0b_111
+    }
+    pub fn y(self) -> u8 {
+        self.0.get() & 0b_111
+    }
+    pub fn move_by(self, movement: Vector) -> Option<Self> {
+        Self::new_checked(
+            self.x().checked_add_signed(movement.x)?,
+            self.y().checked_add_signed(movement.y)?,
+        )
+    }
+    pub fn is_aligned(
+        self,
+        other: Self,
+        directions: &[Vector],
+    ) -> Option<impl Iterator<Item = Self>> {
+        directions.iter().copied().find_map(|direction| {
+            if direction.is_aligned(other - self) {
+                Some(self.line_until_exclusive(direction, 1, other))
+            } else {
+                None
+            }
+        })
+    }
+    pub fn is_aligned_with_bishop(self, other: Self) -> Option<impl Iterator<Item = Self>> {
+        self.is_aligned(other, &Vector::BISHOP_DIRECTIONS)
+    }
+    pub fn is_aligned_with_rook(self, other: Self) -> Option<impl Iterator<Item = Self>> {
+        self.is_aligned(other, &Vector::ROOK_DIRECTIONS)
+    }
+    pub fn is_aligned_with_queen(self, other: Self) -> Option<impl Iterator<Item = Self>> {
+        self.is_aligned(other, &Vector::QUEEN_DIRECTIONS)
+    }
+    pub fn line(self, direction: Vector, start: i8) -> impl Iterator<Item = Self> {
+        (start..)
+            .into_iter()
+            .map_while(move |difference| self.move_by(direction * difference))
+    }
+    pub fn line_until_exclusive(
+        self,
+        direction: Vector,
+        start: i8,
+        end: Coord,
+    ) -> impl Iterator<Item = Self> {
+        self.line(direction, start)
+            .take_while(move |position| *position != end)
+    }
+    pub fn line_until_inclusive(
+        self,
+        direction: Vector,
+        start: i8,
+        end: Coord,
+    ) -> impl Iterator<Item = Self> {
+        let mut resume = true;
+        self.line(direction, start).take_while(move |position| {
+            resume && {
+                resume = *position != end;
+                true
+            }
+        })
+    }
+    pub fn is_inside_of(self, bound_1: Self, bound_2: Self) -> bool {
+        (Ord::min(bound_1.x(), bound_2.x())..=Ord::max(bound_1.x(), bound_2.x()))
+            .contains(&self.x())
+            && (Ord::min(bound_1.y(), bound_2.y())..=Ord::max(bound_1.y(), bound_2.y()))
+                .contains(&self.y())
+    }
+    pub fn color(self) -> Color {
+        match (self.x() + self.y()) % 2 {
+            0 => Color::White,
+            1 => Color::Black,
+            _ => unreachable!(),
         }
+    }
+}
+pub fn home_rank(color: Color) -> u8 {
+    match color {
+        Color::White => coord_y!("1"),
+        Color::Black => coord_y!("8"),
+    }
+}
+impl Display for Coord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let x = (self.x() + b'a') as char;
+        let y = 8 - self.y();
+        write!(f, "{x}{y}")?;
+        Ok(())
+    }
+}
+impl FromStr for Coord {
+    type Err = ParseCoordError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars();
+        let Some(x) = chars.next() else {
+            return Err(ParseCoordError::NotEnoughCharacter(0));
+        };
+        let Some(y) = chars.next() else {
+            return Err(ParseCoordError::NotEnoughCharacter(1));
+        };
+        if let Some(c) = chars.next() {
+            return Err(ParseCoordError::Unexpected(c));
+        }
+        Ok(Coord::from_chars(x, y)?)
+    }
+}
+impl TryFrom<u8> for Coord {
+    type Error = InvalidByte;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        if (value >> 6) & 0b_11 == 0b_10 {
+            Ok(Coord(NonZero::new(value).unwrap()))
+        } else {
+            Err(InvalidByte)
+        }
+    }
+}
+impl From<Coord> for u8 {
+    fn from(value: Coord) -> Self {
+        value.0.get()
+    }
+}
+impl Sub<Self> for Coord {
+    type Output = Vector;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Vector {
+            x: self.x().checked_signed_diff(rhs.x()).unwrap(),
+            y: self.y().checked_signed_diff(rhs.y()).unwrap(),
+        }
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Vector {
+    pub x: i8,
+    pub y: i8,
+}
+impl Vector {
+    pub const KNIGHT_MOVES: [Self; 8] = [
+        Vector { x: -1, y: -2 },
+        Vector { x: 1, y: -2 },
+        Vector { x: -1, y: 2 },
+        Vector { x: 1, y: 2 },
+        Vector { x: -2, y: -1 },
+        Vector { x: 2, y: -1 },
+        Vector { x: -2, y: 1 },
+        Vector { x: 2, y: 1 },
+    ];
+    pub const KING_MOVES: [Self; 8] = [
+        Vector { x: -1, y: -2 },
+        Vector { x: 1, y: -2 },
+        Vector { x: -1, y: 2 },
+        Vector { x: 1, y: 2 },
+        Vector { x: -2, y: -1 },
+        Vector { x: 2, y: -1 },
+        Vector { x: -2, y: 1 },
+        Vector { x: 2, y: 1 },
+    ];
+    pub const ROOK_DIRECTIONS: [Self; 4] = [
+        Vector { x: -1, y: 0 },
+        Vector { x: 1, y: 0 },
+        Vector { x: 0, y: -1 },
+        Vector { x: 0, y: 1 },
+    ];
+    pub const BISHOP_DIRECTIONS: [Self; 4] = [
+        Vector { x: -1, y: -1 },
+        Vector { x: 1, y: -1 },
+        Vector { x: -1, y: 1 },
+        Vector { x: 1, y: 1 },
+    ];
+    pub const QUEEN_DIRECTIONS: [Self; 8] = Vector::KING_MOVES;
+
+    pub fn is_aligned(self, other: Self) -> bool {
+        self.as_unit() == other.as_unit() && self.x * other.y == other.x * self.y
+    }
+    pub fn is_king_move(self) -> bool {
+        (-1..=1).contains(&self.x) && (-1..=1).contains(&self.y) && !(self.x == 0 && self.y == 0)
+    }
+    pub fn is_knight_move(self) -> bool {
+        let x = self.x.abs();
+        let y = self.y.abs();
+        (x == 1 && y == 2) || (x == 2 && y == 1)
+    }
+    pub fn is_pawn_attack(self, color: Color) -> bool {
+        self.x.abs() == 1 && self.y == pawn_direction(color)
+    }
+    pub fn pawn_single_move(color: Color) -> Self {
+        Vector {
+            x: 0,
+            y: pawn_direction(color),
+        }
+    }
+    pub fn as_unit(self) -> Self {
+        Vector {
+            x: self.x.signum(),
+            y: self.x.signum(),
+        }
+    }
+}
+pub fn pawn_direction(color: Color) -> i8 {
+    match color {
+        Color::White => -1,
+        Color::Black => 1,
+    }
+}
+impl Neg for Vector {
+    type Output = Vector;
+
+    fn neg(self) -> Self::Output {
+        Vector {
+            x: -self.x,
+            y: -self.y,
+        }
+    }
+}
+impl Add<Self> for Vector {
+    type Output = Vector;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Vector {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+impl AddAssign<Self> for Vector {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+impl Sub<Self> for Vector {
+    type Output = Vector;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Vector {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+impl SubAssign<Self> for Vector {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+    }
+}
+impl Mul<i8> for Vector {
+    type Output = Vector;
+
+    fn mul(self, rhs: i8) -> Self::Output {
+        Vector {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
+    }
+}
+impl MulAssign<i8> for Vector {
+    fn mul_assign(&mut self, rhs: i8) {
+        self.x *= rhs;
+        self.y *= rhs;
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Piece {
+    pub piece: ColoredPieceKind,
+    pub position: Coord,
+}
+impl Piece {
+    fn step_moves(
+        self,
+        index: PieceIndex,
+        board: &Board,
+        moves: &[Vector],
+    ) -> impl Iterator<Item = SimpleMove> {
+        moves
+            .iter()
+            .copied()
+            .filter_map(move |movement| self.position.move_by(movement))
+            .filter_map(move |destination| {
+                if let Some(capture) = board[destination] {
+                    (board[capture].unwrap().piece.color() != self.piece.color()).then(|| {
+                        SimpleMove {
+                            index,
+                            destination,
+                            capture: Some(capture),
+                        }
+                    })
+                } else {
+                    Some(SimpleMove {
+                        index,
+                        destination,
+                        capture: None,
+                    })
+                }
+            })
+    }
+    fn directional_moves(
+        self,
+        index: PieceIndex,
+        board: &Board,
+        direction: Vector,
+    ) -> impl Iterator<Item = SimpleMove> {
+        let mut resume = false;
+        self.position
+            .line(direction, 1)
+            .map_while(move |destination| {
+                if resume {
+                    if let Some(capture) = board[destination] {
+                        resume = false;
+                        (board[capture].unwrap().piece.color() != self.piece.color()).then(|| {
+                            SimpleMove {
+                                index,
+                                destination,
+                                capture: Some(capture),
+                            }
+                        })
+                    } else {
+                        Some(SimpleMove {
+                            index,
+                            destination,
+                            capture: None,
+                        })
+                    }
+                } else {
+                    None
+                }
+            })
+    }
+    fn all_directional_moves(
+        self,
+        index: PieceIndex,
+        board: &Board,
+        directions: &[Vector],
+    ) -> impl Iterator<Item = SimpleMove> {
+        directions
+            .iter()
+            .copied()
+            .flat_map(move |direction| self.directional_moves(index, board, direction))
+    }
+    fn pawn_moves(self, index: PieceIndex, board: &Board) -> impl Iterator<Item = Move> {
+        todo!();
+        empty()
+    }
+    fn non_castling_moves(self, index: PieceIndex, board: &Board) -> impl Iterator<Item = Move> {
+        let moves: Box<dyn Iterator<Item = Move>> = match self.piece.piece() {
+            PieceKind::Pawn => Box::new(self.pawn_moves(index, board)),
+            PieceKind::Knight => Box::new(
+                self.step_moves(index, board, &Vector::KNIGHT_MOVES)
+                    .map(|movement| movement.to_simple_move(board.castling_right)),
+            ),
+            PieceKind::Bishop => Box::new(
+                self.all_directional_moves(index, board, &Vector::BISHOP_DIRECTIONS)
+                    .map(|movement| movement.to_simple_move(board.castling_right)),
+            ),
+            PieceKind::Rook => {
+                let castling_right = if self.position.y() == home_rank(self.piece.color()) {
+                    board
+                        .castling_right
+                        .to_removed(self.piece.color(), self.position.x())
+                } else {
+                    board.castling_right
+                };
+                Box::new(
+                    self.all_directional_moves(index, board, &Vector::ROOK_DIRECTIONS)
+                        .map(move |movement| movement.to_simple_move(castling_right)),
+                )
+            }
+            PieceKind::Queen => Box::new(
+                self.all_directional_moves(index, board, &Vector::QUEEN_DIRECTIONS)
+                    .map(|movement| movement.to_simple_move(board.castling_right)),
+            ),
+            PieceKind::King => {
+                let castling_right = board.castling_right.to_cleared(self.piece.color());
+                Box::new(
+                    self.step_moves(index, board, &Vector::KING_MOVES)
+                        .map(move |movement| movement.to_simple_move(castling_right)),
+                )
+            }
+        };
+        moves.map(move |movement| {
+            if let Some(capture) = movement.movement.capture {
+                let piece = board[capture].unwrap();
+                if piece.piece.piece() == PieceKind::Rook
+                    && piece.piece.color() != self.piece.color()
+                    && piece.position.y() == home_rank(piece.piece.color())
+                {
+                    Move {
+                        castling_right: movement
+                            .castling_right
+                            .to_removed(piece.piece.color(), piece.position.x()),
+                        ..movement
+                    }
+                } else {
+                    movement
+                }
+            } else {
+                movement
+            }
+        })
+    }
+    fn can_be_blocked(self, target: Coord, blocker: Coord) -> bool {
+        self.position == blocker
+            || (matches!(
+                self.piece.piece(),
+                PieceKind::Bishop | PieceKind::Rook | PieceKind::Queen
+            ) && (target - self.position).is_aligned(blocker - self.position)
+                && blocker.is_inside_of(self.position, target))
     }
 }
 impl Display for Piece {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", self.color, self.kind)?;
+        write!(f, "{} on {}", self.piece, self.position)?;
         Ok(())
     }
 }
@@ -203,913 +743,954 @@ impl Display for EndState {
         Ok(())
     }
 }
-#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CastlingRights {
-    white_king_side: bool,
-    white_queen_side: bool,
-    black_king_side: bool,
-    black_queen_side: bool,
-}
-impl Display for CastlingRights {
+pub struct InvalidCastlingCharacter(pub char);
+
+impl Display for InvalidCastlingCharacter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut printed = false;
-        if self.white_king_side {
-            printed = true;
-            write!(f, "K")?;
+        write!(
+            f,
+            "found {}, expected one of `k`, `q`, letters from `a` to `h`, or uppercase forms of these letters",
+            self.0
+        )?;
+        Ok(())
+    }
+}
+impl Error for InvalidCastlingCharacter {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CastlingRight {
+    white: u8,
+    black: u8,
+}
+impl CastlingRight {
+    pub fn none() -> Self {
+        CastlingRight { white: 0, black: 0 }
+    }
+    pub fn from_configuration(configuration: &[PieceKind; 8]) -> Self {
+        let mut castling_right = CastlingRight::none();
+        for (i, piece) in configuration.iter().enumerate() {
+            if *piece == PieceKind::Rook {
+                castling_right.add(Color::White, i as u8);
+                castling_right.add(Color::Black, i as u8);
+            }
         }
-        if self.white_queen_side {
-            printed = true;
-            write!(f, "Q")?;
+        castling_right
+    }
+    pub fn all(self, color: Color) -> impl Iterator<Item = u8> {
+        (0..8).into_iter().filter(move |x| self.get(color, *x))
+    }
+    pub fn get(self, color: Color, x: u8) -> bool {
+        assert!(x < 8);
+        let byte = match color {
+            Color::White => self.white,
+            Color::Black => self.black,
+        };
+        match (byte >> x) & 0b_1 {
+            0 => false,
+            1 => true,
+            _ => unreachable!(),
         }
-        if self.black_king_side {
-            printed = true;
-            write!(f, "k")?;
+    }
+    pub fn add(&mut self, color: Color, x: u8) {
+        assert!(x < 8);
+        let byte = match color {
+            Color::White => &mut self.white,
+            Color::Black => &mut self.black,
+        };
+        *byte = *byte | (0b_1 << x);
+    }
+    pub fn to_added(self, color: Color, x: u8) -> Self {
+        let mut new = self;
+        new.add(color, x);
+        new
+    }
+    pub fn remove(&mut self, color: Color, x: u8) {
+        assert!(x < 8);
+        let byte = match color {
+            Color::White => &mut self.white,
+            Color::Black => &mut self.black,
+        };
+        *byte = *byte & !(0b_1 << x);
+    }
+    pub fn to_removed(self, color: Color, x: u8) -> Self {
+        let mut new = self;
+        new.remove(color, x);
+        new
+    }
+    pub fn clear(&mut self, color: Color) {
+        match color {
+            Color::White => self.white = 0,
+            Color::Black => self.black = 0,
         }
-        if self.black_queen_side {
-            printed = true;
-            write!(f, "q")?;
+    }
+    pub fn to_cleared(self, color: Color) -> Self {
+        let mut new = self;
+        new.clear(color);
+        new
+    }
+    pub fn standard_fen_display(self) -> StandardCastlingRight {
+        StandardCastlingRight(self)
+    }
+}
+impl Display for CastlingRight {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut written = false;
+        for color in [Color::White, Color::Black] {
+            let start = match color {
+                Color::White => b'A',
+                Color::Black => b'a',
+            };
+            for x in self.all(color) {
+                written = true;
+                let c: char = (x + start).try_into().unwrap();
+                write!(f, "{c}")?;
+            }
         }
-        if !printed {
+        if !written {
             write!(f, "-")?;
         }
         Ok(())
     }
 }
+impl FromStr for CastlingRight {
+    type Err = InvalidCastlingCharacter;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut castling_right = CastlingRight::none();
+        for c in s.chars() {
+            match c {
+                'Q' => castling_right.add(Color::White, coord_x!("a")),
+                'K' => castling_right.add(Color::White, coord_x!("h")),
+                'q' => castling_right.add(Color::Black, coord_x!("a")),
+                'k' => castling_right.add(Color::Black, coord_x!("h")),
+                'A'..='H' => castling_right.add(Color::White, c as u8 - b'A'),
+                'a'..='h' => castling_right.add(Color::Black, c as u8 - b'a'),
+                '-' => (),
+                c => return Err(InvalidCastlingCharacter(c)),
+            }
+        }
+        Ok(castling_right)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct StandardCastlingRight(pub CastlingRight);
+impl Display for StandardCastlingRight {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut written = false;
+        for color in [Color::White, Color::Black] {
+            for x in self.0.all(color) {
+                let c = match (color, x) {
+                    (Color::White, coord_x!("a")) => 'Q',
+                    (Color::White, coord_x!("h")) => 'K',
+                    (Color::Black, coord_x!("a")) => 'q',
+                    (Color::Black, coord_x!("h")) => 'k',
+                    _ => panic!("invalid rook file"),
+                };
+                written = true;
+                write!(f, "{c}")?;
+            }
+        }
+        if !written {
+            write!(f, "-")?;
+        }
+        Ok(())
+    }
+}
+impl FromStr for StandardCastlingRight {
+    type Err = InvalidCastlingCharacter;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(s.parse()?)
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum InvalidBoard {
+    NoKing,
+    NonPlayerInCheck,
+    MoreThanTwoCheckers,
+    InvalidCastlingRight,
+    InvalidEnPassantTarget,
+    PawnInHomeRank,
+}
+impl Display for InvalidBoard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InvalidBoard::NoKing => write!(f, "no kings found")?,
+            InvalidBoard::NonPlayerInCheck => write!(f, "non-player in check")?,
+            InvalidBoard::MoreThanTwoCheckers => {
+                write!(f, "found more than 2 pieces delivering check")?
+            }
+            InvalidBoard::InvalidCastlingRight => write!(f, "invalid castling right")?,
+            InvalidBoard::InvalidEnPassantTarget => write!(f, "invalid en passant target")?,
+            InvalidBoard::PawnInHomeRank => write!(f, "pawn in home rank")?,
+        }
+        Ok(())
+    }
+}
+impl Error for InvalidBoard {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct PieceIndex(NonZero<u8>);
+impl From<PieceIndex> for usize {
+    fn from(value: PieceIndex) -> Self {
+        (value.0.get() & 0b_11111) as usize
+    }
+}
+impl TryFrom<usize> for PieceIndex {
+    type Error = InvalidByte;
+
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        if value > 32 {
+            return Err(InvalidByte);
+        }
+        let byte: u8 = value.try_into().unwrap();
+        Ok(PieceIndex(NonZero::new(byte | 0b_1000_0000).unwrap()))
+    }
+}
+#[derive(Debug, Clone)]
 pub struct Board {
-    pub current_player: Color,
-    pub board: [[Option<Piece>; 8]; 8],
+    pieces: [Option<Piece>; 32],
+    indices: OnceCell<[Option<PieceIndex>; 64]>,
+    current_player: Color,
+    castling_right: CastlingRight,
+    en_passant_target: Option<Coord>,
+}
+fn original_piece_range(color: Color, piece: PieceKind) -> Range<usize> {
+    match (color, piece) {
+        (Color::White, PieceKind::Pawn) => 8..16,
+        (Color::White, PieceKind::Knight) => 6..8,
+        (Color::White, PieceKind::Bishop) => 4..6,
+        (Color::White, PieceKind::Rook) => 2..4,
+        (Color::White, PieceKind::Queen) => 1..2,
+        (Color::White, PieceKind::King) => 0..1,
+        (Color::Black, PieceKind::Pawn) => 24..32,
+        (Color::Black, PieceKind::Knight) => 22..24,
+        (Color::Black, PieceKind::Bishop) => 20..22,
+        (Color::Black, PieceKind::Rook) => 18..20,
+        (Color::Black, PieceKind::Queen) => 17..18,
+        (Color::Black, PieceKind::King) => 16..17,
+    }
 }
 impl Board {
-    pub fn new() -> Self {
-        Board::default()
+    pub fn starting_position() -> Self {
+        Board::from_configuration(PieceKind::STARTING_CONFIGURATION)
     }
-    // fn blank(current_player: Color) -> Self {
-    //     Board {
-    //         current_player,
-    //         board: [[None; 8]; 8],
-    //     }
-    // }
-    // fn iter(&self) -> impl Iterator<Item = &Piece> {
-    //     self.board
-    //         .iter()
-    //         .flat_map(|row| row.iter())
-    //         .flat_map(Option::iter)
-    // }
-    fn iter_mut(&mut self) -> impl Iterator<Item = &mut Piece> {
-        self.board
-            .iter_mut()
-            .flat_map(|row| row.iter_mut())
-            .flat_map(Option::iter_mut)
+    fn from_configuration(configuration: [PieceKind; 8]) -> Self {
+        HashableBoard::from_configuration(configuration)
+            .try_into()
+            .unwrap()
     }
-    // fn into_iter(self) -> impl Iterator<Item = Piece> {
-    //     self.board
-    //         .into_iter()
-    //         .flat_map(|row| row.into_iter())
-    //         .filter_map(|piece| piece)
-    // }
-    fn pieces(self) -> impl Iterator<Item = PieceWithContext> {
-        self.board.into_iter().zip(0..).flat_map(move |(row, y)| {
-            row.into_iter().zip(0..).flat_map(move |(piece, x)| {
-                piece.into_iter().map(move |piece| PieceWithContext {
-                    piece,
-                    position: Coord { x, y },
-                    board: self,
-                })
-            })
-        })
+    pub fn current_player(&self) -> Color {
+        self.current_player
     }
-    fn pieces_of(self, color: Color) -> impl Iterator<Item = PieceWithContext> {
-        self.pieces()
-            .filter(move |piece| piece.piece.color == color)
+    fn from_range(&self, range: Range<usize>) -> impl Iterator<Item = Piece> {
+        self.pieces[range].iter().copied().filter_map(|piece| piece)
     }
-    pub fn king_of(self, color: Color) -> Option<PieceWithContext> {
-        self.pieces_of(color)
-            .find(|piece| piece.piece.kind == PieceKind::King)
+    fn from_range_indexed(&self, range: Range<usize>) -> impl Iterator<Item = (PieceIndex, Piece)> {
+        let slice = &self.pieces[range.clone()];
+        range
+            .into_iter()
+            .map(|index| index.try_into().unwrap())
+            .zip(slice.iter().copied())
+            .filter_map(|(index, piece)| piece.map(|piece| (index, piece)))
     }
-    pub fn state(self) -> Option<EndState> {
-        let white_king = self.king_of(Color::White);
-        let black_king = self.king_of(Color::Black);
-        match (white_king, black_king) {
-            (None, None) => Some(EndState::Draw),
-            (Some(_), None) => Some(EndState::Win(Color::White)),
-            (None, Some(_)) => Some(EndState::Win(Color::Black)),
-            (Some(white_king), Some(black_king)) => {
-                let king = match self.current_player {
-                    Color::White => white_king,
-                    Color::Black => black_king,
-                };
-                if !king
-                    .position
-                    .king_moves()
-                    .filter(|position| {
-                        self[*position].is_none_or(|piece| piece.color != self.current_player)
-                    })
-                    .all(|position| {
-                        self.is_attacked_after_move(king.position, position, !self.current_player)
-                    })
-                {
-                    self.is_dead().then_some(EndState::Draw)
-                } else if self.is_attacked(king.position, !self.current_player) {
-                    (!self.has_valid_moves()).then_some(EndState::Win(!self.current_player))
+    fn all_pieces(&self) -> impl Iterator<Item = Piece> {
+        self.pieces.iter().copied().filter_map(|piece| piece)
+    }
+    fn all_pieces_indexed(&self) -> impl Iterator<Item = (PieceIndex, Piece)> {
+        self.pieces
+            .iter()
+            .copied()
+            .enumerate()
+            .filter_map(|(i, piece)| piece.map(|piece| (i.try_into().unwrap(), piece)))
+    }
+    fn pieces(&self, color: Color) -> impl Iterator<Item = Piece> + FusedIterator {
+        let slice = match color {
+            Color::White => &self.pieces[0..16],
+            Color::Black => &self.pieces[16..32],
+        };
+        slice.iter().copied().filter_map(|piece| piece)
+    }
+    fn non_kings(&self, color: Color) -> impl Iterator<Item = Piece> {
+        let slice = match color {
+            Color::White => &self.pieces[1..16],
+            Color::Black => &self.pieces[17..32],
+        };
+        slice.iter().copied().filter_map(|piece| piece)
+    }
+    fn pieces_indexed(&self, color: Color) -> impl Iterator<Item = (PieceIndex, Piece)> {
+        match color {
+            Color::White => self.from_range_indexed(0..16),
+            Color::Black => self.from_range_indexed(16..32),
+        }
+    }
+    fn pieces_by_kind(&self, color: Color, piece: PieceKind) -> impl Iterator<Item = Piece> {
+        let definite_pieces = if piece == PieceKind::Pawn {
+            self.from_range(0..0)
+        } else {
+            self.from_range(original_piece_range(color, piece))
+        };
+        definite_pieces.chain(
+            self.from_range(original_piece_range(color, PieceKind::Pawn))
+                .filter(move |item| item.piece.piece() == piece),
+        )
+    }
+    fn pieces_by_kind_indexed(
+        &self,
+        color: Color,
+        piece: PieceKind,
+    ) -> impl Iterator<Item = (PieceIndex, Piece)> {
+        let range = if piece == PieceKind::Pawn {
+            0..0
+        } else {
+            original_piece_range(color, piece)
+        };
+        self.from_range_indexed(range).chain(
+            self.from_range_indexed(original_piece_range(color, PieceKind::Pawn))
+                .filter(move |(_, item)| item.piece.piece() == piece),
+        )
+    }
+    fn pieces_by_kinds(&self, color: Color, pieces: &[PieceKind]) -> impl Iterator<Item = Piece> {
+        pieces
+            .iter()
+            .copied()
+            .map(move |piece| {
+                if piece == PieceKind::Pawn {
+                    0..0
                 } else {
-                    (self.is_dead() || !self.has_valid_moves()).then_some(EndState::Draw)
+                    original_piece_range(color, piece)
                 }
-            }
-        }
-    }
-    fn is_dead(self) -> bool {
-        [Color::White, Color::Black].into_iter().all(|color| {
-            self.pieces_of(color)
-                .try_fold(0, |num, piece| {
-                    matches!(
-                        piece.piece.kind,
-                        PieceKind::Knight | PieceKind::Bishop | PieceKind::King
-                    )
-                    .then(|| num + 1)
-                })
-                .is_some_and(|count| count <= 2)
-        })
-    }
-    pub fn move_piece(&mut self, movement: Move) {
-        let piece_movement = movement.movement;
-
-        self.current_player = !self.current_player;
-        for piece in self.iter_mut() {
-            piece.just_moved_twice_as_pawn = false;
-        }
-        let mut piece = self[piece_movement.origin]
-            .take()
-            .expect("origin position should contain a piece");
-        let rook_and_destination = movement.castling_rook.map(|movement| {
-            (
-                self[movement.origin]
-                    .take()
-                    .expect("origin position should contain a piece"),
-                movement.destination,
+            })
+            .flat_map(|range| self.from_range(range))
+            .chain(
+                self.from_range(original_piece_range(color, PieceKind::Pawn))
+                    .filter(move |piece| pieces.contains(&piece.piece.piece())),
             )
-        });
-
-        piece.moved = true;
-        if let Some(promoted_piece) = movement.promotion_piece {
-            piece.kind = promoted_piece;
-        }
-        if piece.kind == PieceKind::Pawn
-            && piece_movement.origin.x == piece_movement.destination.x
-            && match piece.color {
-                Color::White => piece_movement.origin.y == piece_movement.destination.y + 2,
-                Color::Black => piece_movement.origin.y + 2 == piece_movement.destination.y,
-            }
-        {
-            piece.just_moved_twice_as_pawn = true;
-        }
-        self[piece_movement.destination] = Some(piece);
-        if let Some((mut rook, destination)) = rook_and_destination {
-            rook.moved = true;
-            self[destination] = Some(rook);
-        }
-        if let Some(captured) = movement.en_passant_capture {
-            self[captured] = None;
-        }
     }
-    pub fn into_moved(self, movement: Move) -> Self {
-        let mut moved = self;
-        moved.move_piece(movement);
-        moved
-    }
-    pub fn is_attacked(self, position: Coord, color: Color) -> bool {
-        position
-            .pawn_captures(!color)
-            .any(|position| self.position_contains(position, color, [PieceKind::Pawn]))
-            || position
-                .knight_moves()
-                .any(|position| self.position_contains(position, color, [PieceKind::Knight]))
-            || position
-                .bishop_lines()
-                .any(|line| self.line_contains(line, color, [PieceKind::Bishop, PieceKind::Queen]))
-            || position
-                .rook_lines()
-                .any(|line| self.line_contains(line, color, [PieceKind::Rook, PieceKind::Queen]))
-            || position
-                .king_moves()
-                .any(|position| self.position_contains(position, color, [PieceKind::King]))
-    }
-    pub fn is_attacked_from(self, position: Coord, attacking: Coord, color: Color) -> bool {
-        position.pawn_captures(!color).any(|position| {
-            position == attacking && self.position_contains(position, color, [PieceKind::Pawn])
-        }) || position.knight_moves().any(|position| {
-            position == attacking && self.position_contains(position, color, [PieceKind::Knight])
-        }) || position.bishop_lines().any(|line| {
-            self.line_attacked_from(
-                line,
-                attacking,
-                color,
-                [PieceKind::Bishop, PieceKind::Queen],
-            )
-        }) || position.rook_lines().any(|line| {
-            self.line_attacked_from(line, attacking, color, [PieceKind::Rook, PieceKind::Queen])
-        }) || position.king_moves().any(|position| {
-            position == attacking && self.position_contains(position, color, [PieceKind::King])
-        })
-    }
-    fn is_attacked_after_move(self, origin: Coord, position: Coord, color: Color) -> bool {
-        let mut board = self;
-        board[origin] = None;
-        board.is_attacked(position, color)
-    }
-    pub fn moves(self) -> impl Iterator<Item = Move> {
-        self.pieces_of(self.current_player)
-            .flat_map(PieceWithContext::moves)
-    }
-    pub fn valid_moves(self) -> impl Iterator<Item = Move> {
-        self.moves()
-            .filter(move |movement| self.is_move_valid(*movement))
-    }
-    pub fn is_move_valid(self, movement: Move) -> bool {
-        let current_player = self.current_player;
-        let moved = self.into_moved(movement);
-        !moved
-            .king_of(current_player)
-            .is_some_and(|king| moved.is_attacked(king.position, !current_player))
-    }
-    fn has_valid_moves(self) -> bool {
-        self.valid_moves().next().is_some()
-    }
-    fn position_contains<const N: usize>(
-        self,
+    fn get_with_kind_indexed(
+        &self,
         position: Coord,
         color: Color,
-        pieces: [PieceKind; N],
-    ) -> bool {
-        self[position].is_some_and(|piece| piece.color == color && pieces.contains(&piece.kind))
-    }
-    fn line_contains<const N: usize>(
-        self,
-        mut line: impl Iterator<Item = Coord>,
-        color: Color,
-        pieces: [PieceKind; N],
-    ) -> bool {
-        line.find_map(|position| self[position])
-            .is_some_and(|piece| piece.color == color && pieces.contains(&piece.kind))
-    }
-    fn line_attacked_from<const N: usize>(
-        self,
-        mut line: impl Iterator<Item = Coord>,
-        attacking: Coord,
-        color: Color,
-        pieces: [PieceKind; N],
-    ) -> bool {
-        line.find_map(|position| self[position].map(|piece| (piece, position)))
-            .is_some_and(|(piece, position)| {
-                position == attacking && piece.color == color && pieces.contains(&piece.kind)
-            })
-    }
-    fn moveable_position_on_line(
-        self,
-        line: impl Iterator<Item = Coord>,
-        color: Color,
-    ) -> impl Iterator<Item = Coord> {
-        let mut stop_next = false;
-        line.take_while(move |position| {
-            if stop_next {
-                false
-            } else {
-                self[*position].is_none_or(|piece| {
-                    if piece.color == color {
-                        false
-                    } else {
-                        stop_next = true;
-                        true
-                    }
-                })
-            }
-        })
-    }
-    pub fn castling_rights(self) -> CastlingRights {
-        let [
-            (white_king_side, white_queen_side),
-            (black_king_side, black_queen_side),
-        ] = [Color::White, Color::Black].map(|color| {
-            if let Some(king) = self.king_of(color) {
-                if king.piece.moved {
-                    (false, false)
-                } else {
-                    let mut king_side = false;
-                    let mut queen_side = false;
-
-                    for piece in self.pieces_of(color) {
-                        if piece.piece.kind == PieceKind::Rook && !piece.piece.moved {
-                            match Ord::cmp(&king.position.x, &piece.position.x) {
-                                Ordering::Less => king_side = true,
-                                Ordering::Equal => (),
-                                Ordering::Greater => queen_side = true,
-                            }
-                            if king_side && queen_side {
-                                break;
-                            }
-                        }
-                    }
-                    (king_side, queen_side)
-                }
-            } else {
-                (false, false)
-            }
-        });
-        CastlingRights {
-            white_king_side,
-            white_queen_side,
-            black_king_side,
-            black_queen_side,
+        piece: PieceKind,
+    ) -> Option<(PieceIndex, Piece)> {
+        if let Some(indices) = self.indices.get() {
+            indices[position.y() as usize * 8 + position.x() as usize]
+                .map(|index| (index, self[index].unwrap()))
+        } else {
+            self.pieces_by_kind_indexed(color, piece)
+                .find(|(_, piece)| piece.position == position)
         }
     }
-    pub fn en_passant_destinations(self) -> impl Iterator<Item = Coord> {
-        self.pieces()
-            .filter(|piece| piece.piece.just_moved_twice_as_pawn)
-            .map(|piece| {
-                piece
+    fn indices(&self) -> &[Option<PieceIndex>; 64] {
+        self.indices.get_or_init(|| {
+            let mut board = [None; 64];
+            for (i, piece) in self.all_pieces_indexed() {
+                board[(piece.position.y() as usize * 8) + piece.position.x() as usize] = Some(i);
+            }
+            board
+        })
+    }
+    fn bishops_and_rooks_and_queens(&self, color: Color) -> impl Iterator<Item = Piece> {
+        self.pieces_by_kinds(
+            color,
+            &[PieceKind::Bishop, PieceKind::Rook, PieceKind::Queen],
+        )
+    }
+    fn king(&self, color: Color) -> Option<Piece> {
+        match color {
+            Color::White => self.pieces[0],
+            Color::Black => self.pieces[16],
+        }
+    }
+    fn king_indexed(&self, color: Color) -> Option<(PieceIndex, Piece)> {
+        match color {
+            Color::White => self.pieces[0].map(|piece| (0.try_into().unwrap(), piece)),
+            Color::Black => self.pieces[0].map(|piece| (16.try_into().unwrap(), piece)),
+        }
+    }
+    fn pawns(&self, color: Color) -> impl Iterator<Item = Piece> {
+        self.from_range(original_piece_range(color, PieceKind::Pawn))
+            .filter(|item| item.piece.piece() == PieceKind::Pawn)
+    }
+    fn validate(&self) -> Result<(), InvalidBoard> {
+        let (king, opponent_king) = match (
+            self.king(self.current_player),
+            self.king(!self.current_player),
+        ) {
+            (Some(king), Some(opponent_king)) => (king, opponent_king),
+            _ => return Err(InvalidBoard::NoKing),
+        };
+        if self
+            .attackers(opponent_king.position, self.current_player)
+            .next()
+            .is_some()
+        {
+            return Err(InvalidBoard::NonPlayerInCheck);
+        }
+        if self
+            .attackers(king.position, !self.current_player)
+            .skip(2)
+            .next()
+            .is_some()
+        {
+            return Err(InvalidBoard::MoreThanTwoCheckers);
+        }
+        if ![Color::White, Color::Black].into_iter().all(|color| {
+            let king = self.king(color).unwrap();
+            let king_on_home = king.position.y() == home_rank(color);
+            self.castling_right.all(color).all(|x| {
+                king_on_home
+                    && self
+                        .get_with_kind_indexed(
+                            Coord::new(x, home_rank(color)),
+                            color,
+                            PieceKind::Rook,
+                        )
+                        .is_some()
+            })
+        }) {
+            return Err(InvalidBoard::InvalidCastlingRight);
+        }
+        if let Some(en_passant_target) = self.en_passant_target {
+            if ![Color::White, Color::Black].into_iter().any(|color| {
+                self.pawns(color).any(|pawn| {
+                    (pawn.position - en_passant_target) == Vector::pawn_single_move(color)
+                })
+            }) {
+                return Err(InvalidBoard::InvalidEnPassantTarget);
+            }
+        }
+        if [Color::White, Color::Black]
+            .into_iter()
+            .flat_map(|color| self.pawns(color))
+            .any(|pawn| matches!(pawn.position.y(), coord_y!("1") | coord_y!("8")))
+        {
+            return Err(InvalidBoard::PawnInHomeRank);
+        }
+        Ok(())
+    }
+    fn attackers_with_inspect(
+        &self,
+        position: Coord,
+        color: Color,
+        checker: impl Fn(Coord) -> bool + Clone,
+    ) -> impl Iterator<Item = Piece> + FusedIterator {
+        self.pieces(color)
+            .filter(move |piece| match piece.piece.piece() {
+                PieceKind::Pawn => (piece.position - position).is_pawn_attack(color),
+                PieceKind::Knight => (piece.position - position).is_knight_move(),
+                PieceKind::Bishop => piece
                     .position
-                    .move_by(0, -pawn_direction(piece.piece.color))
-                    .expect("en passant destination shouldn't be out of bounds")
+                    .is_aligned_with_bishop(position)
+                    .is_some_and(|mut inside| !inside.any(checker.clone())),
+                PieceKind::Rook => piece
+                    .position
+                    .is_aligned_with_rook(position)
+                    .is_some_and(|mut inside| !inside.any(checker.clone())),
+                PieceKind::Queen => piece
+                    .position
+                    .is_aligned_with_queen(position)
+                    .is_some_and(|mut inside| !inside.any(checker.clone())),
+                PieceKind::King => (piece.position - position).is_king_move(),
             })
     }
-    pub fn into_switched_color(self, color: Color) -> Self {
-        let mut board = self;
-        board.current_player = color;
-        board
+    fn attackers(
+        &self,
+        position: Coord,
+        color: Color,
+    ) -> impl Iterator<Item = Piece> + FusedIterator {
+        self.attackers_with_inspect(position, color, |position| self[position].is_some())
+    }
+    fn is_move_attacked(&self, index: PieceIndex, destination: Coord, color: Color) -> bool {
+        self.attackers_with_inspect(destination, color, |position| {
+            self[position].is_some_and(|b| b != index)
+        })
+        .next()
+        .is_some()
+    }
+    fn pinned_with_inspect(
+        &self,
+        king: Coord,
+        position: Coord,
+        color: Color,
+        checker: impl Fn(Coord) -> bool + Clone,
+    ) -> Option<impl Iterator<Item = Coord>> {
+        let direction = position - king;
+        if Vector::QUEEN_DIRECTIONS
+            .iter()
+            .any(|valid_direction| direction.is_aligned(*valid_direction))
+        {
+            let direction = direction.as_unit();
+            if !position
+                .line_until_exclusive(-direction, 1, king)
+                .any(checker.clone())
+            {
+                let pieces = if Vector::BISHOP_DIRECTIONS.contains(&direction) {
+                    &[PieceKind::Bishop, PieceKind::Queen]
+                } else {
+                    &[PieceKind::Rook, PieceKind::Queen]
+                };
+                self.pieces_by_kinds(!color, pieces).find_map(|piece| {
+                    if direction.is_aligned(piece.position - king)
+                        && position.is_inside_of(piece.position, king)
+                    {
+                        (!piece
+                            .position
+                            .line_until_exclusive(-direction, 1, position)
+                            .any(checker.clone()))
+                        .then(|| piece.position.line_until_exclusive(-direction, 0, king))
+                    } else {
+                        None
+                    }
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+    fn valid_destinations_when_pinned(
+        &self,
+        king: Coord,
+        position: Coord,
+        color: Color,
+    ) -> Option<impl Iterator<Item = Coord>> {
+        self.pinned_with_inspect(king, position, color, |position| self[position].is_some())
+    }
+    fn one_side_is_dead(&self, color: Color) -> Option<bool> {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        enum PieceLeft {
+            Knight,
+            Bishop(Color),
+        }
+        self.non_kings(color)
+            .try_fold(None, |piece_left, piece| match piece.piece.piece() {
+                PieceKind::Knight => piece_left.is_none().then_some(Some(PieceLeft::Knight)),
+                PieceKind::Bishop => {
+                    let color = piece.position.color();
+                    match piece_left {
+                        Some(PieceLeft::Bishop(b)) if color == b => {
+                            Some(Some(PieceLeft::Bishop(color)))
+                        }
+                        Some(_) => None,
+                        None => Some(Some(PieceLeft::Bishop(color))),
+                    }
+                }
+                _ => None,
+            })
+            .map(|piece_left| piece_left.is_none())
+    }
+    fn has_lone_king(&self, color: Color) -> bool {
+        self.non_kings(color).next().is_none()
+    }
+    fn is_dead(&self) -> bool {
+        match self.one_side_is_dead(Color::White) {
+            Some(false) => self.has_lone_king(Color::Black),
+            Some(true) => self.one_side_is_dead(Color::Black).is_some(),
+            None => false,
+        }
+    }
+    pub fn valid_moves(&self) -> Result<impl Iterator<Item = Move>, EndState> {
+        if self.is_dead() {
+            Err(EndState::Draw)
+        } else {
+            let (valid_moves, check) = self.valid_moves_and_check();
+            let mut valid_moves = valid_moves.peekable();
+            if valid_moves.peek().is_some() {
+                Ok(valid_moves)
+            } else if check {
+                Err(EndState::Win(!self.current_player))
+            } else {
+                Err(EndState::Draw)
+            }
+        }
+    }
+    fn castling_moves(&self, check: bool) -> impl Iterator<Item = Move> {
+        let (king_index, king) = self.king_indexed(self.current_player).unwrap();
+        let castling_right = self.castling_right;
+        let new_castling_right = castling_right.to_cleared(self.current_player);
+        castling_right
+            .all(self.current_player)
+            .filter(move |_| !check)
+            .filter_map(move |x| {
+                let (rook_index, rook) = self
+                    .get_with_kind_indexed(
+                        Coord::new(x, home_rank(self.current_player)),
+                        self.current_player,
+                        PieceKind::Rook,
+                    )
+                    .unwrap();
+                let (king_destination, rook_destination) =
+                    match Ord::cmp(&king.position.x(), &rook.position.x()) {
+                        Ordering::Less => (
+                            Coord::new(coord_x!("g"), home_rank(self.current_player)),
+                            Coord::new(coord_x!("f"), home_rank(self.current_player)),
+                        ),
+                        Ordering::Equal => unreachable!(),
+                        Ordering::Greater => (
+                            Coord::new(coord_x!("c"), home_rank(self.current_player)),
+                            Coord::new(coord_x!("d"), home_rank(self.current_player)),
+                        ),
+                    };
+                [
+                    (
+                        king.position,
+                        king_destination,
+                        rook.position,
+                        PieceKind::King,
+                    ),
+                    (
+                        rook.position,
+                        rook_destination,
+                        king.position,
+                        PieceKind::Rook,
+                    ),
+                ]
+                .into_iter()
+                .all(|(origin, destination, other_position, piece)| {
+                    origin
+                        .line_until_inclusive((destination - origin).as_unit(), 1, destination)
+                        .all(|position| {
+                            (position == other_position || self[position].is_none())
+                                && (piece != PieceKind::King
+                                    || self.is_move_attacked(
+                                        rook_index,
+                                        destination,
+                                        !self.current_player,
+                                    ))
+                        })
+                })
+                .then(|| Move {
+                    movement: SimpleMove {
+                        index: king_index,
+                        destination: king_destination,
+                        capture: None,
+                    },
+                    castling_rook: Some(SimpleMove {
+                        index: rook_index,
+                        destination: rook_destination,
+                        capture: None,
+                    }),
+                    promotion: None,
+                    en_passant_target: None,
+                    castling_right: new_castling_right,
+                })
+            })
+    }
+    fn valid_moves_and_check(&self) -> (impl Iterator<Item = Move> + '_, bool) {
+        let king = self.king(self.current_player).unwrap();
+        let mut attackers_iter = self.attackers(king.position, self.current_player).fuse();
+        let attackers = [attackers_iter.next(), attackers_iter.next()];
+        debug_assert!(attackers_iter.next().is_none());
+        let check = !attackers.is_empty();
+        let non_castling_moves = self
+            .all_pieces_indexed()
+            .flat_map(move |(index, piece)| {
+                let valid_destination_when_pinned: Option<Rc<[_]>> =
+                    if piece.piece.piece() != PieceKind::King {
+                        self.valid_destinations_when_pinned(
+                            king.position,
+                            piece.position,
+                            self.current_player,
+                        )
+                        .map(Iterator::collect)
+                    } else {
+                        None
+                    };
+                piece
+                    .non_castling_moves(index, &self)
+                    .map(move |movement| (movement, piece, valid_destination_when_pinned.clone()))
+            })
+            .filter(move |(movement, piece, valid_destination_when_pinned)| {
+                if piece.piece.piece() == PieceKind::King {
+                    self.is_move_attacked(
+                        movement.movement.index,
+                        piece.position,
+                        !self.current_player,
+                    )
+                } else {
+                    attackers
+                        .into_iter()
+                        .map_while(|attacker| attacker)
+                        .all(|piece| {
+                            piece.can_be_blocked(king.position, movement.movement.destination)
+                        })
+                        && valid_destination_when_pinned
+                            .as_ref()
+                            .is_none_or(|valid_destinations| {
+                                valid_destinations.contains(&movement.movement.destination)
+                            })
+                        && {
+                            // special case for en passant when the captured pawn is pinned
+                            let en_passant = movement.movement.capture.is_some_and(|index| {
+                                self[index].unwrap().position != movement.movement.destination
+                            });
+                            (!en_passant)
+                                || self
+                                    .pinned_with_inspect(
+                                        king.position,
+                                        self[movement.movement.capture.unwrap()].unwrap().position,
+                                        piece.piece.color(),
+                                        |position| {
+                                            position != piece.position
+                                                && (position == movement.movement.destination
+                                                    || self[position].is_some())
+                                        },
+                                    )
+                                    .is_none()
+                        }
+                }
+            })
+            .map(|(movement, _, _)| movement);
+        (non_castling_moves.chain(self.castling_moves(check)), check)
+    }
+    fn move_piece(&mut self, movement: &impl Moveable) {
+        movement.move_board(self);
+    }
+    pub fn clone_and_move(&self, movement: &impl Moveable) -> Self {
+        let mut new = self.clone();
+        new.move_piece(movement);
+        new
     }
 }
 impl Index<Coord> for Board {
-    type Output = Option<Piece>;
+    type Output = Option<PieceIndex>;
 
     fn index(&self, index: Coord) -> &Self::Output {
-        &self.board[index.y as usize][index.x as usize]
+        &self.indices()[(index.y() as usize * 8) + index.x() as usize]
     }
 }
-impl IndexMut<Coord> for Board {
-    fn index_mut(&mut self, index: Coord) -> &mut Self::Output {
-        &mut self.board[index.y as usize][index.x as usize]
+impl Index<PieceIndex> for Board {
+    type Output = Option<Piece>;
+
+    fn index(&self, index: PieceIndex) -> &Self::Output {
+        let index: usize = index.into();
+        &self.pieces[index]
     }
 }
-impl Default for Board {
-    fn default() -> Self {
-        let pieces = [
-            PieceKind::Rook,
-            PieceKind::Knight,
-            PieceKind::Bishop,
-            PieceKind::Queen,
-            PieceKind::King,
-            PieceKind::Bishop,
-            PieceKind::Knight,
-            PieceKind::Rook,
-        ];
-        Self {
-            current_player: Color::White,
-            board: [
-                pieces.map(|kind| {
-                    Some(Piece {
-                        color: Color::Black,
-                        kind,
-                        moved: false,
-                        just_moved_twice_as_pawn: false,
-                    })
-                }),
-                [Some(Piece {
-                    color: Color::Black,
-                    kind: PieceKind::Pawn,
-                    moved: false,
-                    just_moved_twice_as_pawn: false,
-                }); 8],
-                [None; 8],
-                [None; 8],
-                [None; 8],
-                [None; 8],
-                [Some(Piece {
-                    color: Color::White,
-                    kind: PieceKind::Pawn,
-                    moved: false,
-                    just_moved_twice_as_pawn: false,
-                }); 8],
-                pieces.map(|kind| {
-                    Some(Piece {
-                        color: Color::White,
-                        kind,
-                        moved: false,
-                        just_moved_twice_as_pawn: false,
-                    })
-                }),
-            ],
-        }
+impl IndexMut<PieceIndex> for Board {
+    fn index_mut(&mut self, index: PieceIndex) -> &mut Self::Output {
+        let index: usize = index.into();
+        &mut self.pieces[index]
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct Coord {
-    pub x: u8,
-    pub y: u8,
+pub enum ExceededPieces {
+    PromotedPiece,
+    Pawn,
+    King,
 }
-impl Coord {
-    fn dummy() -> Self {
-        coord!("a8")
-    }
-    pub fn board_color(self) -> Color {
-        match (self.x + self.y) % 2 {
-            0 => Color::White,
-            1 => Color::Black,
-            _ => unreachable!(),
-        }
-    }
-    fn is_valid(self) -> bool {
-        self.x < 8 && self.y < 8
-    }
-    fn move_by(self, x: i8, y: i8) -> Option<Self> {
-        let x = self.x.checked_add_signed(x)?;
-        let y = self.y.checked_add_signed(y)?;
-        Some(Coord { x, y }).filter(|position| position.is_valid())
-    }
-    fn king_moves(self) -> impl Iterator<Item = Self> {
-        (-1..=1)
-            .flat_map(|x| (-1..=1).map(move |y| (x, y)))
-            .filter(|(x, y)| *x != 0 || *y != 0)
-            .filter_map(move |(x, y)| self.move_by(x, y))
-    }
-    fn line(self, x: i8, y: i8) -> impl Iterator<Item = Self> {
-        (1..).map_while(move |distance| self.move_by(x * distance, y * distance))
-    }
-    fn rook_lines(self) -> impl Iterator<Item = impl Iterator<Item = Self>> {
-        [(-1, 0), (1, 0), (0, -1), (0, 1)]
-            .into_iter()
-            .map(move |(x, y)| self.line(x, y))
-    }
-    fn bishop_lines(self) -> impl Iterator<Item = impl Iterator<Item = Self>> {
-        [(-1, -1), (1, -1), (-1, 1), (1, 1)]
-            .into_iter()
-            .map(move |(x, y)| self.line(x, y))
-    }
-    fn queen_lines(self) -> impl Iterator<Item = impl Iterator<Item = Self>> {
-        (-1..=1)
-            .flat_map(|x| (-1..=1).map(move |y| (x, y)))
-            .filter(|(x, y)| *x != 0 || *y != 0)
-            .map(move |(x, y)| self.line(x, y))
-    }
-    fn knight_moves(self) -> impl Iterator<Item = Self> {
-        [(1, 2), (2, 1)]
-            .into_iter()
-            .flat_map(|(x, y)| [(x, y), (-x, y), (x, -y), (-x, -y)])
-            .filter_map(move |(x, y)| self.move_by(x, y))
-    }
-    fn pawn_captures(self, color: Color) -> impl Iterator<Item = Self> {
-        let y = pawn_direction(color);
-        [(1, y), (-1, y)]
-            .into_iter()
-            .filter_map(move |(x, y)| self.move_by(x, y))
-    }
-    fn en_passant_target(self) -> impl Iterator<Item = Self> {
-        [(1, 0), (-1, 0)]
-            .into_iter()
-            .filter_map(move |(x, y)| self.move_by(x, y))
-    }
-    pub fn from_char(x: char, y: char) -> Result<Self, ParseCoordError> {
-        let x = match x {
-            'a'..='h' => x as u8 - b'a',
-            _ => return Err(ParseCoordError::InvalidX(x)),
-        };
-        let y = match y {
-            '1'..='8' => 7 - (y as u8 - b'1'),
-            _ => return Err(ParseCoordError::InvalidY(y)),
-        };
-        Ok(Coord { x, y })
-    }
-}
-fn pawn_direction(color: Color) -> i8 {
-    match color {
-        Color::White => -1,
-        Color::Black => 1,
-    }
-}
-fn promotion_rank(color: Color) -> u8 {
-    match color {
-        Color::White => coord_y!("8"),
-        Color::Black => coord_y!("1"),
-    }
-}
-pub fn pawn_home_rank(color: Color) -> u8 {
-    match color {
-        Color::White => coord_y!("2"),
-        Color::Black => coord_y!("7"),
-    }
-}
-impl Display for Coord {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let x = (self.x + b'a') as char;
-        let y = 8 - self.y;
-        write!(f, "{x}{y}")?;
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ParseCoordError {
-    Empty,
-    YNotProvided,
-    InvalidX(char),
-    InvalidY(char),
-    UnexpectedSymbol(char),
-}
-impl Display for ParseCoordError {
+impl Display for ExceededPieces {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseCoordError::Empty => write!(f, "expected 2 characters, found none instead")?,
-            ParseCoordError::YNotProvided => write!(f, "expected 2 characters, found 1 instead")?,
-            ParseCoordError::InvalidX(c) => write!(f, "`{c}` is not a letter from a to h")?,
-            ParseCoordError::InvalidY(c) => write!(f, "`{c}` is not a number from 1 to 8")?,
-            ParseCoordError::UnexpectedSymbol(c) => {
-                write!(f, "unexpected `{c}`, only 2 characters are expected")?;
+            ExceededPieces::PromotedPiece => {
+                write!(f, "exceeded allowable number of promoted pieces")?
+            }
+            ExceededPieces::Pawn => write!(f, "found more than 8 pawns")?,
+            ExceededPieces::King => write!(f, "found more than 1 kings")?,
+        };
+        Ok(())
+    }
+}
+impl Error for ExceededPieces {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct HashableBoard {
+    pub board: [[Option<ColoredPieceKind>; 8]; 8],
+    pub current_player: Color,
+    pub castling_right: CastlingRight,
+    pub en_passant_target: Option<Coord>,
+}
+impl HashableBoard {
+    fn starting_position() -> Self {
+        HashableBoard::from_configuration(PieceKind::STARTING_CONFIGURATION)
+    }
+    fn from_configuration(configuration: [PieceKind; 8]) -> Self {
+        let castling_right = CastlingRight::from_configuration(&configuration);
+        let board = [
+            configuration.map(|piece| Some(ColoredPieceKind::new(Color::Black, piece))),
+            [Some(ColoredPieceKind::new(Color::Black, PieceKind::Pawn)); 8],
+            [None; 8],
+            [None; 8],
+            [None; 8],
+            [None; 8],
+            [Some(ColoredPieceKind::new(Color::White, PieceKind::Pawn)); 8],
+            configuration.map(|piece| Some(ColoredPieceKind::new(Color::White, piece))),
+        ];
+        HashableBoard {
+            board,
+            current_player: Color::White,
+            castling_right,
+            en_passant_target: None,
+        }
+    }
+}
+impl TryFrom<HashableBoard> for Board {
+    type Error = ExceededPieces;
+
+    fn try_from(value: HashableBoard) -> Result<Self, Self::Error> {
+        let mut pieces = [None; 32];
+        for (y, row) in value.board.iter().enumerate() {
+            'upper: for (x, piece) in row.iter().enumerate() {
+                if let Some(piece) = piece {
+                    let range = original_piece_range(piece.color(), piece.piece());
+                    let pawn_range = match piece.piece() {
+                        PieceKind::King | PieceKind::Pawn => 0..0,
+                        _ => original_piece_range(piece.color(), PieceKind::Pawn),
+                    };
+                    let [piece_rack, pawn_rack] =
+                        pieces.get_disjoint_mut([range, pawn_range]).unwrap();
+                    for square in piece_rack.iter_mut().chain(pawn_rack.iter_mut()) {
+                        if square.is_none() {
+                            *square = Some(Piece {
+                                piece: *piece,
+                                position: Coord::new(x.try_into().unwrap(), y.try_into().unwrap()),
+                            });
+                            continue 'upper;
+                        }
+                    }
+                    match piece.piece() {
+                        PieceKind::Pawn => {
+                            if pieces[original_piece_range(piece.color(), PieceKind::Pawn)]
+                                .iter()
+                                .copied()
+                                .all(|piece| piece.unwrap().piece.piece() == PieceKind::Pawn)
+                            {
+                                return Err(ExceededPieces::Pawn);
+                            } else {
+                                return Err(ExceededPieces::PromotedPiece);
+                            }
+                        }
+                        PieceKind::King => return Err(ExceededPieces::King),
+                        _ => return Err(ExceededPieces::PromotedPiece),
+                    }
+                }
             }
         }
-        Ok(())
-    }
-}
-impl Error for ParseCoordError {}
-
-impl FromStr for Coord {
-    type Err = ParseCoordError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut characters = s.chars();
-        let x = characters.next().ok_or(ParseCoordError::Empty)?;
-        let y = characters.next().ok_or(ParseCoordError::YNotProvided)?;
-        let coord = Coord::from_char(x, y)?;
-        if let Some(c) = characters.next() {
-            return Err(ParseCoordError::UnexpectedSymbol(c));
+        let mut board = Board {
+            pieces,
+            indices: OnceCell::new(),
+            current_player: value.current_player,
+            castling_right: value.castling_right,
+            en_passant_target: value.en_passant_target,
+        };
+        if let Some(en_passant_target) = board.en_passant_target {
+            if ![Color::White, Color::Black].into_iter().any(|color| {
+                board
+                    .pawns(color)
+                    .any(|piece| (en_passant_target - piece.position).is_pawn_attack(color))
+            }) {
+                board.en_passant_target = None;
+            }
         }
-        Ok(coord)
+        Ok(board)
     }
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct PieceWithContext {
-    pub piece: Piece,
-    pub position: Coord,
-    pub board: Board,
-}
-impl PieceWithContext {
-    fn moves_from_positions(
-        self,
-        positions: impl Iterator<Item = Coord>,
-    ) -> impl Iterator<Item = Move> {
-        positions
-            .filter(move |position| {
-                self.board[*position].is_none_or(|piece| piece.color != self.piece.color)
-            })
-            .map(move |destination| SimpleMove {
-                origin: self.position,
-                destination,
-            })
-            .map(SimpleMove::as_simple_move)
-    }
-    fn moves_from_lines(
-        self,
-        lines: impl Iterator<Item = impl Iterator<Item = Coord>>,
-    ) -> impl Iterator<Item = Move> {
-        lines
-            .flat_map(move |line| self.board.moveable_position_on_line(line, self.piece.color))
-            .map(move |destination| SimpleMove {
-                origin: self.position,
-                destination,
-            })
-            .map(SimpleMove::as_simple_move)
-    }
-    fn pawn_moves(self) -> impl Iterator<Item = Move> {
-        // regular forward move
-        self.position
-            .line(0, pawn_direction(self.piece.color))
-            .take_while(move |position| self.board[*position].is_none())
-            .take(if self.piece.moved { 1 } else { 2 })
-            .chain(
-                // regular capture moves
-                self.position
-                    .pawn_captures(self.piece.color)
-                    .filter(move |position| {
-                        self.board[*position].is_some_and(|piece| piece.color != self.piece.color)
-                    }),
-            )
-            .flat_map(
-                // turn into promotion if possible
-                move |destination| {
-                    if destination.y == promotion_rank(self.piece.color) {
-                        [
-                            PieceKind::Knight,
-                            PieceKind::Bishop,
-                            PieceKind::Rook,
-                            PieceKind::Queen,
-                        ]
-                        .map(|promotion_piece| Move {
-                            movement: SimpleMove {
-                                origin: self.position,
-                                destination,
-                            },
-                            castling_rook: None,
-                            en_passant_capture: None,
-                            promotion_piece: Some(promotion_piece),
-                        })
-                        .into_iter()
-                        .take(4)
-                    } else {
-                        [
-                            Move {
-                                movement: SimpleMove {
-                                    origin: self.position,
-                                    destination,
-                                },
-                                castling_rook: None,
-                                en_passant_capture: None,
-                                promotion_piece: None,
-                            },
-                            Move::dummy(),
-                            Move::dummy(),
-                            Move::dummy(),
-                        ]
-                        .into_iter()
-                        .take(1)
-                    }
-                },
-            )
-            .chain(
-                // en passant
-                self.position
-                    .en_passant_target()
-                    .filter(move |position| {
-                        self.board[*position].is_some_and(|piece| {
-                            piece.color != self.piece.color && piece.just_moved_twice_as_pawn
-                        })
-                    })
-                    .filter_map(move |captured| {
-                        Some(Move {
-                            movement: SimpleMove {
-                                origin: self.position,
-                                destination: captured
-                                    .move_by(0, pawn_direction(self.piece.color))?,
-                            },
-                            castling_rook: None,
-                            en_passant_capture: Some(captured),
-                            promotion_piece: None,
-                        })
-                    }),
-            )
-    }
-    fn knight_moves(self) -> impl Iterator<Item = Move> {
-        self.moves_from_positions(self.position.knight_moves())
-    }
-    fn bishop_moves(self) -> impl Iterator<Item = Move> {
-        self.moves_from_lines(self.position.bishop_lines())
-    }
-    fn rook_moves(self) -> impl Iterator<Item = Move> {
-        self.moves_from_lines(self.position.rook_lines())
-    }
-    fn queen_moves(self) -> impl Iterator<Item = Move> {
-        self.moves_from_lines(self.position.queen_lines())
-    }
-    fn king_moves(self) -> impl Iterator<Item = Move> {
-        // regular moves
-        self.moves_from_positions(self.position.king_moves()).chain(
-            // castling
-            [-1, 1]
-                .into_iter()
-                .filter(move |_| !self.piece.moved)
-                .filter_map(move |direction| {
-                    self.position
-                        .line(direction, 0)
-                        .filter_map(|position| {
-                            Some(PieceWithContext {
-                                piece: self.board[position]?,
-                                position,
-                                board: self.board,
-                            })
-                        })
-                        .find_map(|piece| {
-                            (piece.piece.color == self.piece.color
-                                && piece.piece.kind == PieceKind::Rook
-                                && !piece.piece.moved)
-                                .then(|| {
-                                    let king_destination = match direction {
-                                        -1 => coord_x!("c"),
-                                        1 => coord_x!("g"),
-                                        _ => unreachable!(),
-                                    };
-                                    let rook_destination = match direction {
-                                        -1 => coord_x!("d"),
-                                        1 => coord_x!("f"),
-                                        _ => unreachable!(),
-                                    };
-                                    (
-                                        SimpleMove {
-                                            origin: self.position,
-                                            destination: Coord {
-                                                x: king_destination,
-                                                y: self.position.y,
-                                            },
-                                        },
-                                        SimpleMove {
-                                            origin: piece.position,
-                                            destination: Coord {
-                                                x: rook_destination,
-                                                y: piece.position.y,
-                                            },
-                                        },
-                                    )
-                                })
-                        })
-                })
-                .filter(move |(king, rook)| {
-                    [
-                        (
-                            PieceKind::Rook,
-                            number_range_inclusive(rook.origin.x, rook.destination.x),
-                        ),
-                        (
-                            PieceKind::King,
-                            number_range_inclusive(king.origin.x, king.destination.x),
-                        ),
-                    ]
-                    .into_iter()
-                    .all(|(kind, mut range)| {
-                        range.all(|x| {
-                            let position = Coord {
-                                x,
-                                y: match kind {
-                                    PieceKind::Rook => rook.origin.y,
-                                    PieceKind::King => king.origin.y,
-                                    _ => unreachable!(),
-                                },
-                            };
-                            self.board[position].is_none_or(|piece| {
-                                piece.color == self.piece.color
-                                    && match piece.kind {
-                                        PieceKind::Rook => position == rook.origin,
-                                        PieceKind::King => position == king.origin,
-                                        _ => false,
-                                    }
-                            }) && !(kind == PieceKind::King
-                                && self.board.is_attacked(position, !self.piece.color))
-                        })
-                    })
-                })
-                .map(|(movement, castling_rook)| Move {
-                    movement,
-                    castling_rook: Some(castling_rook),
-                    en_passant_capture: None,
-                    promotion_piece: None,
-                }),
-        )
-    }
-    fn moves(self) -> Box<dyn Iterator<Item = Move>> {
-        match self.piece.kind {
-            PieceKind::Pawn => Box::new(self.pawn_moves()),
-            PieceKind::Knight => Box::new(self.knight_moves()),
-            PieceKind::Bishop => Box::new(self.bishop_moves()),
-            PieceKind::Rook => Box::new(self.rook_moves()),
-            PieceKind::Queen => Box::new(self.queen_moves()),
-            PieceKind::King => Box::new(self.king_moves()),
-        }
-    }
-    #[cfg(test)]
-    pub fn valid_moves(self) -> impl Iterator<Item = Move> {
-        self.moves()
-            .filter(move |movement| self.board.is_move_valid(*movement))
-    }
-}
-impl Display for PieceWithContext {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} on {}", self.piece, self.position)?;
-        Ok(())
-    }
+pub trait Moveable {
+    fn move_board(&self, board: &mut Board);
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct SimpleMove {
-    pub origin: Coord,
-    pub destination: Coord,
-}
-impl Display for SimpleMove {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.origin, self.destination)?;
-        Ok(())
-    }
+struct SimpleMove {
+    index: PieceIndex,
+    destination: Coord,
+    capture: Option<PieceIndex>,
 }
 impl SimpleMove {
-    fn dummy() -> Self {
-        SimpleMove {
-            origin: Coord::dummy(),
-            destination: Coord::dummy(),
-        }
-    }
-    fn as_simple_move(self) -> Move {
+    fn to_simple_move(self, castling_right: CastlingRight) -> Move {
         Move {
             movement: self,
             castling_rook: None,
-            en_passant_capture: None,
-            promotion_piece: None,
+            promotion: None,
+            en_passant_target: None,
+            castling_right,
         }
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Move {
-    pub movement: SimpleMove,
-    pub castling_rook: Option<SimpleMove>,
-    pub en_passant_capture: Option<Coord>,
-    pub promotion_piece: Option<PieceKind>,
+    movement: SimpleMove,
+    castling_rook: Option<SimpleMove>,
+    promotion: Option<PieceKind>,
+    en_passant_target: Option<Coord>,
+    castling_right: CastlingRight,
 }
 impl Move {
-    fn dummy() -> Self {
-        SimpleMove::dummy().as_simple_move()
-    }
-}
-impl Display for Move {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.movement)?;
-        if let Some(piece) = self.promotion_piece {
-            write!(f, "{}", piece.lowercase())?;
+    fn as_long_algebraic_notation(self, board: &Board) -> LongAlgebraicNotation {
+        let piece = board[self.movement.index].unwrap();
+        if let Some(rook) = self.castling_rook {
+            let rook = board[rook.index].unwrap();
+            if piece.position.x() == coord_x!("e")
+                && matches!(rook.position.x(), coord_x!("a") | coord_x!("h"))
+            {
+                LongAlgebraicNotation {
+                    origin: piece.position,
+                    destination: self.movement.destination,
+                    promotion: self.promotion,
+                }
+            } else {
+                LongAlgebraicNotation {
+                    origin: piece.position,
+                    destination: rook.position,
+                    promotion: self.promotion,
+                }
+            }
+        } else {
+            LongAlgebraicNotation {
+                origin: piece.position,
+                destination: self.movement.destination,
+                promotion: self.promotion,
+            }
         }
-        Ok(())
+    }
+    fn as_long_algebraic_notation_chess_960(self, board: &Board) -> LongAlgebraicNotation {
+        let piece = board[self.movement.index].unwrap();
+        if let Some(rook) = self.castling_rook {
+            LongAlgebraicNotation {
+                origin: piece.position,
+                destination: board[rook.index].unwrap().position,
+                promotion: self.promotion,
+            }
+        } else {
+            LongAlgebraicNotation {
+                origin: piece.position,
+                destination: self.movement.destination,
+                promotion: self.promotion,
+            }
+        }
     }
 }
-fn number_range_inclusive(a: u8, b: u8) -> RangeInclusive<u8> {
-    Ord::min(a, b)..=Ord::max(a, b)
-}
-#[cfg(test)]
-mod test {
-    use crate::{
-        chess::{Board, Color, Coord, EndState, PieceWithContext},
-        coord,
-        fen::Fen,
-    };
+impl Moveable for Move {
+    fn move_board(&self, board: &mut Board) {
+        let current_player = board.current_player;
+        let piece = board[self.movement.index].as_mut().unwrap();
+        piece.position = self.movement.destination;
+        if let Some(promotion) = self.promotion {
+            piece.piece = ColoredPieceKind::new(current_player, promotion);
+        }
+        if let Some(index) = self.movement.capture {
+            board[index] = None;
+        }
+        if let Some(movement) = self.castling_rook {
+            let rook = board[movement.index].as_mut().unwrap();
+            rook.position = movement.destination;
+        }
+        board.en_passant_target = self.en_passant_target;
+        board.castling_right = self.castling_right;
 
-    #[test]
-    fn checkmate() {
-        let Fen(board) = "8/8/R7/R3k3/R7/8/8/4K3 b - - 0 1".parse().unwrap();
-        assert_eq!(board.state(), Some(EndState::Win(Color::White)));
+        board.indices = OnceCell::new();
     }
-    #[test]
-    fn stalemate() {
-        let Fen(board) = "8/8/R7/4k3/R7/8/8/3RKR2 b - - 0 1".parse().unwrap();
-        assert_eq!(board.state(), Some(EndState::Draw));
-    }
-    #[test]
-    fn dead_position() {
-        let Fen(board) = "3bk3/8/8/8/8/8/8/3NK3 w - - 0 1".parse().unwrap();
-        assert_eq!(board.state(), Some(EndState::Draw));
-    }
-    #[test]
-    fn en_passant() {
-        let Fen(mut board) = "4k3/5p2/8/4P3/8/8/8/4K3 b - - 0 1".parse().unwrap();
-        move_piece_with_assert(&mut board, coord!("f7"), coord!("f5"));
-        assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
-        move_piece_with_assert(&mut board, coord!("e5"), coord!("f6"));
-        assert!(board[coord!("f5")].is_none());
-    }
-    #[test]
-    fn lose_of_en_passant_rights() {
-        let Fen(mut board) = "4k3/3p1p2/8/8/4P3/8/8/4K3 b - - 0 1".parse().unwrap();
-        move_piece_with_assert(&mut board, coord!("d7"), coord!("d5"));
-        move_piece_with_assert(&mut board, coord!("e4"), coord!("e5"));
-        move_piece_with_assert(&mut board, coord!("f7"), coord!("f5"));
-        assert!(!board[coord!("d5")].unwrap().just_moved_twice_as_pawn);
-        assert!(board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
-        move_piece_with_assert(&mut board, coord!("e1"), coord!("d1"));
-        move_piece_with_assert(&mut board, coord!("e8"), coord!("d8"));
-        assert!(!board[coord!("f5")].unwrap().just_moved_twice_as_pawn);
-        assert_no_move(&mut board, coord!("e5"), coord!("f6"));
-    }
-    fn move_piece_with_assert(board: &mut Board, origin: Coord, destination: Coord) {
-        let piece = board[origin].expect("origin position should contain a piece");
-        assert_eq!(piece.color, board.current_player);
-        let piece = PieceWithContext {
-            piece,
-            position: origin,
-            board: *board,
-        };
-        board.move_piece(
-            piece
-                .valid_moves()
-                .find(|movement| movement.movement.destination == destination)
-                .unwrap(),
-        );
-    }
-    fn assert_no_move(board: &mut Board, origin: Coord, destination: Coord) {
-        let piece = board[origin].expect("origin position should contain a piece");
-        assert_eq!(piece.color, board.current_player);
-        let piece = PieceWithContext {
-            piece,
-            position: origin,
-            board: *board,
-        };
-        assert!(
-            piece
-                .valid_moves()
-                .find(|movement| {
-                    movement.movement.origin == origin
-                        && movement.movement.destination == destination
-                })
-                .is_none()
-        )
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct LongAlgebraicNotation {
+    origin: Coord,
+    destination: Coord,
+    promotion: Option<PieceKind>,
+}
+impl Moveable for LongAlgebraicNotation {
+    fn move_board(&self, board: &mut Board) {
+        todo!()
     }
 }

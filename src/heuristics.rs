@@ -72,31 +72,5 @@ impl Ord for Advantage {
     }
 }
 pub fn estimate(board: Board) -> Estimated {
-    let [white, black] = [Color::White, Color::Black].map(|color| {
-        let board = board.into_switched_color(color);
-        let opposing_king = board.king_of(!color).unwrap();
-        let mut king_safety = 0;
-        let mut square_control = 0;
-        for movement in board.moves() {
-            if !board.is_attacked(movement.movement.destination, !color) {
-                let moved_board = board.into_moved(movement);
-                if moved_board.is_attacked_from(
-                    opposing_king.position,
-                    movement.movement.destination,
-                    color,
-                ) {
-                    king_safety += 1;
-                }
-            }
-            square_control += 1;
-        }
-        Estimated {
-            king_safety,
-            square_control,
-        }
-    });
-    Estimated {
-        king_safety: white.king_safety - black.king_safety,
-        square_control: white.square_control - black.square_control,
-    }
+    todo!()
 }

@@ -32,7 +32,7 @@ pub struct GameTree {
 }
 impl GameTree {
     pub fn new(board: Board) -> Self {
-        let data = if let Some(state) = board.state() {
+        let data = if let Err(state) = board.valid_moves() {
             GameTreeData::End(state)
         } else {
             GameTreeData::Board(Box::new(board))
@@ -53,7 +53,7 @@ impl GameTree {
             sender
         });
         let new = match &mut self.data {
-            GameTreeData::Board(board) => GameTree::new(board.into_moved(movement)),
+            GameTreeData::Board(board) => GameTree::new(board.clone_and_move(&movement)),
             GameTreeData::Children { children, .. } => {
                 children
                     .remove(children.iter().position(|(b, _)| movement == *b).unwrap())
@@ -69,10 +69,11 @@ impl GameTree {
             GameTreeData::Board(board) => {
                 let board = Board::clone(board);
                 self.data = GameTreeData::Children {
-                    current_player: board.current_player,
+                    current_player: board.current_player(),
                     children: board
                         .valid_moves()
-                        .map(|movement| (movement, GameTree::new(board.into_moved(movement))))
+                        .unwrap()
+                        .map(|movement| (movement, GameTree::new(board.clone_and_move(&movement))))
                         .collect(),
                 };
             }
@@ -86,7 +87,7 @@ impl GameTree {
     }
     fn current_player(&self) -> Option<Color> {
         match &self.data {
-            GameTreeData::Board(board) => Some(board.current_player),
+            GameTreeData::Board(board) => Some(board.current_player()),
             GameTreeData::Children { current_player, .. } => Some(*current_player),
             GameTreeData::End(_) => None,
         }

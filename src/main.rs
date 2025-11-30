@@ -1,57 +1,14 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic)]
-
-use crate::{chess::Board, game_tree::GameTree, tui::Tui};
+#![allow(dead_code)]
 
 mod chess;
 mod fen;
 mod game_tree;
 mod heuristics;
-mod tui;
+mod temporal;
 
-fn main() {
-    let mut board = Board::new();
-    let mut game_tree = GameTree::new(board);
-    let mut previous_move = None;
-    let mut end = false;
-
-    loop {
-        if let Some(previous_move) = &previous_move {
-            println!(
-                "{}",
-                Tui {
-                    board,
-                    highlighted: previous_move
-                }
-            );
-        } else {
-            println!(
-                "{}",
-                Tui {
-                    board,
-                    highlighted: &[]
-                }
-            );
-        }
-        if end {
-            break;
-        }
-        let (movement, advantage) = game_tree.best(5);
-        println!("{advantage}");
-        print!("idea:");
-        for movement in game_tree.line() {
-            print!(" {movement}");
-        }
-        println!();
-        if let Some(movement) = movement {
-            board.move_piece(movement);
-            game_tree.move_piece(movement);
-            previous_move = Some([movement.movement.origin, movement.movement.destination]);
-        } else {
-            end = true;
-        }
-    }
-}
+fn main() {}
 #[macro_export]
 macro_rules! coord_x {
     ("a") => {
