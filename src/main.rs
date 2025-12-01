@@ -55,7 +55,6 @@ fn main() {
                 info: &info,
             },
         );
-        board.display_raw_moves();
         if valid_moves.is_empty() {
             break;
         }
