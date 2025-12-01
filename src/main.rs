@@ -11,6 +11,7 @@ use std::{
 use crate::{
     board_display::BoardDisplay,
     chess::{Board, Color},
+    fen::Fen,
 };
 
 mod board_display;
@@ -26,6 +27,8 @@ fn main() {
     let mut highlighted = Vec::new();
     let mut valid_moves = HashMap::new();
     let mut update = true;
+    let mut view = Color::White;
+    let mut first_time = true;
     loop {
         if update {
             valid_moves.clear();
@@ -37,10 +40,14 @@ fn main() {
                             (movement.as_long_algebraic_notation(&board), movement)
                         }),
                     );
-                    write!(&mut info, "{} plays", board.current_player()).unwrap();
+                    writeln!(&mut info, "{} plays", board.current_player()).unwrap();
+                    if first_time {
+                        writeln!(&mut info, "type `help` for instructions").unwrap();
+                        first_time = false;
+                    }
                 }
                 Err(end_state) => {
-                    write!(&mut info, "{end_state}").unwrap();
+                    writeln!(&mut info, "{end_state}").unwrap();
                 }
             }
         }
@@ -49,7 +56,7 @@ fn main() {
             "{}",
             BoardDisplay {
                 board: &board,
-                view: Color::White,
+                view,
                 show_coordinates: true,
                 highlighted: &highlighted,
                 info: &info,
@@ -68,7 +75,32 @@ fn main() {
             stdin().read_line(&mut input).unwrap();
 
             let input = input.trim();
-            if let Ok(position) = input.parse() {
+            if input == "help" {
+                println!("flip           - flip the board");
+                println!("import <fen>   - import a position");
+                println!("e2             - view valid moves");
+                println!("e2e4           - play the move");
+                println!("e7e8q          - move and promote");
+                println!("e1g1 (or e1h1) - perform castling");
+            } else if input == "flip" {
+                view = !view;
+            } else if input.get(0..7) == Some("import ") {
+                let fen: Fen = match input[7..].parse() {
+                    Ok(fen) => fen,
+                    Err(err) => {
+                        eprintln!("Error: {err}");
+                        continue;
+                    }
+                };
+                board = match fen.board.try_into() {
+                    Ok(board) => board,
+                    Err(err) => {
+                        eprintln!("Error: {err}");
+                        continue;
+                    }
+                };
+                update = true;
+            } else if let Ok(position) = input.parse() {
                 highlighted.clear();
                 highlighted.extend(
                     valid_moves
@@ -82,13 +114,6 @@ fn main() {
                     Ok(movement) => movement,
                     Err(err) => {
                         eprintln!("Error: {err}");
-                        eprintln!();
-                        eprintln!("This chess program uses long algebraic notation:");
-                        eprintln!("- e2e4");
-                        eprintln!("- e7e8q for promotion");
-                        eprintln!("- e1g1 for castling");
-                        eprintln!();
-                        eprintln!("To view valid moves, just enter a coordinate");
                         continue;
                     }
                 };
