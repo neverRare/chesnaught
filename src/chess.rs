@@ -1028,15 +1028,22 @@ impl FromStr for StandardCastlingRight {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum InvalidBoard {
+    ExceededPieces(ExceededPieces),
     NoKing,
     NonPlayerInCheck,
     MoreThanTwoCheckers,
     InvalidCastlingRight,
     InvalidEnPassantTarget,
 }
+impl From<ExceededPieces> for InvalidBoard {
+    fn from(value: ExceededPieces) -> Self {
+        InvalidBoard::ExceededPieces(value)
+    }
+}
 impl Display for InvalidBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
+            InvalidBoard::ExceededPieces(err) => write!(f, "{err}")?,
             InvalidBoard::NoKing => write!(f, "no kings found")?,
             InvalidBoard::NonPlayerInCheck => write!(f, "non-player in check")?,
             InvalidBoard::MoreThanTwoCheckers => {
@@ -1048,7 +1055,34 @@ impl Display for InvalidBoard {
         Ok(())
     }
 }
-impl Error for InvalidBoard {}
+impl Error for InvalidBoard {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            InvalidBoard::ExceededPieces(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ExceededPieces {
+    PromotedPiece,
+    Pawn,
+    King,
+}
+impl Display for ExceededPieces {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ExceededPieces::PromotedPiece => {
+                write!(f, "exceeded allowable number of promoted pieces")?;
+            }
+            ExceededPieces::Pawn => write!(f, "found more than 8 pawns")?,
+            ExceededPieces::King => write!(f, "found more than 1 kings")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ExceededPieces {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PieceIndex(NonZero<u8>);
@@ -1654,26 +1688,6 @@ impl IndexableBoard for Board {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ExceededPieces {
-    PromotedPiece,
-    Pawn,
-    King,
-}
-impl Display for ExceededPieces {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ExceededPieces::PromotedPiece => {
-                write!(f, "exceeded allowable number of promoted pieces")?;
-            }
-            ExceededPieces::Pawn => write!(f, "found more than 8 pawns")?,
-            ExceededPieces::King => write!(f, "found more than 1 kings")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ExceededPieces {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HashableBoard {
     pub board: [[Option<ColoredPieceKind>; 8]; 8],
     pub current_player: Color,
@@ -1705,7 +1719,7 @@ impl HashableBoard {
     }
 }
 impl TryFrom<HashableBoard> for Board {
-    type Error = ExceededPieces;
+    type Error = InvalidBoard;
 
     fn try_from(value: HashableBoard) -> Result<Self, Self::Error> {
         let mut pieces = [None; 32];
@@ -1735,12 +1749,12 @@ impl TryFrom<HashableBoard> for Board {
                                 .copied()
                                 .all(|piece| piece.unwrap().piece.piece() == PieceKind::Pawn)
                             {
-                                return Err(ExceededPieces::Pawn);
+                                return Err(ExceededPieces::Pawn.into());
                             }
-                            return Err(ExceededPieces::PromotedPiece);
+                            return Err(ExceededPieces::PromotedPiece.into());
                         }
-                        PieceKind::King => return Err(ExceededPieces::King),
-                        _ => return Err(ExceededPieces::PromotedPiece),
+                        PieceKind::King => return Err(ExceededPieces::King.into()),
+                        _ => return Err(ExceededPieces::PromotedPiece.into()),
                     }
                 }
             }
@@ -1761,6 +1775,7 @@ impl TryFrom<HashableBoard> for Board {
         {
             board.en_passant_target = None;
         }
+        board.validate()?;
         Ok(board)
     }
 }
