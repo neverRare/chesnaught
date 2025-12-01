@@ -1871,6 +1871,7 @@ impl Moveable for Move {
         }
         board.en_passant_target = self.en_passant_target;
         board.castling_right = self.castling_right;
+        board.current_player = !board.current_player;
 
         board.indices = OnceCell::new();
     }
