@@ -1412,8 +1412,8 @@ impl Board {
     ) -> Option<impl Iterator<Item = Coord>> {
         let direction = position - king;
         if Vector::QUEEN_DIRECTIONS
-            .iter()
-            .any(|valid_direction| direction.is_aligned(*valid_direction))
+            .into_iter()
+            .any(|valid_direction| direction.is_aligned(valid_direction))
         {
             let direction = direction.as_unit();
             if position
