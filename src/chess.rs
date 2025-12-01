@@ -312,7 +312,7 @@ impl Coord {
     pub fn new(x: u8, y: u8) -> Self {
         debug_assert!(x < 8);
         debug_assert!(y < 8);
-        let byte = 0b1000_0000 | (y << 3) | x;
+        let byte = 0b1000_0000 | (x << 3) | y;
         Coord(NonZero::new(byte).unwrap())
     }
     pub fn from_chars(x: char, y: char) -> Result<Self, ParseCoordError> {
