@@ -41,15 +41,15 @@ fn main() {
                         }),
                     );
                     writeln!(&mut info, "{} plays", board.current_player()).unwrap();
-                    if first_time {
-                        writeln!(&mut info, "type `help` for instructions").unwrap();
-                        first_time = false;
-                    }
                 }
                 Err(end_state) => {
                     writeln!(&mut info, "{end_state}").unwrap();
                 }
             }
+        }
+        if first_time {
+            writeln!(&mut info, "type `help` for instructions").unwrap();
+            first_time = false;
         }
         update = false;
         print!(
