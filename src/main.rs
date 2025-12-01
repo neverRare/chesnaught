@@ -19,7 +19,6 @@ mod chess;
 mod fen;
 mod game_tree;
 mod heuristics;
-mod temporal;
 
 fn main() {
     let mut board = Board::starting_position();
