@@ -10,8 +10,8 @@ use std::{
 use crate::{
     board_display::IndexableBoard,
     chess::{
-        Board, Color, ColoredPieceKind, Coord, ExceededPieces, HashableBoard,
-        InvalidCastlingCharacter, InvalidFenPiece, ParseColorError, ParseCoordError, PieceKind,
+        Color, ColoredPieceKind, Coord, HashableBoard, InvalidCastlingCharacter, InvalidFenPiece,
+        ParseColorError, ParseCoordError, PieceKind,
     },
     coord_x, coord_y,
 };
