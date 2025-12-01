@@ -62,9 +62,6 @@ fn main() {
                 info: &info,
             },
         );
-        if valid_moves.is_empty() {
-            break;
-        }
         loop {
             print!("> ");
             {
@@ -78,10 +75,15 @@ fn main() {
             if input == "help" {
                 println!("flip           - flip the board");
                 println!("import <fen>   - import a position");
+                println!("exit           - exit the game");
                 println!("e2             - view valid moves");
                 println!("e2e4           - play the move");
                 println!("e7e8q          - move and promote");
                 println!("e1g1 (or e1h1) - perform castling");
+            } else if input == "show raw moves" {
+                board.display_raw_moves();
+            } else if input == "exit" {
+                return;
             } else if input == "flip" {
                 view = !view;
             } else if input.get(0..7) == Some("import ") {
