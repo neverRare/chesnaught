@@ -310,8 +310,8 @@ pub struct Coord(NonZero<u8>);
 
 impl Coord {
     pub fn new(x: u8, y: u8) -> Self {
-        assert!(x < 8);
-        assert!(y < 8);
+        debug_assert!(x < 8);
+        debug_assert!(y < 8);
         let byte = 0b1000_0000 | (y << 3) | x;
         Coord(NonZero::new(byte).unwrap())
     }
@@ -902,7 +902,7 @@ impl CastlingRight {
         (0..8).filter(move |x| self.get(color, *x))
     }
     pub fn get(self, color: Color, x: u8) -> bool {
-        assert!(x < 8);
+        debug_assert!(x < 8);
         let byte = match color {
             Color::White => self.white,
             Color::Black => self.black,
@@ -914,7 +914,7 @@ impl CastlingRight {
         }
     }
     pub fn add(&mut self, color: Color, x: u8) {
-        assert!(x < 8);
+        debug_assert!(x < 8);
         let byte = match color {
             Color::White => &mut self.white,
             Color::Black => &mut self.black,
@@ -927,7 +927,7 @@ impl CastlingRight {
         new
     }
     pub fn remove(&mut self, color: Color, x: u8) {
-        assert!(x < 8);
+        debug_assert!(x < 8);
         let byte = match color {
             Color::White => &mut self.white,
             Color::Black => &mut self.black,
@@ -1033,7 +1033,6 @@ pub enum InvalidBoard {
     MoreThanTwoCheckers,
     InvalidCastlingRight,
     InvalidEnPassantTarget,
-    PawnInHomeRank,
 }
 impl Display for InvalidBoard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -1045,7 +1044,6 @@ impl Display for InvalidBoard {
             }
             InvalidBoard::InvalidCastlingRight => write!(f, "invalid castling right")?,
             InvalidBoard::InvalidEnPassantTarget => write!(f, "invalid en passant target")?,
-            InvalidBoard::PawnInHomeRank => write!(f, "pawn in home rank")?,
         }
         Ok(())
     }
@@ -1334,13 +1332,6 @@ impl Board {
         {
             return Err(InvalidBoard::InvalidEnPassantTarget);
         }
-        if [Color::White, Color::Black]
-            .into_iter()
-            .flat_map(|color| self.pawns(color))
-            .any(|pawn| matches!(pawn.position.y(), coord_y!("1") | coord_y!("8")))
-        {
-            return Err(InvalidBoard::PawnInHomeRank);
-        }
         Ok(())
     }
     fn attackers_with_inspect(
@@ -1617,6 +1608,9 @@ impl Board {
     }
     pub fn move_piece(&mut self, movement: &impl Moveable) {
         movement.move_board(self);
+        if cfg!(debug_assertions) {
+            self.validate().unwrap();
+        }
     }
     pub fn clone_and_move(&self, movement: &impl Moveable) -> Self {
         let mut new = self.clone();
