@@ -1541,7 +1541,7 @@ impl Board {
     }
     fn valid_moves_and_check(&self) -> (impl Iterator<Item = Move> + '_, bool) {
         let king = self.king(self.current_player).unwrap();
-        let mut attackers_iter = self.attackers(king.position, self.current_player).fuse();
+        let mut attackers_iter = self.attackers(king.position, !self.current_player).fuse();
         let attackers = [attackers_iter.next(), attackers_iter.next()];
         debug_assert_eq!(attackers_iter.next(), None);
         let check = attackers[0].is_some();
