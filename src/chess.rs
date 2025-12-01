@@ -1543,7 +1543,7 @@ impl Board {
         let king = self.king(self.current_player).unwrap();
         let mut attackers_iter = self.attackers(king.position, self.current_player).fuse();
         let attackers = [attackers_iter.next(), attackers_iter.next()];
-        debug_assert!(attackers_iter.next().is_none());
+        debug_assert_eq!(attackers_iter.next(), None);
         let check = attackers[0].is_some();
         let non_castling_moves = self
             .pieces_indexed(self.current_player)
