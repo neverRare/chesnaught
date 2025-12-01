@@ -656,7 +656,7 @@ impl Piece {
         board: &Board,
         direction: Vector,
     ) -> impl Iterator<Item = SimpleMove> {
-        let mut resume = false;
+        let mut resume = true;
         self.position
             .line(direction, 1)
             .map_while(move |destination| {
