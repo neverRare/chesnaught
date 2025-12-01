@@ -102,13 +102,6 @@ pub struct Fen {
     pub half_move: u32,
     pub full_move: u32,
 }
-impl TryFrom<Fen> for Board {
-    type Error = ExceededPieces;
-
-    fn try_from(value: Fen) -> Result<Self, Self::Error> {
-        value.board.try_into()
-    }
-}
 impl Display for Fen {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for (first, row) in once(true)

@@ -1968,7 +1968,7 @@ mod test {
     #[test]
     fn king_moves() {
         let board: Fen = "4k3/8/8/8/4K3/8/8/R7 w - - 0 1".parse().unwrap();
-        let board: Board = board.try_into().unwrap();
+        let board: Board = board.board.try_into().unwrap();
         let valid_moves: Vec<_> = board
             .valid_moves()
             .unwrap()
