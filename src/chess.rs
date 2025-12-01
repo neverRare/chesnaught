@@ -493,14 +493,14 @@ impl Vector {
         Vector { x: 2, y: 1 },
     ];
     pub const KING_MOVES: [Self; 8] = [
-        Vector { x: -1, y: -2 },
-        Vector { x: 1, y: -2 },
-        Vector { x: -1, y: 2 },
-        Vector { x: 1, y: 2 },
-        Vector { x: -2, y: -1 },
-        Vector { x: 2, y: -1 },
-        Vector { x: -2, y: 1 },
-        Vector { x: 2, y: 1 },
+        Vector { x: -1, y: -1 },
+        Vector { x: 0, y: -1 },
+        Vector { x: 1, y: -1 },
+        Vector { x: -1, y: 0 },
+        Vector { x: 1, y: 0 },
+        Vector { x: -1, y: 1 },
+        Vector { x: 0, y: 1 },
+        Vector { x: 1, y: 1 },
     ];
     pub const ROOK_DIRECTIONS: [Self; 4] = [
         Vector { x: -1, y: 0 },
