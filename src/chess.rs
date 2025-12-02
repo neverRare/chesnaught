@@ -1642,9 +1642,6 @@ impl Board {
     }
     pub fn move_piece(&mut self, movement: &impl Moveable) {
         movement.move_board(self);
-        if cfg!(debug_assertions) {
-            self.validate().unwrap();
-        }
     }
     pub fn clone_and_move(&self, movement: &impl Moveable) -> Self {
         let mut new = self.clone();
@@ -1889,6 +1886,10 @@ impl Moveable for Move {
         board.current_player = !board.current_player;
 
         board.indices = OnceCell::new();
+
+        if cfg!(debug_assertions) {
+            board.validate().unwrap();
+        }
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
