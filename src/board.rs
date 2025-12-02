@@ -1219,6 +1219,7 @@ impl Moveable for LongAlgebraicNotation {
 mod test {
     use crate::{
         board::{Board, LongAlgebraicNotation},
+        coord,
         fen::Fen,
     };
 
@@ -1238,5 +1239,21 @@ mod test {
         for expected in expected_valid_moves {
             assert!(valid_moves.contains(&expected))
         }
+    }
+    #[test]
+    fn pin() {
+        let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        let valid_moves: Vec<_> = board
+            .valid_moves()
+            .unwrap()
+            .map(|movement| movement.as_long_algebraic_notation(&board))
+            .collect();
+        assert!(
+            valid_moves
+                .iter()
+                .find(|movement| movement.origin == coord!("e2"))
+                .is_none()
+        );
     }
 }
