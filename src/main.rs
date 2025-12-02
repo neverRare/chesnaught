@@ -8,17 +8,19 @@ use std::{
     io::{stdin, stdout},
 };
 
-use crate::{
-    board_display::BoardDisplay,
-    chess::{Board, Color},
-    fen::Fen,
-};
+use crate::{board::Board, board_display::BoardDisplay, color::Color, fen::Fen};
 
+mod board;
 mod board_display;
-mod chess;
+mod castling_right;
+mod color;
+mod coord;
+mod end_state;
+mod error;
 mod fen;
 mod game_tree;
 mod heuristics;
+mod piece;
 
 fn main() {
     let mut board = Board::starting_position();

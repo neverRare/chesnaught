@@ -8,12 +8,13 @@ use std::{
 };
 
 use crate::{
+    board::HashableBoard,
     board_display::IndexableBoard,
-    chess::{
-        Color, ColoredPieceKind, Coord, HashableBoard, InvalidCastlingCharacter, InvalidFenPiece,
-        ParseColorError, ParseCoordError, PieceKind,
-    },
+    castling_right::InvalidCastlingCharacter,
+    color::{Color, ParseColorError},
+    coord::{Coord, ParseCoordError},
     coord_x, coord_y,
+    piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

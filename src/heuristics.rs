@@ -3,7 +3,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use crate::chess::{Board, Color, EndState};
+use crate::{board::Board, color::Color, end_state::EndState};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Estimated {

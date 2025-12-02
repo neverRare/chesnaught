@@ -1,6 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
-use crate::chess::{Color, ColoredPieceKind, Coord};
+use crate::{color::Color, coord::Coord, piece::ColoredPieceKind};
 
 const WHITE: &str = "\x1b[30;107m";
 const BLACK: &str = "\x1b[30;47m";

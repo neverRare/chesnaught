@@ -11,7 +11,9 @@ use std::{
 };
 
 use crate::{
-    chess::{Board, Color, EndState, Move},
+    board::{Board, Move},
+    color::Color,
+    end_state::EndState,
     heuristics::{Advantage, estimate},
 };
 
