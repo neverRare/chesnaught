@@ -636,17 +636,17 @@ impl Board {
     fn pinned_with_inspect(
         &self,
         king: Coord,
-        position: Coord,
+        pinned_position: Coord,
         color: Color,
         checker: impl Fn(Coord) -> bool + Clone,
     ) -> Option<impl Iterator<Item = Coord>> {
-        let direction = position - king;
+        let direction = pinned_position - king;
         if Vector::QUEEN_DIRECTIONS
             .into_iter()
             .any(|valid_direction| direction.is_aligned(valid_direction))
         {
             let direction = direction.as_unit();
-            if position
+            if pinned_position
                 .line_until_exclusive(-direction, 1, king)
                 .any(checker.clone())
             {
@@ -657,19 +657,24 @@ impl Board {
                 } else {
                     &[PieceKind::Rook, PieceKind::Queen]
                 };
-                self.pieces_by_kinds(!color, pieces).find_map(|piece| {
-                    if direction.is_aligned(piece.position - king)
-                        && position.is_inside_of(piece.position, king)
-                    {
-                        (!piece
-                            .position
-                            .line_until_exclusive(-direction, 1, position)
-                            .any(checker.clone()))
-                        .then(|| piece.position.line_until_exclusive(-direction, 0, king))
-                    } else {
-                        None
-                    }
-                })
+                self.pieces_by_kinds(!color, pieces)
+                    .find_map(|pinning_piece| {
+                        if direction.is_aligned(pinning_piece.position - king)
+                            && pinned_position.is_inside_of(pinning_piece.position, king)
+                        {
+                            (!pinning_piece
+                                .position
+                                .line_until_exclusive(-direction, 1, pinned_position)
+                                .any(checker.clone()))
+                            .then(|| {
+                                pinning_piece
+                                    .position
+                                    .line_until_exclusive(-direction, 0, king)
+                            })
+                        } else {
+                            None
+                        }
+                    })
             }
         } else {
             None
@@ -678,10 +683,12 @@ impl Board {
     fn valid_destinations_when_pinned(
         &self,
         king: Coord,
-        position: Coord,
+        pinned_position: Coord,
         color: Color,
     ) -> Option<impl Iterator<Item = Coord>> {
-        self.pinned_with_inspect(king, position, color, |position| self[position].is_some())
+        self.pinned_with_inspect(king, pinned_position, color, |position| {
+            self[position].is_some()
+        })
     }
     fn one_side_is_dead(&self, color: Color) -> Option<bool> {
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
