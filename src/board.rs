@@ -23,6 +23,64 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum InvalidBoard {
+    ExceededPieces(ExceededPieces),
+    NoKing,
+    NonPlayerInCheck,
+    MoreThanTwoCheckers,
+    InvalidCastlingRight,
+    InvalidEnPassantTarget,
+}
+impl From<ExceededPieces> for InvalidBoard {
+    fn from(value: ExceededPieces) -> Self {
+        InvalidBoard::ExceededPieces(value)
+    }
+}
+impl Display for InvalidBoard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            InvalidBoard::ExceededPieces(err) => write!(f, "{err}")?,
+            InvalidBoard::NoKing => write!(f, "no kings found")?,
+            InvalidBoard::NonPlayerInCheck => write!(f, "non-player in check")?,
+            InvalidBoard::MoreThanTwoCheckers => {
+                write!(f, "found more than 2 pieces delivering check")?;
+            }
+            InvalidBoard::InvalidCastlingRight => write!(f, "invalid castling right")?,
+            InvalidBoard::InvalidEnPassantTarget => write!(f, "invalid en passant target")?,
+        }
+        Ok(())
+    }
+}
+impl Error for InvalidBoard {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            InvalidBoard::ExceededPieces(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ExceededPieces {
+    PromotedPiece,
+    Pawn,
+    King,
+}
+impl Display for ExceededPieces {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ExceededPieces::PromotedPiece => {
+                write!(f, "exceeded allowable number of promoted pieces")?;
+            }
+            ExceededPieces::Pawn => write!(f, "found more than 8 pawns")?,
+            ExceededPieces::King => write!(f, "found more than 1 kings")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ExceededPieces {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Piece {
     pub piece: ColoredPieceKind,
     pub position: Coord,
@@ -256,64 +314,6 @@ impl Display for Piece {
         Ok(())
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum InvalidBoard {
-    ExceededPieces(ExceededPieces),
-    NoKing,
-    NonPlayerInCheck,
-    MoreThanTwoCheckers,
-    InvalidCastlingRight,
-    InvalidEnPassantTarget,
-}
-impl From<ExceededPieces> for InvalidBoard {
-    fn from(value: ExceededPieces) -> Self {
-        InvalidBoard::ExceededPieces(value)
-    }
-}
-impl Display for InvalidBoard {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            InvalidBoard::ExceededPieces(err) => write!(f, "{err}")?,
-            InvalidBoard::NoKing => write!(f, "no kings found")?,
-            InvalidBoard::NonPlayerInCheck => write!(f, "non-player in check")?,
-            InvalidBoard::MoreThanTwoCheckers => {
-                write!(f, "found more than 2 pieces delivering check")?;
-            }
-            InvalidBoard::InvalidCastlingRight => write!(f, "invalid castling right")?,
-            InvalidBoard::InvalidEnPassantTarget => write!(f, "invalid en passant target")?,
-        }
-        Ok(())
-    }
-}
-impl Error for InvalidBoard {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            InvalidBoard::ExceededPieces(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ExceededPieces {
-    PromotedPiece,
-    Pawn,
-    King,
-}
-impl Display for ExceededPieces {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ExceededPieces::PromotedPiece => {
-                write!(f, "exceeded allowable number of promoted pieces")?;
-            }
-            ExceededPieces::Pawn => write!(f, "found more than 8 pawns")?,
-            ExceededPieces::King => write!(f, "found more than 1 kings")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ExceededPieces {}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PieceIndex(NonZero<u8>);
 impl From<PieceIndex> for usize {
