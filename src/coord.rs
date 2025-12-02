@@ -205,8 +205,8 @@ impl Sub<Self> for Coord {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Vector {
-            x: self.x().checked_signed_diff(rhs.x()).unwrap(),
-            y: self.y().checked_signed_diff(rhs.y()).unwrap(),
+            x: self.x() as i8 - rhs.x() as i8,
+            y: self.y() as i8 - rhs.y() as i8,
         }
     }
 }
@@ -272,12 +272,12 @@ impl Vector {
         (-1..=1).contains(&self.x) && (-1..=1).contains(&self.y) && !(self.x == 0 && self.y == 0)
     }
     pub fn is_knight_move(self) -> bool {
-        let x = self.x.abs();
-        let y = self.y.abs();
+        let x = self.x.unsigned_abs();
+        let y = self.y.unsigned_abs();
         (x == 1 && y == 2) || (x == 2 && y == 1)
     }
     pub fn is_pawn_attack(self, color: Color) -> bool {
-        self.x.abs() == 1 && self.y == pawn_direction(color)
+        self.x.unsigned_abs() == 1 && self.y == pawn_direction(color)
     }
     pub fn as_unit(self) -> Self {
         Vector {
