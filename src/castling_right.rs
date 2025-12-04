@@ -106,8 +106,7 @@ impl Display for CastlingRight {
             };
             for x in self.all(color) {
                 written = true;
-                let c: char = (x + start).into();
-                write!(f, "{c}")?;
+                write!(f, "{}", (x + start) as char)?;
             }
         }
         if !written {
@@ -154,7 +153,7 @@ impl Display for StandardCastlingRight {
                             Color::White => b'A',
                             Color::Black => b'a',
                         };
-                        (x + start).into()
+                        (x + start) as char
                     }
                 };
                 written = true;
