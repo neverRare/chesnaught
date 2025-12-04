@@ -149,7 +149,13 @@ impl Display for StandardCastlingRight {
                     (Color::White, coord_x!("h")) => 'K',
                     (Color::Black, coord_x!("a")) => 'q',
                     (Color::Black, coord_x!("h")) => 'k',
-                    _ => panic!("invalid rook file"),
+                    (color, x) => {
+                        let start = match color {
+                            Color::White => b'A',
+                            Color::Black => b'a',
+                        };
+                        (x + start).into()
+                    }
                 };
                 written = true;
                 write!(f, "{c}")?;
