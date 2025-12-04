@@ -138,7 +138,7 @@ impl Display for Fen {
                 }
             }
         }
-        write!(f, " {}", self.board.current_player)?;
+        write!(f, " {}", self.board.current_player.lowercase())?;
         let use_standard_castling = [Color::White, Color::Black].into_iter().all(|color| {
             let row = match color {
                 Color::White => self.board.board[coord_y!("1")],
