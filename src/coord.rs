@@ -143,13 +143,7 @@ impl Coord {
         end: Coord,
         direction: Vector,
     ) -> impl Iterator<Item = Self> {
-        let mut resume = true;
-        self.line_exclusive(direction).take_while(move |position| {
-            resume && {
-                resume = *position != end;
-                true
-            }
-        })
+        self.line_inclusive_inclusive(end, direction).skip(1)
     }
     pub fn is_inside_of(self, bound_1: Self, bound_2: Self) -> bool {
         (Ord::min(bound_1.x(), bound_2.x())..=Ord::max(bound_1.x(), bound_2.x()))
