@@ -158,13 +158,6 @@ impl Piece {
             .flat_map(move |direction| self.directional_moves(index, board, direction))
     }
     fn pawn_moves(self, index: PieceIndex, board: &Board) -> impl Iterator<Item = Move> {
-        static PROMOTION_CHOICES: [Option<PieceKind>; 4] = [
-            Some(PieceKind::Queen),
-            Some(PieceKind::Rook),
-            Some(PieceKind::Bishop),
-            Some(PieceKind::Knight),
-        ];
-        static NON_PROMOTION_CHOICES: [Option<PieceKind>; 1] = [None];
         let forward_jumps = if self.position.y() == pawn_home_rank(self.piece.color()) {
             2
         } else {
@@ -226,12 +219,17 @@ impl Piece {
                     .map(|movement| movement.to_simple_move(board.castling_right)),
             )
             .flat_map(move |movement| {
-                let promotion_choices: &[_] = if movement.movement.destination.y()
+                let promotion_choices: &'static [_] = if movement.movement.destination.y()
                     == pawn_promotion_rank(self.piece.color())
                 {
-                    &PROMOTION_CHOICES
+                    &[
+                        Some(PieceKind::Queen),
+                        Some(PieceKind::Rook),
+                        Some(PieceKind::Bishop),
+                        Some(PieceKind::Knight),
+                    ]
                 } else {
-                    &NON_PROMOTION_CHOICES
+                    &[None]
                 };
                 promotion_choices
                     .iter()
