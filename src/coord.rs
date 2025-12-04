@@ -368,3 +368,17 @@ impl MulAssign<i8> for Vector {
         self.y *= rhs;
     }
 }
+#[cfg(test)]
+mod test {
+    use crate::{coord, coord::Vector};
+
+    #[test]
+    fn exclusive_exclusive_is_empty() {
+        assert_eq!(
+            coord!("e4")
+                .line_exclusive_exclusive(coord!("e4"), Vector { x: 1, y: 0 })
+                .next(),
+            None
+        );
+    }
+}
