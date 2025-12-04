@@ -76,6 +76,7 @@ fn main() {
             if input == "help" {
                 println!("flip           - flip the board");
                 println!("import <fen>   - import a position");
+                println!("fen            - export the position as fen");
                 println!("exit           - exit the game");
                 println!("e2             - view valid moves");
                 println!("e2e4           - play the move");
@@ -87,6 +88,15 @@ fn main() {
                 return;
             } else if input == "flip" {
                 view = !view;
+            } else if input == "fen" {
+                println!(
+                    "{}",
+                    Fen {
+                        board: board.as_hashable(),
+                        half_move: 0,
+                        full_move: 1
+                    }
+                );
             } else if input.get(0..7) == Some("import ") {
                 let fen: Fen = match input[7..].parse() {
                     Ok(fen) => fen,

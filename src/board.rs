@@ -369,7 +369,16 @@ impl Board {
         self.current_player
     }
     pub fn as_hashable(&self) -> HashableBoard {
-        todo!()
+        let mut board = [[None; 8]; 8];
+        for piece in self.all_pieces() {
+            board[piece.position.y() as usize][piece.position.x() as usize] = Some(piece.piece);
+        }
+        HashableBoard {
+            board,
+            current_player: self.current_player,
+            castling_right: self.castling_right,
+            en_passant_target: self.en_passant_target,
+        }
     }
     fn range(&self, range: Range<usize>) -> impl Iterator<Item = Piece> {
         self.pieces[range].iter().copied().flatten()
