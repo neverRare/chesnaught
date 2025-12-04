@@ -102,6 +102,8 @@ impl Coord {
         self.is_aligned(other, &Vector::QUEEN_DIRECTIONS)
     }
     pub fn line(self, direction: Vector, start: i8) -> impl Iterator<Item = Self> {
+        debug_assert_ne!(direction, Vector::ZERO);
+        debug_assert_eq!(direction, direction.as_unit());
         (start..).map_while(move |difference| self.move_by(direction * difference))
     }
     pub fn line_inclusive(self, direction: Vector) -> impl Iterator<Item = Self> {
@@ -234,6 +236,8 @@ pub struct Vector {
     pub y: i8,
 }
 impl Vector {
+    pub const ZERO: Self = Vector { x: 0, y: 0 };
+
     pub const KNIGHT_MOVES: [Self; 8] = [
         Vector { x: -1, y: -2 },
         Vector { x: 1, y: -2 },
