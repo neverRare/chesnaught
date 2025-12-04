@@ -373,10 +373,10 @@ mod test {
     use crate::{coord, coord::Vector};
 
     #[test]
-    fn exclusive_exclusive_is_empty() {
+    fn adjacent_exclusive_exclusive_line_is_empty() {
         assert_eq!(
             coord!("e4")
-                .line_exclusive_exclusive(coord!("e4"), Vector { x: 1, y: 0 })
+                .line_exclusive_exclusive(coord!("e5"), Vector { x: 0, y: -1 })
                 .next(),
             None
         );
