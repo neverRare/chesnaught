@@ -300,7 +300,7 @@ impl Vector {
     pub fn as_unit(self) -> Self {
         Vector {
             x: self.x.signum(),
-            y: self.x.signum(),
+            y: self.y.signum(),
         }
     }
 }
