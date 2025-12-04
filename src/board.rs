@@ -122,7 +122,7 @@ impl Piece {
     ) -> impl Iterator<Item = SimpleMove> {
         let mut resume = true;
         self.position
-            .line(direction, 1)
+            .line_exclusive(direction)
             .map_while(move |destination| {
                 if resume {
                     if let Some(capture) = board[destination] {
@@ -171,7 +171,7 @@ impl Piece {
             1
         };
         self.position
-            .line(Vector::pawn_single_move(self.piece.color()), 1)
+            .line_exclusive(Vector::pawn_single_move(self.piece.color()))
             .take(forward_jumps)
             .take_while(|position| board[*position].is_none())
             .map(move |destination| Move {
@@ -647,7 +647,7 @@ impl Board {
         {
             let direction = direction.as_unit();
             if pinned_position
-                .line_until_exclusive(-direction, 1, king)
+                .line_exclusive_exclusive(king, -direction)
                 .any(checker.clone())
             {
                 None
@@ -664,12 +664,12 @@ impl Board {
                         {
                             (!pinning_piece
                                 .position
-                                .line_until_exclusive(-direction, 1, pinned_position)
+                                .line_exclusive_exclusive(pinned_position, -direction)
                                 .any(checker.clone()))
                             .then(|| {
                                 pinning_piece
                                     .position
-                                    .line_until_exclusive(-direction, 0, king)
+                                    .line_inclusive_exclusive(king, -direction)
                             })
                         } else {
                             None
@@ -782,7 +782,7 @@ impl Board {
                 .into_iter()
                 .all(|(origin, destination, other_position, piece)| {
                     origin
-                        .line_until_inclusive((destination - origin).as_unit(), 1, destination)
+                        .line_exclusive_inclusive(destination, (destination - origin).as_unit())
                         .all(|position| {
                             (position == other_position || self[position].is_none())
                                 && (piece != PieceKind::King

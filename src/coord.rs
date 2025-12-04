@@ -86,7 +86,7 @@ impl Coord {
     ) -> Option<impl Iterator<Item = Self>> {
         directions.iter().copied().find_map(|direction| {
             if direction.is_aligned(other - self) {
-                Some(self.line_until_exclusive(direction, 1, other))
+                Some(self.line_exclusive_exclusive(other, direction))
             } else {
                 None
             }
@@ -104,23 +104,47 @@ impl Coord {
     pub fn line(self, direction: Vector, start: i8) -> impl Iterator<Item = Self> {
         (start..).map_while(move |difference| self.move_by(direction * difference))
     }
-    pub fn line_until_exclusive(
+    pub fn line_inclusive(self, direction: Vector) -> impl Iterator<Item = Self> {
+        self.line(direction, 0)
+    }
+    pub fn line_exclusive(self, direction: Vector) -> impl Iterator<Item = Self> {
+        self.line(direction, 1)
+    }
+    pub fn line_inclusive_exclusive(
         self,
-        direction: Vector,
-        start: i8,
         end: Coord,
+        direction: Vector,
     ) -> impl Iterator<Item = Self> {
-        self.line(direction, start)
+        self.line_inclusive(direction)
             .take_while(move |position| *position != end)
     }
-    pub fn line_until_inclusive(
+    pub fn line_exclusive_exclusive(
         self,
-        direction: Vector,
-        start: i8,
         end: Coord,
+        direction: Vector,
+    ) -> impl Iterator<Item = Self> {
+        self.line_inclusive_exclusive(end, direction).skip(1)
+    }
+    pub fn line_inclusive_inclusive(
+        self,
+        end: Coord,
+        direction: Vector,
     ) -> impl Iterator<Item = Self> {
         let mut resume = true;
-        self.line(direction, start).take_while(move |position| {
+        self.line_inclusive(direction).take_while(move |position| {
+            resume && {
+                resume = *position != end;
+                true
+            }
+        })
+    }
+    pub fn line_exclusive_inclusive(
+        self,
+        end: Coord,
+        direction: Vector,
+    ) -> impl Iterator<Item = Self> {
+        let mut resume = true;
+        self.line_exclusive(direction).take_while(move |position| {
             resume && {
                 resume = *position != end;
                 true
