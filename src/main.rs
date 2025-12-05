@@ -22,6 +22,7 @@ mod game_tree;
 mod heuristics;
 mod piece;
 
+#[allow(clippy::too_many_lines)]
 fn main() {
     let mut board = Board::starting_position();
     let mut info = String::new();
