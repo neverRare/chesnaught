@@ -225,8 +225,8 @@ impl Sub<Self> for Coord {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Vector {
-            x: self.x() as i8 - rhs.x() as i8,
-            y: self.y() as i8 - rhs.y() as i8,
+            x: <i8>::try_from(self.x()).unwrap() - <i8>::try_from(rhs.x()).unwrap(),
+            y: <i8>::try_from(self.y()).unwrap() - <i8>::try_from(rhs.y()).unwrap(),
         }
     }
 }
