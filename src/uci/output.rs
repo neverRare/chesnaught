@@ -1,0 +1,145 @@
+use std::{
+    fmt::{self, Display, Formatter},
+    num::NonZero,
+    time::Duration,
+};
+
+use crate::board::Lan;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum Output {
+    Id {
+        name: &'static str,
+        author: &'static str,
+    },
+    UciOk,
+    ReadyOk,
+    BestMove {
+        movement: Lan,
+        ponder: Option<Lan>,
+    },
+    // CopyProtection,
+    // Registration,
+    Info(Vec<Info>),
+    Option {
+        name: &'static str,
+        kind: OptionType,
+        default: OptionValue,
+        boundary: Option<Boundary>,
+    },
+}
+impl Display for Output {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Output::Id { name, author } => write!(f, "id name {name} author {author}")?,
+            Output::UciOk => write!(f, "uciok")?,
+            Output::ReadyOk => write!(f, "readyok")?,
+            Output::BestMove { movement, ponder } => {
+                write!(f, "bestmove {movement}")?;
+                if let Some(ponder) = ponder {
+                    write!(f, " ponder {ponder}")?;
+                }
+            }
+            Output::Info(infos) => todo!(),
+            Output::Option {
+                name,
+                kind,
+                default,
+                boundary,
+            } => {
+                write!(f, "option name {name} type {kind} default {default}")?;
+                if let Some(boundary) = boundary {
+                    write!(f, " {boundary}")?
+                }
+            }
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum Info {
+    Depth(NonZero<u32>),
+    SelDepth(NonZero<u32>),
+    Time(Duration),
+    Nodes(NonZero<u32>),
+    Pv(Vec<Lan>),
+    MultiPv(u32),
+    Score {
+        score: Score,
+        bound: Option<ScoreBound>,
+    },
+    CurrMove(Lan),
+    CurrMoveNumber(u8),
+    HashFull(u32),
+    Nps(u32),
+    TbHits(u32),
+    SbHits(u32),
+    CpuLoad(u32),
+    String(String),
+    Refutation(Vec<Lan>),
+    CurrLine(Vec<Lan>),
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Score {
+    Cp(i32),
+    Mate(NonZero<u32>),
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ScoreBound {
+    LowerBound,
+    UpperBound,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum OptionType {
+    Check,
+    Spin,
+    Combo,
+    Button,
+    String,
+}
+impl Display for OptionType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            OptionType::Check => write!(f, "check")?,
+            OptionType::Spin => write!(f, "spin")?,
+            OptionType::Combo => write!(f, "combo")?,
+            OptionType::Button => write!(f, "button")?,
+            OptionType::String => write!(f, "string")?,
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum OptionValue {
+    Bool(bool),
+    Int(i32),
+    Str(&'static str),
+}
+impl Display for OptionValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            OptionValue::Bool(b) => write!(f, "{b}")?,
+            OptionValue::Int(int) => write!(f, "{int}")?,
+            OptionValue::Str(s) => write!(f, "{s}")?,
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Boundary {
+    Boundary { min: i32, max: i32 },
+    Var(&'static [&'static str]),
+}
+impl Display for Boundary {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Boundary::Boundary { min, max } => write!(f, "min {min} max {max}")?,
+            Boundary::Var(vars) => {
+                for var in *vars {
+                    write!(f, "var {var}")?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
