@@ -138,6 +138,16 @@ impl FromStr for CastlingRight {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct StandardCastlingRight(pub CastlingRight);
+impl From<CastlingRight> for StandardCastlingRight {
+    fn from(value: CastlingRight) -> Self {
+        StandardCastlingRight(value)
+    }
+}
+impl From<StandardCastlingRight> for CastlingRight {
+    fn from(value: StandardCastlingRight) -> Self {
+        value.0
+    }
+}
 impl Display for StandardCastlingRight {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut written = false;
