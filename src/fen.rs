@@ -98,6 +98,7 @@ impl From<ParseIntError> for ParseFenError {
         ParseFenError::ParseIntError(value)
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Fen {
     pub board: HashableBoard,
     pub half_move: u32,

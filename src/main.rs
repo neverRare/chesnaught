@@ -3,13 +3,9 @@
 // TODO: remove this when the engine is fully implemented
 #![allow(dead_code, reason = "work in progress code")]
 
-use std::{
-    collections::HashMap,
-    fmt::Write,
-    io::{stdin, stdout},
-};
+use std::io::{self, stderr, stdin, stdout};
 
-use crate::{board::Board, board_display::BoardDisplay, color::Color, fen::Fen};
+use crate::repl::repl;
 
 mod board;
 mod board_display;
@@ -22,136 +18,11 @@ mod fen;
 mod game_tree;
 mod heuristics;
 mod piece;
+mod repl;
 
-#[allow(
-    clippy::too_many_lines,
-    reason = "the state and procedure are very clearly defined; no need to decompose these into separate functions"
-)]
-fn main() {
-    let mut board = Board::starting_position();
-    let mut info = String::new();
-    let mut highlighted = Vec::new();
-    let mut valid_moves = HashMap::new();
-    let mut update = true;
-    let mut view = Color::White;
-    let mut first_time = true;
-    loop {
-        if update {
-            valid_moves.clear();
-            info.clear();
-            match board.valid_moves() {
-                Ok(moves) => {
-                    valid_moves.extend(
-                        moves.map(|movement| {
-                            (movement.as_long_algebraic_notation(&board), movement)
-                        }),
-                    );
-                    writeln!(&mut info, "{} plays", board.current_player()).unwrap();
-                }
-                Err(end_state) => {
-                    writeln!(&mut info, "{end_state}").unwrap();
-                }
-            }
-        }
-        if first_time {
-            writeln!(&mut info, "type `help` for instructions").unwrap();
-            first_time = false;
-        }
-        update = false;
-        print!(
-            "{}",
-            BoardDisplay {
-                board: &board,
-                view,
-                show_coordinates: true,
-                highlighted: &highlighted,
-                info: &info,
-            },
-        );
-        loop {
-            print!("> ");
-            {
-                use std::io::Write;
-                stdout().flush().unwrap();
-            }
-            let mut input = String::new();
-            stdin().read_line(&mut input).unwrap();
-
-            let input = input.trim();
-            if input == "help" {
-                println!("flip           - flip the board");
-                println!("restart        - reset to starting position");
-                println!("exit           - exit the game");
-                println!("import <fen>   - import a position");
-                println!("fen            - export the position as fen");
-                println!("e2             - view valid moves");
-                println!("e2e4           - play the move");
-                println!("e7e8q          - move and promote");
-                println!("e1g1 (or e1h1) - perform castling");
-            } else if input == "restart" {
-                board = Board::starting_position();
-                update = true;
-                highlighted.clear();
-            } else if input == "exit" {
-                return;
-            } else if input == "flip" {
-                view = !view;
-            } else if input == "fen" {
-                println!(
-                    "{}",
-                    Fen {
-                        board: board.as_hashable(),
-                        half_move: 0,
-                        full_move: 1
-                    }
-                );
-            } else if input.get(0..7) == Some("import ") {
-                let fen: Fen = match input[7..].parse() {
-                    Ok(fen) => fen,
-                    Err(err) => {
-                        eprintln!("Error: {err}");
-                        continue;
-                    }
-                };
-                board = match fen.board.try_into() {
-                    Ok(board) => board,
-                    Err(err) => {
-                        eprintln!("Error: {err}");
-                        continue;
-                    }
-                };
-                update = true;
-                highlighted.clear();
-            } else if let Ok(position) = input.parse() {
-                highlighted.clear();
-                highlighted.extend(
-                    valid_moves
-                        .keys()
-                        .copied()
-                        .filter(|movement| movement.origin == position)
-                        .map(|movement| movement.destination),
-                );
-            } else {
-                let long_algebraic_notation = match input.parse() {
-                    Ok(movement) => movement,
-                    Err(err) => {
-                        eprintln!("Error: {err}");
-                        continue;
-                    }
-                };
-                let Some(movement) = valid_moves.get(&long_algebraic_notation) else {
-                    eprintln!("Error: {input} is an invalid move");
-                    continue;
-                };
-                board.move_piece(movement);
-                highlighted.clear();
-                highlighted.push(long_algebraic_notation.origin);
-                highlighted.push(long_algebraic_notation.destination);
-                update = true;
-            }
-            break;
-        }
-    }
+fn main() -> io::Result<()> {
+    repl(&mut stdin().lock(), &mut stdout(), &mut stderr())?;
+    Ok(())
 }
 #[macro_export]
 macro_rules! coord_x {
