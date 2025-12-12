@@ -58,8 +58,8 @@ enum Output {
         movement: Lan,
         ponder: Option<Lan>,
     },
-    CopyProtection,
-    Registration,
+    CopyProtection(CopyProtection),
+    Registration(Registration),
     Info(Vec<Info>),
     Option {
         name: &'static str,
@@ -67,6 +67,18 @@ enum Output {
         default: OptionValue,
         possible_values: Boundary,
     },
+}
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum CopyProtection {
+    Checking,
+    Ok,
+    Error,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum Registration {
+    Checking,
+    Ok,
+    Error,
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Info {
