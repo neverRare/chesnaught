@@ -633,9 +633,9 @@ impl Board {
     fn attackers(&self, position: Coord, color: Color) -> impl FusedIterator<Item = Piece> {
         self.attackers_with_inspect(position, color, |position| self[position].is_some())
     }
-    fn is_move_attacked(&self, index: PieceIndex, destination: Coord, color: Color) -> bool {
+    fn is_move_attacked(&self, indices: &[PieceIndex], destination: Coord, color: Color) -> bool {
         self.attackers_with_inspect(destination, color, |position| {
-            self[position].is_some_and(|b| b != index)
+            self[position].is_some_and(|index| !indices.contains(&index))
         })
         .next()
         .is_some()
@@ -794,7 +794,7 @@ impl Board {
                             (position == other_position || self[position].is_none())
                                 && (piece != PieceKind::King
                                     || self.is_move_attacked(
-                                        rook_index,
+                                        &[king_index, rook_index],
                                         destination,
                                         !self.current_player,
                                     ))
@@ -844,7 +844,7 @@ impl Board {
             .filter(move |(movement, piece, valid_destination_when_pinned)| {
                 if piece.piece.piece() == PieceKind::King {
                     !self.is_move_attacked(
-                        movement.movement.index,
+                        &[movement.movement.index],
                         piece.position,
                         !self.current_player,
                     )
