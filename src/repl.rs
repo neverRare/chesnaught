@@ -10,7 +10,6 @@ use std::{
     error::Error,
     fmt::{self, Display, Formatter, Write as _},
     io::{self, BufRead, Write},
-    iter::once,
     str::FromStr,
 };
 
