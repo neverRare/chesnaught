@@ -4,7 +4,7 @@ use std::{
     error::Error,
     fmt::{self, Display, Formatter},
     hash::Hash,
-    iter::FusedIterator,
+    iter::{FusedIterator, once},
     num::NonZero,
     ops::{Index, IndexMut, Range},
     rc::Rc,
@@ -1075,48 +1075,55 @@ pub struct Move {
     castling_right: CastlingRight,
 }
 impl Move {
-    pub fn as_long_algebraic_notation(self, board: &Board) -> LongAlgebraicNotation {
+    pub fn as_ambiguous_lan_pair(self, board: &Board) -> (Lan, Option<Lan>) {
         let piece = board[self.movement.index].unwrap();
+        let regular = Lan {
+            origin: piece.position,
+            destination: self.movement.destination,
+            promotion: self.promotion,
+        };
         if let Some(rook) = self.castling_rook {
-            let rook = board[rook.index].unwrap();
-            if piece.position.x() == coord_x!("e")
-                && matches!(rook.position.x(), coord_x!("a") | coord_x!("h"))
-            {
-                LongAlgebraicNotation {
+            (
+                Lan {
                     origin: piece.position,
-                    destination: self.movement.destination,
+                    destination: board[rook.index].unwrap().position,
                     promotion: self.promotion,
-                }
-            } else {
-                LongAlgebraicNotation {
-                    origin: piece.position,
-                    destination: rook.position,
-                    promotion: self.promotion,
-                }
-            }
+                },
+                Some(regular),
+            )
         } else {
-            LongAlgebraicNotation {
-                origin: piece.position,
-                destination: self.movement.destination,
-                promotion: self.promotion,
-            }
+            (regular, None)
         }
     }
-    pub fn as_long_algebraic_notation_chess_960(self, board: &Board) -> LongAlgebraicNotation {
-        let piece = board[self.movement.index].unwrap();
-        if let Some(rook) = self.castling_rook {
-            LongAlgebraicNotation {
-                origin: piece.position,
-                destination: board[rook.index].unwrap().position,
-                promotion: self.promotion,
+    pub fn as_lan_pair(self, board: &Board) -> (Lan, Option<Lan>) {
+        let (chess_960, regular) = self.as_ambiguous_lan_pair(board);
+        (
+            chess_960,
+            regular.filter(|movement| !(movement.destination - movement.origin).is_king_move()),
+        )
+    }
+    pub fn as_lan_iter(self, board: &Board) -> impl Iterator<Item = Lan> {
+        let (chess_960, regular) = self.as_ambiguous_lan_pair(board);
+        regular.into_iter().chain(once(chess_960))
+    }
+    pub fn as_lan(self, board: &Board) -> Lan {
+        let (chess_960, regular) = self.as_ambiguous_lan_pair(board);
+        if let Some(regular) = regular {
+            let king = board[self.movement.index].unwrap();
+            let rook = board[self.castling_rook.unwrap().index].unwrap();
+            if king.position.x() == coord_x!("e")
+                && matches!(rook.position.x(), coord_x!("a") | coord_x!("h"))
+            {
+                regular
+            } else {
+                chess_960
             }
         } else {
-            LongAlgebraicNotation {
-                origin: piece.position,
-                destination: self.movement.destination,
-                promotion: self.promotion,
-            }
+            chess_960
         }
+    }
+    pub fn as_lan_chess_960(self, board: &Board) -> Lan {
+        self.as_ambiguous_lan_pair(board).0
     }
 }
 impl Moveable for Move {
@@ -1146,55 +1153,55 @@ impl Moveable for Move {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ParseMoveError {
+pub enum ParseLanError {
     InvalidChar,
     ParseCoordError(ParseCoordError),
     InvalidFenPiece(InvalidFenPiece),
     Unexpected(char),
 }
-impl From<ParseCoordError> for ParseMoveError {
+impl From<ParseCoordError> for ParseLanError {
     fn from(value: ParseCoordError) -> Self {
-        ParseMoveError::ParseCoordError(value)
+        ParseLanError::ParseCoordError(value)
     }
 }
-impl From<InvalidFenPiece> for ParseMoveError {
+impl From<InvalidFenPiece> for ParseLanError {
     fn from(value: InvalidFenPiece) -> Self {
-        ParseMoveError::InvalidFenPiece(value)
+        ParseLanError::InvalidFenPiece(value)
     }
 }
-impl Display for ParseMoveError {
+impl Display for ParseLanError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ParseMoveError::InvalidChar => write!(f, "provided string contains invalid character")?,
-            ParseMoveError::ParseCoordError(err) => write!(f, "{err}")?,
-            ParseMoveError::InvalidFenPiece(err) => write!(f, "{err}")?,
-            ParseMoveError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
+            ParseLanError::InvalidChar => write!(f, "provided string contains invalid character")?,
+            ParseLanError::ParseCoordError(err) => write!(f, "{err}")?,
+            ParseLanError::InvalidFenPiece(err) => write!(f, "{err}")?,
+            ParseLanError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
         }
         Ok(())
     }
 }
-impl Error for ParseMoveError {
+impl Error for ParseLanError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            ParseMoveError::ParseCoordError(err) => Some(err),
-            ParseMoveError::InvalidFenPiece(err) => Some(err),
+            ParseLanError::ParseCoordError(err) => Some(err),
+            ParseLanError::InvalidFenPiece(err) => Some(err),
             _ => None,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct LongAlgebraicNotation {
+pub struct Lan {
     pub origin: Coord,
     pub destination: Coord,
     pub promotion: Option<PieceKind>,
 }
-impl LongAlgebraicNotation {
+impl Lan {
     pub fn as_move(self, board: &Board) -> Move {
         todo!()
     }
 }
-impl Display for LongAlgebraicNotation {
+impl Display for Lan {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.origin, self.destination)?;
         if let Some(promotion) = self.promotion {
@@ -1203,30 +1210,26 @@ impl Display for LongAlgebraicNotation {
         Ok(())
     }
 }
-impl FromStr for LongAlgebraicNotation {
-    type Err = ParseMoveError;
+impl FromStr for Lan {
+    type Err = ParseLanError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let origin = s.get(0..2).ok_or(ParseMoveError::InvalidChar)?.parse()?;
-        let destination = s.get(2..4).ok_or(ParseMoveError::InvalidChar)?.parse()?;
-        let mut rest = s
-            .get(4..)
-            .ok_or(ParseMoveError::InvalidChar)?
-            .chars()
-            .fuse();
+        let origin = s.get(0..2).ok_or(ParseLanError::InvalidChar)?.parse()?;
+        let destination = s.get(2..4).ok_or(ParseLanError::InvalidChar)?.parse()?;
+        let mut rest = s.get(4..).ok_or(ParseLanError::InvalidChar)?.chars().fuse();
         let promotion = rest.next().map(PieceKind::from_fen).transpose()?;
 
         if let Some(c) = rest.next() {
-            return Err(ParseMoveError::Unexpected(c));
+            return Err(ParseLanError::Unexpected(c));
         }
-        Ok(LongAlgebraicNotation {
+        Ok(Lan {
             origin,
             destination,
             promotion,
         })
     }
 }
-impl Moveable for LongAlgebraicNotation {
+impl Moveable for Lan {
     fn move_board(&self, board: &mut Board) {
         board.move_piece(&self.as_move(board));
     }
@@ -1242,7 +1245,7 @@ mod test {
         let valid_moves: Vec<_> = board
             .valid_moves()
             .unwrap()
-            .map(|movement| movement.as_long_algebraic_notation(&board))
+            .flat_map(|movement| movement.as_lan_iter(&board))
             .collect();
         assert!(
             valid_moves

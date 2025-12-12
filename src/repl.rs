@@ -1,5 +1,5 @@
 use crate::{
-    board::{Board, LongAlgebraicNotation, ParseMoveError},
+    board::{Board, Lan, ParseLanError},
     board_display::BoardDisplay,
     color::Color,
     coord::Coord,
@@ -10,21 +10,22 @@ use std::{
     error::Error,
     fmt::{self, Display, Formatter, Write as _},
     io::{self, BufRead, Write},
+    iter::once,
     str::FromStr,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ParseInputError {
     ParseFenError(ParseFenError),
-    ParseMoveError(ParseMoveError),
+    ParseMoveError(ParseLanError),
 }
 impl From<ParseFenError> for ParseInputError {
     fn from(value: ParseFenError) -> Self {
         ParseInputError::ParseFenError(value)
     }
 }
-impl From<ParseMoveError> for ParseInputError {
-    fn from(value: ParseMoveError) -> Self {
+impl From<ParseLanError> for ParseInputError {
+    fn from(value: ParseLanError) -> Self {
         ParseInputError::ParseMoveError(value)
     }
 }
@@ -54,7 +55,7 @@ enum Input {
     Import(Fen),
     ExportFen,
     Coord(Coord),
-    Move(LongAlgebraicNotation),
+    Move(Lan),
 }
 impl Display for Input {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -115,11 +116,9 @@ pub fn repl(
             info.clear();
             match board.valid_moves() {
                 Ok(moves) => {
-                    valid_moves.extend(
-                        moves.map(|movement| {
-                            (movement.as_long_algebraic_notation(&board), movement)
-                        }),
-                    );
+                    valid_moves.extend(moves.flat_map(|movement| {
+                        movement.as_lan_iter(&board).map(move |lan| (lan, movement))
+                    }));
                     writeln!(&mut info, "{} plays", board.current_player()).unwrap();
                 }
                 Err(end_state) => {
@@ -209,15 +208,15 @@ pub fn repl(
                             .map(|movement| movement.destination),
                     );
                 }
-                Input::Move(long_algebraic_notation) => {
-                    let Some(movement) = valid_moves.get(&long_algebraic_notation) else {
+                Input::Move(lan) => {
+                    let Some(movement) = valid_moves.get(&lan) else {
                         writeln!(error, "Error: {text} is an invalid move")?;
                         continue;
                     };
                     board.move_piece(movement);
                     highlighted.clear();
-                    highlighted.push(long_algebraic_notation.origin);
-                    highlighted.push(long_algebraic_notation.destination);
+                    highlighted.push(lan.origin);
+                    highlighted.push(lan.destination);
                     update = true;
                 }
             }
