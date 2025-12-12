@@ -1104,7 +1104,7 @@ impl Move {
     }
     pub fn as_lan_iter(self, board: &Board) -> impl Iterator<Item = Lan> {
         let (chess_960, regular) = self.as_ambiguous_lan_pair(board);
-        regular.into_iter().chain(once(chess_960))
+        once(chess_960).chain(regular.into_iter())
     }
     pub fn as_lan(self, board: &Board) -> Lan {
         let (chess_960, regular) = self.as_ambiguous_lan_pair(board);
