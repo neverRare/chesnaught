@@ -21,7 +21,11 @@ mod piece;
 mod repl;
 
 fn main() -> io::Result<()> {
-    repl(&mut stdin().lock(), &mut stdout(), &mut stderr())?;
+    repl(
+        &mut stdin().lock(),
+        &mut stdout().lock(),
+        &mut stderr().lock(),
+    )?;
     Ok(())
 }
 #[macro_export]
