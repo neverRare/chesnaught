@@ -21,11 +21,11 @@ mod piece;
 mod repl;
 
 fn main() -> io::Result<()> {
-    repl(
-        &mut stdin().lock(),
-        &mut stdout().lock(),
-        &mut stderr().lock(),
-    )?;
+    let mut output = stdout();
+    let mut error = stderr();
+    let lock = (!cfg!(debug_assertions)).then(|| (output.lock(), error.lock()));
+    repl(&mut stdin().lock(), &mut output, &mut error)?;
+    drop(lock);
     Ok(())
 }
 #[macro_export]
