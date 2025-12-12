@@ -793,7 +793,7 @@ impl Board {
                         .all(|position| {
                             (position == other_position || self[position].is_none())
                                 && (piece != PieceKind::King
-                                    || self.is_move_attacked(
+                                    || !self.is_move_attacked(
                                         &[king_index, rook_index],
                                         destination,
                                         !self.current_player,
