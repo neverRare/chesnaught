@@ -49,10 +49,10 @@ impl Display for InvalidBoard {
             }
             InvalidBoard::InvalidCastlingRight => write!(f, "rook not found for castling right")?,
             InvalidBoard::InvalidEnPassantRank => {
-                write!(f, "en passant target may only be on ranks 3 or 6")?
+                write!(f, "en passant target may only be on ranks 3 or 6")?;
             }
             InvalidBoard::EnPassantPawnNotFound => {
-                write!(f, "pawn in front of en passant target is not found")?
+                write!(f, "pawn in front of en passant target is not found")?;
             }
             InvalidBoard::PawnOnHomeRank => write!(f, "pawns cannot be on ranks 1 or 8")?,
         }
