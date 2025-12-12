@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic)]
-#![allow(dead_code)]
+// TODO: remove this when the engine is fully implemented
+#![allow(dead_code, reason = "work in progress code")]
 
 use std::{
     collections::HashMap,
@@ -24,7 +25,7 @@ mod piece;
 
 #[allow(
     clippy::too_many_lines,
-    reason = "the state and procedure are very clearly defined"
+    reason = "the state and procedure are very clearly defined; no need to decompose these into separate functions"
 )]
 fn main() {
     let mut board = Board::starting_position();
