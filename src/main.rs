@@ -80,15 +80,15 @@ fn main() {
             let input = input.trim();
             if input == "help" {
                 println!("flip           - flip the board");
-                println!("import <fen>   - import a position");
-                println!("reset          - reset to starting position");
-                println!("fen            - export the position as fen");
+                println!("restart        - reset to starting position");
                 println!("exit           - exit the game");
+                println!("import <fen>   - import a position");
+                println!("fen            - export the position as fen");
                 println!("e2             - view valid moves");
                 println!("e2e4           - play the move");
                 println!("e7e8q          - move and promote");
                 println!("e1g1 (or e1h1) - perform castling");
-            } else if input == "reset" {
+            } else if input == "restart" {
                 board = Board::starting_position();
                 update = true;
                 highlighted.clear();
