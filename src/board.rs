@@ -630,8 +630,8 @@ impl Board {
     ) -> impl FusedIterator<Item = Piece> {
         self.pieces(color)
             .filter(move |piece| match piece.piece.piece() {
-                PieceKind::Pawn => (piece.position - position).is_pawn_attack(color),
-                PieceKind::Knight => (piece.position - position).is_knight_move(),
+                PieceKind::Pawn => (position - piece.position).is_pawn_attack(color),
+                PieceKind::Knight => (position - piece.position).is_knight_move(),
                 PieceKind::Bishop => piece
                     .position
                     .is_aligned_with_bishop(position)
@@ -644,7 +644,7 @@ impl Board {
                     .position
                     .is_aligned_with_queen(position)
                     .is_some_and(|mut inside| !inside.any(checker.clone())),
-                PieceKind::King => (piece.position - position).is_king_move(),
+                PieceKind::King => (position - piece.position).is_king_move(),
             })
     }
     fn attackers(&self, position: Coord, color: Color) -> impl FusedIterator<Item = Piece> {
