@@ -616,7 +616,7 @@ impl Board {
             }
         }
         for pawn in self.pawns(Color::White).chain(self.pawns(Color::Black)) {
-            if ![coord_y!("1"), coord_y!("8")].contains(&pawn.position.y()) {
+            if matches!(pawn.position.y(), coord_y!("1") | coord_y!("8")) {
                 return Err(InvalidBoard::PawnOnHomeRank);
             }
         }
