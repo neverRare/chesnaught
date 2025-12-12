@@ -343,18 +343,18 @@ pub struct Board {
 }
 fn original_piece_range(color: Color, piece: PieceKind) -> Range<usize> {
     match (color, piece) {
-        (Color::White, PieceKind::Pawn) => 8..16,
-        (Color::White, PieceKind::Knight) => 6..8,
-        (Color::White, PieceKind::Bishop) => 4..6,
-        (Color::White, PieceKind::Rook) => 2..4,
-        (Color::White, PieceKind::Queen) => 1..2,
         (Color::White, PieceKind::King) => 0..1,
-        (Color::Black, PieceKind::Pawn) => 24..32,
-        (Color::Black, PieceKind::Knight) => 22..24,
-        (Color::Black, PieceKind::Bishop) => 20..22,
-        (Color::Black, PieceKind::Rook) => 18..20,
-        (Color::Black, PieceKind::Queen) => 17..18,
+        (Color::White, PieceKind::Queen) => 1..2,
+        (Color::White, PieceKind::Rook) => 2..4,
+        (Color::White, PieceKind::Bishop) => 4..6,
+        (Color::White, PieceKind::Knight) => 6..8,
+        (Color::White, PieceKind::Pawn) => 8..16,
         (Color::Black, PieceKind::King) => 16..17,
+        (Color::Black, PieceKind::Queen) => 17..18,
+        (Color::Black, PieceKind::Rook) => 18..20,
+        (Color::Black, PieceKind::Bishop) => 20..22,
+        (Color::Black, PieceKind::Knight) => 22..24,
+        (Color::Black, PieceKind::Pawn) => 24..32,
     }
 }
 impl Board {
