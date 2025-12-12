@@ -191,12 +191,7 @@ impl Piece {
                         .unwrap()
                 })
                 .filter(|en_passant_target| {
-                    board.any_moves_has(
-                        *en_passant_target,
-                        &Vector::pawn_attacks(self.piece.color()),
-                        !self.piece.color(),
-                        PieceKind::Pawn,
-                    )
+                    board.can_attack_by_pawn(*en_passant_target, !self.piece.color())
                 }),
                 castling_right: board.castling_right,
             })
@@ -533,6 +528,14 @@ impl Board {
             self.pieces_by_kind(color, piece)
                 .any(|piece| moves.contains(&(piece.position - position)))
         }
+    }
+    fn can_attack_by_pawn(&self, position: Coord, color: Color) -> bool {
+        self.any_moves_has(
+            position,
+            &Vector::pawn_attacks(!color),
+            color,
+            PieceKind::Pawn,
+        )
     }
     fn indices(&self) -> &[Option<PieceIndex>; 64] {
         self.indices.get_or_init(|| {
@@ -1027,12 +1030,7 @@ impl TryFrom<HashableBoard> for Board {
                 coord_y!("6") => Color::Black,
                 _ => return Err(InvalidBoard::InvalidEnPassantRank),
             };
-            if !board.any_moves_has(
-                en_passant_target,
-                &Vector::pawn_attacks(color),
-                !color,
-                PieceKind::Pawn,
-            ) {
+            if !board.can_attack_by_pawn(en_passant_target, !color) {
                 board.en_passant_target = None;
             }
         }
