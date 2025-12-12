@@ -152,6 +152,7 @@ pub fn repl(
                 Ok(input) => input,
                 Err(err) => {
                     writeln!(error, "Error: {err}")?;
+                    writeln!(error, "for available command, enter `help`")?;
                     continue;
                 }
             };
