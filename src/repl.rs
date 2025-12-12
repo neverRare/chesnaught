@@ -83,7 +83,7 @@ impl FromStr for Input {
             "fen" => Ok(Input::ExportFen),
             s => {
                 if s.get(0..7) == Some("import ") {
-                    Ok(Input::Import(s[7..].parse()?))
+                    Ok(Input::Import(s[7..].trim_start().parse()?))
                 } else if let Ok(position) = s.parse() {
                     Ok(Input::Coord(position))
                 } else {
