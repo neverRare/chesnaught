@@ -1021,14 +1021,20 @@ impl TryFrom<HashableBoard> for Board {
             castling_right: value.castling_right,
             en_passant_target: value.en_passant_target,
         };
-        if let Some(en_passant_target) = board.en_passant_target
-            && ![Color::White, Color::Black].into_iter().any(|color| {
-                board
-                    .pawns(color)
-                    .any(|piece| (en_passant_target - piece.position).is_pawn_attack(color))
-            })
-        {
-            board.en_passant_target = None;
+        if let Some(en_passant_target) = board.en_passant_target {
+            let color = match en_passant_target.y() {
+                coord_y!("3") => Color::White,
+                coord_y!("6") => Color::Black,
+                _ => return Err(InvalidBoard::InvalidEnPassantRank),
+            };
+            if !board.any_moves_has(
+                en_passant_target,
+                &Vector::pawn_attacks(color),
+                !color,
+                PieceKind::Pawn,
+            ) {
+                board.en_passant_target = None;
+            }
         }
         board.validate()?;
         Ok(board)
