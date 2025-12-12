@@ -16,7 +16,7 @@ use crate::{
     castling_right::CastlingRight,
     color::Color,
     coord::{Coord, ParseCoordError, Vector, home_rank, pawn_home_rank, pawn_promotion_rank},
-    coord_x,
+    coord_x, coord_y,
     end_state::EndState,
     error::InvalidByte,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
@@ -29,7 +29,9 @@ pub enum InvalidBoard {
     NonPlayerInCheck,
     MoreThanTwoCheckers,
     InvalidCastlingRight,
-    InvalidEnPassantTarget,
+    InvalidEnPassantRank,
+    EnPassantPawnNotFound,
+    PawnOnHomeRank,
 }
 impl From<ExceededPieces> for InvalidBoard {
     fn from(value: ExceededPieces) -> Self {
@@ -45,8 +47,14 @@ impl Display for InvalidBoard {
             InvalidBoard::MoreThanTwoCheckers => {
                 write!(f, "found more than 2 pieces delivering check")?;
             }
-            InvalidBoard::InvalidCastlingRight => write!(f, "invalid castling right")?,
-            InvalidBoard::InvalidEnPassantTarget => write!(f, "invalid en passant target")?,
+            InvalidBoard::InvalidCastlingRight => write!(f, "rook not found for castling right")?,
+            InvalidBoard::InvalidEnPassantRank => {
+                write!(f, "en passant target may only be on ranks 3 or 6")?
+            }
+            InvalidBoard::EnPassantPawnNotFound => {
+                write!(f, "pawn in front of en passant target is not found")?
+            }
+            InvalidBoard::PawnOnHomeRank => write!(f, "pawns cannot be on ranks 1 or 8")?,
         }
         Ok(())
     }
@@ -594,14 +602,20 @@ impl Board {
         }) {
             return Err(InvalidBoard::InvalidCastlingRight);
         }
-        if let Some(en_passant_target) = self.en_passant_target
-            && ![Color::White, Color::Black].into_iter().any(|color| {
-                en_passant_target
-                    .move_by(Vector::pawn_single_move(color))
-                    .is_some_and(|position| self.position_has(position, color, PieceKind::Pawn))
-            })
-        {
-            return Err(InvalidBoard::InvalidEnPassantTarget);
+        if let Some(en_passant_target) = self.en_passant_target {
+            let (color, y) = match en_passant_target.y() {
+                coord_y!("3") => (Color::White, coord_y!("4")),
+                coord_y!("6") => (Color::Black, coord_y!("5")),
+                _ => return Err(InvalidBoard::InvalidEnPassantRank),
+            };
+            if !self.position_has(Coord::new(en_passant_target.x(), y), color, PieceKind::Pawn) {
+                return Err(InvalidBoard::EnPassantPawnNotFound);
+            }
+        }
+        for pawn in self.pawns(Color::White).chain(self.pawns(Color::Black)) {
+            if ![coord_y!("1"), coord_y!("8")].contains(&pawn.position.y()) {
+                return Err(InvalidBoard::PawnOnHomeRank);
+            }
         }
         Ok(())
     }
