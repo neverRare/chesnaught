@@ -909,15 +909,6 @@ impl Board {
         new.move_piece(movement);
         new
     }
-    pub fn display_raw_moves(&self) {
-        for (index, piece) in self.pieces_indexed(self.current_player) {
-            println!("moves of {piece}:");
-            for movement in piece.non_castling_moves(index, self) {
-                println!("{}", movement.as_long_algebraic_notation(self));
-            }
-            println!();
-        }
-    }
 }
 impl Index<Coord> for Board {
     type Output = Option<PieceIndex>;

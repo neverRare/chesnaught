@@ -77,14 +77,17 @@ fn main() {
             if input == "help" {
                 println!("flip           - flip the board");
                 println!("import <fen>   - import a position");
+                println!("reset          - reset to starting position");
                 println!("fen            - export the position as fen");
                 println!("exit           - exit the game");
                 println!("e2             - view valid moves");
                 println!("e2e4           - play the move");
                 println!("e7e8q          - move and promote");
                 println!("e1g1 (or e1h1) - perform castling");
-            } else if input == "show raw moves" {
-                board.display_raw_moves();
+            } else if input == "reset" {
+                board = Board::starting_position();
+                update = true;
+                highlighted.clear();
             } else if input == "exit" {
                 return;
             } else if input == "flip" {
@@ -114,6 +117,7 @@ fn main() {
                     }
                 };
                 update = true;
+                highlighted.clear();
             } else if let Ok(position) = input.parse() {
                 highlighted.clear();
                 highlighted.extend(
