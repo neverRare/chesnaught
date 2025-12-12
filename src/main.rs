@@ -19,6 +19,7 @@ mod game_tree;
 mod heuristics;
 mod piece;
 mod repl;
+mod uci;
 
 fn main() -> io::Result<()> {
     let mut output = stdout();
