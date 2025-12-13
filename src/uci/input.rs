@@ -1,6 +1,7 @@
 use std::{
     error::Error,
     fmt::{self, Display, Formatter},
+    iter::from_fn,
     num::NonZero,
     str::FromStr,
     time::Duration,
@@ -20,7 +21,7 @@ enum Input<'a> {
         name: &'a str,
         value: Option<&'a str>,
     },
-    Register(Register<'a>),
+    Register(Vec<Register<'a>>),
     UciNewGame,
     Position {
         position: Position,
@@ -60,7 +61,12 @@ impl Display for Input<'_> {
                     write!(f, " value {value}")?;
                 }
             }
-            Input::Register(register) => write!(f, "register {register}")?,
+            Input::Register(register) => {
+                write!(f, "register")?;
+                for register in register {
+                    write!(f, " {register}")?;
+                }
+            }
             Input::UciNewGame => write!(f, "ucinewgame")?,
             Input::Position { position, moves } => {
                 write!(f, "position {position} moves")?;
@@ -131,16 +137,78 @@ impl Display for Input<'_> {
         Ok(())
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum ParseRegisterError {
+    UnknownCommand,
+    NoName,
+    NoCode,
+}
+impl Display for ParseRegisterError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseRegisterError::UnknownCommand => {
+                write!(f, "provided prefix was not `later`, `name`, or `code`")?
+            }
+            ParseRegisterError::NoName => write!(f, "no name provided")?,
+            ParseRegisterError::NoCode => write!(f, "no code provided")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParseRegisterError {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Register<'a> {
     Later,
-    NameCode { name: &'a str, code: &'a str },
+    Name(&'a str),
+    Code(&'a str),
+}
+impl<'a> Register<'a> {
+    fn parse(mut src: &'a str) -> Result<Vec<Self>, ParseRegisterError> {
+        let src = &mut src;
+        from_fn(|| {
+            (*src != "").then(|| {
+                Register::partial_parse(src).map(|value| {
+                    *src = src.trim_start();
+                    value
+                })
+            })
+        })
+        .collect()
+    }
+    fn partial_parse(src: &mut &'a str) -> Result<Self, ParseRegisterError> {
+        if src.get(..5) == Some("later")
+            && src[5..].chars().next().is_none_or(<char>::is_whitespace)
+        {
+            *src = &src[5..];
+            Ok(Register::Later)
+        } else if let Some(command) = src.get(..5) {
+            let index = match src[5..].find(<char>::is_whitespace) {
+                Some(index) => index + 5,
+                None => src.len(),
+            };
+            let name = &src[5..index];
+            *src = &src[index..];
+            match command {
+                "name " => Ok(Register::Name(name)),
+                "code " => Ok(Register::Code(name)),
+                _ => Err(ParseRegisterError::UnknownCommand),
+            }
+        } else {
+            match *src {
+                "name" => Err(ParseRegisterError::NoName),
+                "code" => Err(ParseRegisterError::NoCode),
+                _ => Err(ParseRegisterError::UnknownCommand),
+            }
+        }
+    }
 }
 impl Display for Register<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Register::Later => write!(f, "later")?,
-            Register::NameCode { name, code } => write!(f, "name {name} code {code}")?,
+            Register::Name(name) => write!(f, "name {name}")?,
+            Register::Code(code) => write!(f, "code {code}")?,
         }
         Ok(())
     }
