@@ -83,7 +83,7 @@ pub enum Input<'a> {
 impl<'a> Input<'a> {
     fn from_str_from_start(src: &'a str) -> Result<Self, ParseInputError> {
         if starts_with_separator(src, "uci") {
-            return Ok(Input::Uci);
+            Ok(Input::Uci)
         } else if starts_with_separator(src, "debug") {
             let src = &src[5..].trim_start();
             if starts_with_separator(src, "on") {
@@ -124,15 +124,14 @@ impl<'a> Input<'a> {
             let position = src[..move_start].trim_end().parse()?;
             let move_src = &mut src[move_end..].trim_start();
             let moves = from_fn(|| {
-                if *move_src == "" {
+                if move_src.is_empty() {
                     None
                 } else {
                     let index = move_src
                         .find(<char>::is_whitespace)
-                        .unwrap_or_else(|| move_src.len());
-                    src[..index].parse().ok().map(|value| {
+                        .unwrap_or(move_src.len());
+                    src[..index].parse().ok().inspect(|value| {
                         *move_src = move_src[index..].trim_start();
-                        value
                     })
                 }
             })
@@ -330,8 +329,7 @@ fn find_separator(src: &str, search: &str) -> Option<usize> {
             .is_none_or(<char>::is_whitespace)
             && src[..*i]
                 .chars()
-                .rev()
-                .next()
+                .next_back()
                 .is_none_or(<char>::is_whitespace)
     })
 }

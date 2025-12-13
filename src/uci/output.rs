@@ -57,7 +57,7 @@ impl Display for Output {
                     write!(f, " default {default}")?;
                 }
                 if let Some(boundary) = boundary {
-                    write!(f, " {boundary}")?
+                    write!(f, " {boundary}")?;
                 }
             }
         }

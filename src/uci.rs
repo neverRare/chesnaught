@@ -44,10 +44,10 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
         let mut text = String::new();
         input.read_line(&mut text)?;
         let text = text.trim();
-        if text == "" {
+        if text.is_empty() {
             continue;
         }
-        let parsed_input = match Input::from_str(&text) {
+        let parsed_input = match Input::from_str(text) {
             Ok(input) => input,
             Err(err) => {
                 if debug {
@@ -88,7 +88,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                 }
                 name => {
                     if debug {
-                        debug_print!(output, "unknown option `{name}`; ignoring")?
+                        debug_print!(output, "unknown option `{name}`; ignoring")?;
                     }
                 }
             },
