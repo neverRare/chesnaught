@@ -12,6 +12,37 @@ use crate::{
     fen::{Fen, ParseFenError},
 };
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ParseInputError {
+    ParsePositionError(ParsePositionError),
+    UnknownCommand(Box<str>),
+    NotOnOrOff,
+    NoName,
+}
+impl From<ParsePositionError> for ParseInputError {
+    fn from(value: ParsePositionError) -> Self {
+        ParseInputError::ParsePositionError(value)
+    }
+}
+impl Display for ParseInputError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseInputError::ParsePositionError(err) => write!(f, "{err}")?,
+            ParseInputError::UnknownCommand(command) => write!(f, "unknown command `{command}`")?,
+            ParseInputError::NotOnOrOff => write!(f, "provided string was not `on` or `off`")?,
+            ParseInputError::NoName => write!(f, "token `name` was not found")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParseInputError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParseInputError::ParsePositionError(err) => Some(err),
+            _ => None,
+        }
+    }
+}
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Input<'a> {
     Uci,
@@ -47,49 +78,47 @@ enum Input<'a> {
     Repl,
 }
 impl<'a> Input<'a> {
-    fn from_str_strict(src: &'a str) -> Option<Self> {
+    fn from_str_from_start(src: &'a str) -> Result<Self, ParseInputError> {
         if starts_with_separator(src, "uci") {
-            return Some(Input::Uci);
+            return Ok(Input::Uci);
         } else if starts_with_separator(src, "debug") {
             let src = &src[5..].trim_start();
             if starts_with_separator(src, "on") {
-                Some(Input::Debug(true))
+                Ok(Input::Debug(true))
             } else if starts_with_separator(src, "off") {
-                Some(Input::Debug(false))
+                Ok(Input::Debug(false))
             } else {
-                None
+                Err(ParseInputError::NotOnOrOff)
             }
         } else if starts_with_separator(src, "isready") {
-            Some(Input::IsReady)
+            Ok(Input::IsReady)
         } else if starts_with_separator(src, "setoption") {
             let src = src[9..].trim_start();
             if !starts_with_separator(src, "name") {
-                return None;
+                return Err(ParseInputError::NoName);
             }
             let src = src[4..].trim_start();
             let Some(separator) = find_separator(src, "value") else {
-                return Some(Input::SetOption {
+                return Ok(Input::SetOption {
                     name: src,
                     value: None,
                 });
             };
-            Some(Input::SetOption {
+            Ok(Input::SetOption {
                 name: src[..separator].trim_end(),
                 value: Some(src[(separator + 5)..].trim_start()),
             })
         } else if starts_with_separator(src, "register") {
-            Some(Input::Register(Register::parse(src[8..].trim_start())))
+            Ok(Input::Register(Register::parse(src[8..].trim_start())))
         } else if starts_with_separator(src, "ucinewgame") {
-            Some(Input::UciNewGame)
+            Ok(Input::UciNewGame)
         } else if starts_with_separator(src, "position") {
             let src = src[8..].trim_start();
             let (move_start, move_end) = match find_separator(src, "moves") {
                 Some(i) => (i, i + 5),
                 None => (src.len(), src.len()),
             };
-            let Ok(position) = src[..move_start].trim_end().parse() else {
-                return None;
-            };
+            let position = src[..move_start].trim_end().parse()?;
             let move_src = &mut src[move_end..].trim_start();
             let moves = from_fn(|| {
                 if *move_src == "" {
@@ -105,28 +134,30 @@ impl<'a> Input<'a> {
                 }
             })
             .collect();
-            Some(Input::Position { position, moves })
+            Ok(Input::Position { position, moves })
         } else if starts_with_separator(src, "go") {
             todo!()
         } else if starts_with_separator(src, "stop") {
-            Some(Input::Stop)
+            Ok(Input::Stop)
         } else if starts_with_separator(src, "ponderhit") {
-            Some(Input::PonderHit)
+            Ok(Input::PonderHit)
         } else if starts_with_separator(src, "quit") {
-            Some(Input::Quit)
+            Ok(Input::Quit)
         } else if starts_with_separator(src, "repl") {
-            Some(Input::Repl)
+            Ok(Input::Repl)
         } else {
-            None
+            Err(ParseInputError::UnknownCommand(extract_command(src).into()))
         }
     }
-    fn from_str(src: &'a str) -> Option<Self> {
+    fn from_str(src: &'a str) -> Result<Self, Vec<ParseInputError>> {
+        let mut errors = Vec::new();
         for (i, _) in src.char_indices() {
-            if let Some(input) = Input::from_str_strict(&src[i..]) {
-                return Some(input);
+            match Input::from_str_from_start(&src[i..]) {
+                Ok(input) => return Ok(input),
+                Err(err) => errors.push(err),
             }
         }
-        None
+        Err(errors)
     }
 }
 impl Display for Input<'_> {
@@ -359,11 +390,9 @@ impl FromStr for Position {
                 None => Ok(Position::StartPos),
             }
         } else {
-            let command = match s.find(<char>::is_whitespace) {
-                Some(i) => &s[..i],
-                None => s,
-            };
-            Err(ParsePositionError::UnknownCommand(command.into()))
+            Err(ParsePositionError::UnknownCommand(
+                extract_command(s).into(),
+            ))
         }
     }
 }
@@ -386,4 +415,10 @@ fn find_separator(src: &str, search: &str) -> Option<usize> {
                 .next()
                 .is_none_or(<char>::is_whitespace)
     })
+}
+fn extract_command(src: &str) -> &str {
+    match src.find(<char>::is_whitespace) {
+        Some(i) => &src[..i],
+        None => src,
+    }
 }
