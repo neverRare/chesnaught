@@ -82,18 +82,18 @@ pub enum Input<'a> {
 }
 impl<'a> Input<'a> {
     fn from_str_from_start(src: &'a str) -> Result<Self, ParseInputError> {
-        if starts_with_token(src, "uci") {
+        if strip_prefix_token(src, "uci").is_some() {
             Ok(Input::Uci)
         } else if let Some(src) = strip_prefix_token(src, "debug") {
             let src = src.trim_start();
-            if starts_with_token(src, "on") {
+            if strip_prefix_token(src, "on").is_some() {
                 Ok(Input::Debug(true))
-            } else if starts_with_token(src, "off") {
+            } else if strip_prefix_token(src, "off").is_some() {
                 Ok(Input::Debug(false))
             } else {
                 Err(ParseInputError::NotOnOrOff)
             }
-        } else if starts_with_token(src, "isready") {
+        } else if strip_prefix_token(src, "isready").is_some() {
             Ok(Input::IsReady)
         } else if let Some(src) = strip_prefix_token(src, "setoption") {
             let src = src.trim_start();
@@ -113,7 +113,7 @@ impl<'a> Input<'a> {
             })
         } else if let Some(src) = strip_prefix_token(src, "register") {
             Ok(Input::Register(src.trim_start()))
-        } else if starts_with_token(src, "ucinewgame") {
+        } else if strip_prefix_token(src, "ucinewgame").is_some() {
             Ok(Input::UciNewGame)
         } else if let Some(src) = strip_prefix_token(src, "position") {
             let src = src.trim_start();
@@ -137,15 +137,15 @@ impl<'a> Input<'a> {
             })
             .collect();
             Ok(Input::Position { position, moves })
-        } else if starts_with_token(src, "go") {
+        } else if strip_prefix_token(src, "go").is_some() {
             todo!()
-        } else if starts_with_token(src, "stop") {
+        } else if strip_prefix_token(src, "stop").is_some() {
             Ok(Input::Stop)
-        } else if starts_with_token(src, "ponderhit") {
+        } else if strip_prefix_token(src, "ponderhit").is_some() {
             Ok(Input::PonderHit)
-        } else if starts_with_token(src, "quit") {
+        } else if strip_prefix_token(src, "quit").is_some() {
             Ok(Input::Quit)
-        } else if starts_with_token(src, "repl") {
+        } else if strip_prefix_token(src, "repl").is_some() {
             Ok(Input::Repl)
         } else {
             Err(ParseInputError::UnknownCommand(extract_command(src).into()))
@@ -313,13 +313,6 @@ impl FromStr for Position {
             ))
         }
     }
-}
-fn starts_with_token(src: &str, search: &str) -> bool {
-    src.starts_with(search)
-        && src[search.len()..]
-            .chars()
-            .next()
-            .is_none_or(<char>::is_whitespace)
 }
 fn strip_prefix_token<'a>(src: &'a str, search: &str) -> Option<&'a str> {
     src.strip_prefix(search)
