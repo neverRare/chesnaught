@@ -75,7 +75,7 @@ impl<'a> Input<'a> {
                 };
                 return Some(Input::SetOption {
                     name: src[..separator].trim_end(),
-                    value: Some(src[(separator + 4)..].trim_start()),
+                    value: Some(src[(separator + 5)..].trim_start()),
                 });
             } else if starts_with_separator(src, "register") {
                 return Some(Input::Register(Register::parse(src[8..].trim_start())));
