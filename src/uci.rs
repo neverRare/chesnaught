@@ -88,7 +88,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                 }
                 name => {
                     if debug {
-                        debug_print!(output, "unknown command `{name}`; ignoring")?
+                        debug_print!(output, "unknown option `{name}`; ignoring")?
                     }
                 }
             },
