@@ -40,7 +40,12 @@ impl Display for Output {
                     write!(f, " ponder {ponder}")?;
                 }
             }
-            Output::Info(infos) => todo!(),
+            Output::Info(infos) => {
+                write!(f, "info")?;
+                for info in infos {
+                    write!(f, " {info}")?;
+                }
+            }
             Output::Option {
                 name,
                 kind,
@@ -82,15 +87,77 @@ pub enum Info {
     Refutation(Vec<Lan>),
     CurrLine(Vec<Lan>),
 }
+impl Display for Info {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Info::Depth(depth) => write!(f, "depth {depth}")?,
+            Info::SelDepth(depth) => write!(f, "seldepth {depth}")?,
+            Info::Time(time) => write!(f, "time {}", time.as_millis())?,
+            Info::Nodes(nodes) => write!(f, "node {nodes}")?,
+            Info::Pv(moves) => {
+                write!(f, "pv")?;
+                for movement in moves {
+                    write!(f, " {movement}")?;
+                }
+            }
+            Info::MultiPv(rank) => write!(f, "multipv {rank}")?,
+            Info::Score { score, bound } => {
+                write!(f, "score {score}")?;
+                if let Some(bound) = bound {
+                    write!(f, " {bound}")?;
+                }
+            }
+            Info::CurrMove(movement) => write!(f, "currmove {movement}")?,
+            Info::CurrMoveNumber(order) => write!(f, "currmovenumber {order}")?,
+            Info::HashFull(permill) => write!(f, "hashfull {permill}")?,
+            Info::Nps(nps) => write!(f, "nps {nps}")?,
+            Info::TbHits(hits) => write!(f, "tbhits {hits}")?,
+            Info::SbHits(hits) => write!(f, "sbhits {hits}")?,
+            Info::CpuLoad(permill) => write!(f, "cpuload {permill}")?,
+            Info::String(s) => write!(f, "string {s}")?,
+            Info::Refutation(moves) => {
+                write!(f, "refutation")?;
+                for movement in moves {
+                    write!(f, " {movement}")?;
+                }
+            }
+            Info::CurrLine(moves) => {
+                write!(f, "currline")?;
+                for movement in moves {
+                    write!(f, " {movement}")?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Score {
     Cp(i32),
-    Mate(NonZero<u32>),
+    Mate(u32),
+}
+impl Display for Score {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Score::Cp(cp) => write!(f, "cp {cp}")?,
+            Score::Mate(moves) => write!(f, "mate {moves}")?,
+        }
+        Ok(())
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ScoreBound {
     LowerBound,
     UpperBound,
+}
+impl Display for ScoreBound {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ScoreBound::LowerBound => write!(f, "lowerbound")?,
+            ScoreBound::UpperBound => write!(f, "upperbound")?,
+        }
+        Ok(())
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum OptionType {
