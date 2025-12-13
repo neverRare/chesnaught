@@ -84,8 +84,8 @@ impl<'a> Input<'a> {
     fn from_str_from_start(src: &'a str) -> Result<Self, ParseInputError> {
         if starts_with_separator(src, "uci") {
             Ok(Input::Uci)
-        } else if starts_with_separator(src, "debug") {
-            let src = &src[5..].trim_start();
+        } else if let Some(src) = strip_prefix_with_separator(src, "debug") {
+            let src = src.trim_start();
             if starts_with_separator(src, "on") {
                 Ok(Input::Debug(true))
             } else if starts_with_separator(src, "off") {
@@ -95,12 +95,12 @@ impl<'a> Input<'a> {
             }
         } else if starts_with_separator(src, "isready") {
             Ok(Input::IsReady)
-        } else if starts_with_separator(src, "setoption") {
-            let src = src[9..].trim_start();
-            if !starts_with_separator(src, "name") {
+        } else if let Some(src) = strip_prefix_with_separator(src, "setoption") {
+            let src = src.trim_start();
+            let Some(src) = strip_prefix_with_separator(src, "name") else {
                 return Err(ParseInputError::NoName);
-            }
-            let src = src[4..].trim_start();
+            };
+            let src = src.trim_start();
             let Some(separator) = find_separator(src, "value") else {
                 return Ok(Input::SetOption {
                     name: src,
@@ -111,12 +111,12 @@ impl<'a> Input<'a> {
                 name: src[..separator].trim_end(),
                 value: Some(src[(separator + 5)..].trim_start()),
             })
-        } else if starts_with_separator(src, "register") {
-            Ok(Input::Register(src[8..].trim_start()))
+        } else if let Some(src) = strip_prefix_with_separator(src, "register") {
+            Ok(Input::Register(src.trim_start()))
         } else if starts_with_separator(src, "ucinewgame") {
             Ok(Input::UciNewGame)
-        } else if starts_with_separator(src, "position") {
-            let src = src[8..].trim_start();
+        } else if let Some(src) = strip_prefix_with_separator(src, "position") {
+            let src = src.trim_start();
             let (move_start, move_end) = match find_separator(src, "moves") {
                 Some(i) => (i, i + 5),
                 None => (src.len(), src.len()),
@@ -300,10 +300,10 @@ impl FromStr for Position {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "startpos" {
             Ok(Position::StartPos)
-        } else if starts_with_separator(s, "fen") {
-            Ok(Position::Fen(s[3..].trim_start().parse()?))
-        } else if starts_with_separator(s, "startpos") {
-            match s[8..].trim_start().chars().next() {
+        } else if let Some(src) = strip_prefix_with_separator(s, "fen") {
+            Ok(Position::Fen(src.trim_start().parse()?))
+        } else if let Some(src) = strip_prefix_with_separator(s, "startpos") {
+            match s.trim_start().chars().next() {
                 Some(c) => Err(ParsePositionError::Unexpected(c)),
                 None => Ok(Position::StartPos),
             }
@@ -321,8 +321,12 @@ fn starts_with_separator(src: &str, search: &str) -> bool {
             .next()
             .is_none_or(<char>::is_whitespace)
 }
+fn strip_prefix_with_separator<'a>(src: &'a str, search: &str) -> Option<&'a str> {
+    src.strip_prefix(search)
+        .filter(|src| src.chars().next().is_none_or(<char>::is_whitespace))
+}
 fn find_separator(src: &str, search: &str) -> Option<usize> {
-    src.find(search).filter(|i| {
+    src.match_indices(search).map(|(i, _)| i).find(|i| {
         src[(i + search.len())..]
             .chars()
             .next()
