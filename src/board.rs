@@ -1,6 +1,7 @@
 use std::{
     cell::OnceCell,
     cmp::Ordering,
+    collections::HashSet,
     error::Error,
     fmt::{self, Display, Formatter},
     hash::Hash,
@@ -903,6 +904,12 @@ impl Board {
     }
     pub fn move_piece(&mut self, movement: &impl Moveable) {
         movement.move_board(self);
+    }
+    pub fn move_assert(&mut self, movement: Lan) {
+        let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
+        let movement = movement.as_move(self);
+        assert!(valid_moves.contains(&movement));
+        self.move_piece(&movement);
     }
     pub fn clone_and_move(&self, movement: &impl Moveable) -> Self {
         let mut new = self.clone();
