@@ -62,7 +62,28 @@ impl<'a> Input<'a> {
             } else if starts_with_separator(src, "isready") {
                 return Some(Input::IsReady);
             } else if starts_with_separator(src, "setoption") {
-                todo!()
+                let src = src[9..].trim_start();
+                if !starts_with_separator(src, "name") {
+                    continue;
+                }
+                let src = src[4..].trim_start();
+                let (value_start, value_end) = if src.ends_with(" value") {
+                    (src.len() - 6, src.len())
+                } else {
+                    match src.find(" value ") {
+                        Some(i) => (i, i + 7),
+                        None => {
+                            return Some(Input::SetOption {
+                                name: src.trim_end(),
+                                value: None,
+                            });
+                        }
+                    }
+                };
+                return Some(Input::SetOption {
+                    name: src[..value_start].trim(),
+                    value: Some(src[value_end..].trim_start()),
+                });
             } else if starts_with_separator(src, "register") {
                 return Some(Input::Register(Register::parse(src[8..].trim_start())));
             } else if starts_with_separator(src, "ucinewgame") {
