@@ -82,42 +82,42 @@ pub enum Input<'a> {
 }
 impl<'a> Input<'a> {
     fn from_str_from_start(src: &'a str) -> Result<Self, ParseInputError> {
-        if starts_with_separator(src, "uci") {
+        if starts_with_token(src, "uci") {
             Ok(Input::Uci)
-        } else if let Some(src) = strip_prefix_with_separator(src, "debug") {
+        } else if let Some(src) = strip_prefix_token(src, "debug") {
             let src = src.trim_start();
-            if starts_with_separator(src, "on") {
+            if starts_with_token(src, "on") {
                 Ok(Input::Debug(true))
-            } else if starts_with_separator(src, "off") {
+            } else if starts_with_token(src, "off") {
                 Ok(Input::Debug(false))
             } else {
                 Err(ParseInputError::NotOnOrOff)
             }
-        } else if starts_with_separator(src, "isready") {
+        } else if starts_with_token(src, "isready") {
             Ok(Input::IsReady)
-        } else if let Some(src) = strip_prefix_with_separator(src, "setoption") {
+        } else if let Some(src) = strip_prefix_token(src, "setoption") {
             let src = src.trim_start();
-            let Some(src) = strip_prefix_with_separator(src, "name") else {
+            let Some(src) = strip_prefix_token(src, "name") else {
                 return Err(ParseInputError::NoName);
             };
             let src = src.trim_start();
-            let Some(separator) = find_separator(src, "value") else {
+            let Some(i) = find_token(src, "value") else {
                 return Ok(Input::SetOption {
                     name: src,
                     value: None,
                 });
             };
             Ok(Input::SetOption {
-                name: src[..separator].trim_end(),
-                value: Some(src[(separator + 5)..].trim_start()),
+                name: src[..i].trim_end(),
+                value: Some(src[(i + 5)..].trim_start()),
             })
-        } else if let Some(src) = strip_prefix_with_separator(src, "register") {
+        } else if let Some(src) = strip_prefix_token(src, "register") {
             Ok(Input::Register(src.trim_start()))
-        } else if starts_with_separator(src, "ucinewgame") {
+        } else if starts_with_token(src, "ucinewgame") {
             Ok(Input::UciNewGame)
-        } else if let Some(src) = strip_prefix_with_separator(src, "position") {
+        } else if let Some(src) = strip_prefix_token(src, "position") {
             let src = src.trim_start();
-            let (move_start, move_end) = match find_separator(src, "moves") {
+            let (move_start, move_end) = match find_token(src, "moves") {
                 Some(i) => (i, i + 5),
                 None => (src.len(), src.len()),
             };
@@ -137,15 +137,15 @@ impl<'a> Input<'a> {
             })
             .collect();
             Ok(Input::Position { position, moves })
-        } else if starts_with_separator(src, "go") {
+        } else if starts_with_token(src, "go") {
             todo!()
-        } else if starts_with_separator(src, "stop") {
+        } else if starts_with_token(src, "stop") {
             Ok(Input::Stop)
-        } else if starts_with_separator(src, "ponderhit") {
+        } else if starts_with_token(src, "ponderhit") {
             Ok(Input::PonderHit)
-        } else if starts_with_separator(src, "quit") {
+        } else if starts_with_token(src, "quit") {
             Ok(Input::Quit)
-        } else if starts_with_separator(src, "repl") {
+        } else if starts_with_token(src, "repl") {
             Ok(Input::Repl)
         } else {
             Err(ParseInputError::UnknownCommand(extract_command(src).into()))
@@ -300,9 +300,9 @@ impl FromStr for Position {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "startpos" {
             Ok(Position::StartPos)
-        } else if let Some(src) = strip_prefix_with_separator(s, "fen") {
+        } else if let Some(src) = strip_prefix_token(s, "fen") {
             Ok(Position::Fen(src.trim_start().parse()?))
-        } else if let Some(src) = strip_prefix_with_separator(s, "startpos") {
+        } else if let Some(src) = strip_prefix_token(s, "startpos") {
             match s.trim_start().chars().next() {
                 Some(c) => Err(ParsePositionError::Unexpected(c)),
                 None => Ok(Position::StartPos),
@@ -314,18 +314,18 @@ impl FromStr for Position {
         }
     }
 }
-fn starts_with_separator(src: &str, search: &str) -> bool {
+fn starts_with_token(src: &str, search: &str) -> bool {
     src.starts_with(search)
         && src[search.len()..]
             .chars()
             .next()
             .is_none_or(<char>::is_whitespace)
 }
-fn strip_prefix_with_separator<'a>(src: &'a str, search: &str) -> Option<&'a str> {
+fn strip_prefix_token<'a>(src: &'a str, search: &str) -> Option<&'a str> {
     src.strip_prefix(search)
         .filter(|src| src.chars().next().is_none_or(<char>::is_whitespace))
 }
-fn find_separator(src: &str, search: &str) -> Option<usize> {
+fn find_token(src: &str, search: &str) -> Option<usize> {
     src.match_indices(search).map(|(i, _)| i).find(|i| {
         src[(i + search.len())..]
             .chars()
