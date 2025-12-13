@@ -83,7 +83,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             Input::SetOption { name, value } => match name {
                 CHESS_960 => {
                     if !matches!(value, Some("true" | "false")) {
-                        debug_print!(output, "set UCI_Chess960 to invalid value; ignoring")?;
+                        debug_print!(output, "set {CHESS_960} to invalid value; ignoring")?;
                     }
                     // The engine can already work on chess 960 without telling it to use chess 960
                 }
