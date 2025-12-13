@@ -1137,7 +1137,7 @@ impl Move {
     }
 }
 impl Moveable for Move {
-    fn as_move(&self, board: &Board) -> Move {
+    fn as_move(&self, _: &Board) -> Move {
         *self
     }
     fn move_board(&self, board: &mut Board) {
