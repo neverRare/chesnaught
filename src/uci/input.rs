@@ -300,7 +300,7 @@ impl Display for Register<'_> {
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ParsePositionError {
-    UnknownCommand,
+    UnknownCommand(Box<str>),
     Unexpected(char),
     ParseFenError(ParseFenError),
 }
@@ -312,9 +312,10 @@ impl From<ParseFenError> for ParsePositionError {
 impl Display for ParsePositionError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ParsePositionError::UnknownCommand => {
-                write!(f, "provided prefix was not `startpos` or `fen`")?
-            }
+            ParsePositionError::UnknownCommand(command) => write!(
+                f,
+                "found `{command}`, `startpos` or `fen` were expected instead"
+            )?,
             ParsePositionError::Unexpected(c) => write!(f, "unexpected {c}")?,
             ParsePositionError::ParseFenError(parse_fen_error) => write!(f, "{parse_fen_error}")?,
         }
@@ -357,7 +358,11 @@ impl FromStr for Position {
                 None => Ok(Position::StartPos),
             }
         } else {
-            Err(ParsePositionError::UnknownCommand)
+            let command = match s.find(<char>::is_whitespace) {
+                Some(i) => &s[..i],
+                None => s,
+            };
+            Err(ParsePositionError::UnknownCommand(command.into()))
         }
     }
 }
