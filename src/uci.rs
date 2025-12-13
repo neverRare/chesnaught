@@ -11,7 +11,7 @@ use crate::{
 mod input;
 mod output;
 
-const CHESS_960: &str = "UCI_Chess960";
+const CHESS960: &str = "UCI_Chess960";
 
 const CONFIG: [Output; 3] = [
     Output::Id {
@@ -19,7 +19,7 @@ const CONFIG: [Output; 3] = [
         author: "Koko",
     },
     Output::Option {
-        name: CHESS_960,
+        name: CHESS960,
         kind: OptionType::Check,
         default: Some(OptionValue::Bool(false)),
         boundary: None,
@@ -81,11 +81,11 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                 }
             }
             Input::SetOption { name, value } => match name {
-                CHESS_960 => {
+                CHESS960 => {
                     if !matches!(value, Some("true" | "false")) {
-                        debug_print!(output, "set {CHESS_960} to invalid value; ignoring")?;
+                        debug_print!(output, "set {CHESS960} to invalid value; ignoring")?;
                     }
-                    // The engine can already work on chess 960 without telling it to use chess 960
+                    // The engine can already work on chess960 without telling it to use chess960
                 }
                 name => debug_print!(output, "unknown command `{name}`; ignoring")?,
             },

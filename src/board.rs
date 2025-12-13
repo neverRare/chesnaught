@@ -1096,18 +1096,18 @@ impl Move {
         }
     }
     pub fn as_lan_pair(self, board: &Board) -> (Lan, Option<Lan>) {
-        let (chess_960, regular) = self.as_ambiguous_lan_pair(board);
+        let (chess960, regular) = self.as_ambiguous_lan_pair(board);
         (
-            chess_960,
+            chess960,
             regular.filter(|movement| !(movement.destination - movement.origin).is_king_move()),
         )
     }
     pub fn as_lan_iter(self, board: &Board) -> impl Iterator<Item = Lan> {
-        let (chess_960, regular) = self.as_ambiguous_lan_pair(board);
-        once(chess_960).chain(regular.into_iter())
+        let (chess960, regular) = self.as_ambiguous_lan_pair(board);
+        once(chess960).chain(regular.into_iter())
     }
     pub fn as_lan(self, board: &Board) -> Lan {
-        let (chess_960, regular) = self.as_ambiguous_lan_pair(board);
+        let (chess960, regular) = self.as_ambiguous_lan_pair(board);
         if let Some(regular) = regular {
             let king = board[self.movement.index].unwrap();
             let rook = board[self.castling_rook.unwrap().index].unwrap();
@@ -1116,13 +1116,13 @@ impl Move {
             {
                 regular
             } else {
-                chess_960
+                chess960
             }
         } else {
-            chess_960
+            chess960
         }
     }
-    pub fn as_lan_chess_960(self, board: &Board) -> Lan {
+    pub fn as_lan_chess960(self, board: &Board) -> Lan {
         self.as_ambiguous_lan_pair(board).0
     }
 }
