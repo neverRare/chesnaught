@@ -67,22 +67,15 @@ impl<'a> Input<'a> {
                     continue;
                 }
                 let src = src[4..].trim_start();
-                let (value_start, value_end) = if src.ends_with(" value") {
-                    (src.len() - 6, src.len())
-                } else {
-                    match src.find(" value ") {
-                        Some(i) => (i, i + 7),
-                        None => {
-                            return Some(Input::SetOption {
-                                name: src.trim_end(),
-                                value: None,
-                            });
-                        }
-                    }
+                let Some(separator) = find_separator(src, "value") else {
+                    return Some(Input::SetOption {
+                        name: src.trim_end(),
+                        value: None,
+                    });
                 };
                 return Some(Input::SetOption {
-                    name: src[..value_start].trim(),
-                    value: Some(src[value_end..].trim_start()),
+                    name: src[..separator].trim_end(),
+                    value: Some(src[(separator + 4)..].trim_start()),
                 });
             } else if starts_with_separator(src, "register") {
                 return Some(Input::Register(Register::parse(src[8..].trim_start())));
@@ -90,13 +83,9 @@ impl<'a> Input<'a> {
                 return Some(Input::UciNewGame);
             } else if starts_with_separator(src, "position") {
                 let src = src[8..].trim_start();
-                let (move_start, move_end) = if src.ends_with(" moves") {
-                    (src.len() - 6, src.len())
-                } else {
-                    match src.find(" moves ") {
-                        Some(i) => (i, i + 7),
-                        None => (src.len(), src.len()),
-                    }
+                let (move_start, move_end) = match find_separator(src, "moves") {
+                    Some(i) => (i, i + 5),
+                    None => (src.len(), src.len()),
                 };
                 let Ok(position) = src[..move_start].trim_end().parse() else {
                     continue;
@@ -268,16 +257,18 @@ impl<'a> Register<'a> {
         if starts_with_separator(src, "later") {
             *src = &src[5..];
             Ok(Register::Later)
-        } else if let Some(command) = src.get(..5) {
-            let index = match src[5..].find(<char>::is_whitespace) {
+        } else if let Some(command) = src.get(..4)
+            && src[4..].chars().next().is_some_and(<char>::is_whitespace)
+        {
+            let index = match src[4..].trim_start().find(<char>::is_whitespace) {
                 Some(index) => index + 5,
                 None => src.len(),
             };
             let name = &src[5..index].trim_start();
             *src = &src[index..];
             match command {
-                "name " => Ok(Register::Name(name)),
-                "code " => Ok(Register::Code(name)),
+                "name" => Ok(Register::Name(name)),
+                "code" => Ok(Register::Code(name)),
                 _ => Err(ParseRegisterError::UnknownCommand),
             }
         } else {
@@ -348,14 +339,15 @@ impl FromStr for Position {
     type Err = ParsePositionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if matches!(s, "startpos" | "startpos ") {
+        if s == "startpos" {
             Ok(Position::StartPos)
         } else if starts_with_separator(s, "fen") {
             Ok(Position::Fen(s[3..].trim_start().parse()?))
-        } else if s.starts_with("startpos ") {
-            Err(ParsePositionError::Unexpected(
-                s[9..].chars().next().unwrap(),
-            ))
+        } else if starts_with_separator(s, "startpos") {
+            match s[9..].chars().next() {
+                Some(c) => Err(ParsePositionError::Unexpected(c)),
+                None => Ok(Position::StartPos),
+            }
         } else {
             Err(ParsePositionError::UnknownCommand)
         }
@@ -367,4 +359,17 @@ fn starts_with_separator(src: &str, search: &str) -> bool {
             .chars()
             .next()
             .is_none_or(<char>::is_whitespace)
+}
+fn find_separator(src: &str, search: &str) -> Option<usize> {
+    src.find(search).filter(|i| {
+        src[(i + search.len())..]
+            .chars()
+            .next()
+            .is_none_or(<char>::is_whitespace)
+            && src[..*i]
+                .chars()
+                .rev()
+                .next()
+                .is_none_or(<char>::is_whitespace)
+    })
 }
