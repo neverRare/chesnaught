@@ -130,7 +130,7 @@ impl<'a> Input<'a> {
                     let index = move_src
                         .find(<char>::is_whitespace)
                         .unwrap_or(move_src.len());
-                    src[..index].parse().ok().inspect(|value| {
+                    src[..index].parse().ok().inspect(|_| {
                         *move_src = move_src[index..].trim_start();
                     })
                 }
