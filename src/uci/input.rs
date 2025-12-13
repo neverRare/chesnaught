@@ -353,7 +353,7 @@ impl FromStr for Position {
         } else if starts_with_separator(s, "fen") {
             Ok(Position::Fen(s[3..].trim_start().parse()?))
         } else if starts_with_separator(s, "startpos") {
-            match s[9..].chars().next() {
+            match s[9..].trim_start().chars().next() {
                 Some(c) => Err(ParsePositionError::Unexpected(c)),
                 None => Ok(Position::StartPos),
             }
