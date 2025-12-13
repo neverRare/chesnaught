@@ -3,9 +3,9 @@
 // TODO: remove this when the engine is fully implemented
 #![allow(dead_code, reason = "work in progress code")]
 
-use std::io::{self, stderr, stdin, stdout};
+use std::io::{self, stdin, stdout};
 
-use crate::repl::repl;
+use crate::uci::uci_loop;
 
 mod board;
 mod board_display;
@@ -23,9 +23,8 @@ mod uci;
 
 fn main() -> io::Result<()> {
     let mut output = stdout();
-    let mut error = stderr();
-    let lock = (!cfg!(debug_assertions)).then(|| (output.lock(), error.lock()));
-    repl(&mut stdin().lock(), &mut output, &mut error)?;
+    let lock = (!cfg!(debug_assertions)).then(|| output.lock());
+    uci_loop(&mut stdin().lock(), &mut output)?;
     drop(lock);
     Ok(())
 }

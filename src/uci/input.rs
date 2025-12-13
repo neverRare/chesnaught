@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum ParseInputError {
+pub enum ParseInputError {
     ParsePositionError(ParsePositionError),
     UnknownCommand(Box<str>),
     NotOnOrOff,
@@ -44,7 +44,7 @@ impl Error for ParseInputError {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum Input<'a> {
+pub enum Input<'a> {
     Uci,
     Debug(bool),
     IsReady,
@@ -152,7 +152,7 @@ impl<'a> Input<'a> {
             Err(ParseInputError::UnknownCommand(extract_command(src).into()))
         }
     }
-    fn from_str(src: &'a str) -> Result<Self, Vec<ParseInputError>> {
+    pub fn from_str(src: &'a str) -> Result<Self, Vec<ParseInputError>> {
         let mut errors = Vec::new();
         for (i, _) in src.char_indices() {
             match Input::from_str_from_start(&src[i..]) {
@@ -250,7 +250,7 @@ impl Display for Input<'_> {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum ParsePositionError {
+pub enum ParsePositionError {
     UnknownCommand(Box<str>),
     Unexpected(char),
     ParseFenError(ParseFenError),
@@ -282,7 +282,7 @@ impl Error for ParsePositionError {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum Position {
+pub enum Position {
     StartPos,
     Fen(Fen),
 }

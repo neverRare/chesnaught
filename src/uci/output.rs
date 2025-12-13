@@ -7,7 +7,7 @@ use std::{
 use crate::board::Lan;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum Output {
+pub enum Output {
     Id {
         name: &'static str,
         author: &'static str,
@@ -57,7 +57,7 @@ impl Display for Output {
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum Info {
+pub enum Info {
     Depth(NonZero<u32>),
     SelDepth(NonZero<u32>),
     Time(Duration),
@@ -80,17 +80,17 @@ enum Info {
     CurrLine(Vec<Lan>),
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum Score {
+pub enum Score {
     Cp(i32),
     Mate(NonZero<u32>),
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum ScoreBound {
+pub enum ScoreBound {
     LowerBound,
     UpperBound,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum OptionType {
+pub enum OptionType {
     Check,
     Spin,
     Combo,
@@ -110,7 +110,7 @@ impl Display for OptionType {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum OptionValue {
+pub enum OptionValue {
     Bool(bool),
     Int(i32),
     Str(&'static str),
@@ -126,7 +126,7 @@ impl Display for OptionValue {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum Boundary {
+pub enum Boundary {
     Boundary { min: i32, max: i32 },
     Var(&'static [&'static str]),
 }
