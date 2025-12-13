@@ -82,8 +82,8 @@ impl FromStr for Input {
             "exit" => Ok(Input::Exit),
             "fen" => Ok(Input::ExportFen),
             s => {
-                if s.starts_with("import ") {
-                    Ok(Input::Import(s[7..].trim_start().parse()?))
+                if let Some(s) = s.strip_prefix("import ") {
+                    Ok(Input::Import(s.trim_start().parse()?))
                 } else if let Ok(position) = s.parse() {
                     Ok(Input::Coord(position))
                 } else {
