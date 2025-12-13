@@ -52,7 +52,7 @@ enum Input<'a> {
         name: &'a str,
         value: Option<&'a str>,
     },
-    Register(Vec<Register<'a>>),
+    Register(&'a str),
     UciNewGame,
     Position {
         position: Position,
@@ -109,7 +109,7 @@ impl<'a> Input<'a> {
                 value: Some(src[(separator + 5)..].trim_start()),
             })
         } else if starts_with_separator(src, "register") {
-            Ok(Input::Register(Register::parse(src[8..].trim_start())))
+            Ok(Input::Register(src[8..].trim_start()))
         } else if starts_with_separator(src, "ucinewgame") {
             Ok(Input::UciNewGame)
         } else if starts_with_separator(src, "position") {
@@ -175,12 +175,7 @@ impl Display for Input<'_> {
                     write!(f, " value {value}")?;
                 }
             }
-            Input::Register(register) => {
-                write!(f, "register")?;
-                for register in register {
-                    write!(f, " {register}")?;
-                }
-            }
+            Input::Register(register) => write!(f, "register {register}")?,
             Input::UciNewGame => write!(f, "ucinewgame")?,
             Input::Position { position, moves } => {
                 write!(f, "position {position} moves")?;
@@ -247,85 +242,6 @@ impl Display for Input<'_> {
             Input::PonderHit => write!(f, "ponderhit")?,
             Input::Quit => write!(f, "quit")?,
             Input::Repl => write!(f, "repl")?,
-        }
-        Ok(())
-    }
-}
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum ParseRegisterError {
-    UnknownCommand,
-    NoName,
-    NoCode,
-}
-impl Display for ParseRegisterError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseRegisterError::UnknownCommand => {
-                write!(f, "provided prefix was not `later`, `name`, or `code`")?
-            }
-            ParseRegisterError::NoName => write!(f, "no name provided")?,
-            ParseRegisterError::NoCode => write!(f, "no code provided")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ParseRegisterError {}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum Register<'a> {
-    Later,
-    Name(&'a str),
-    Code(&'a str),
-}
-impl<'a> Register<'a> {
-    fn parse(mut src: &'a str) -> Vec<Self> {
-        let src = &mut src;
-        from_fn(|| {
-            if *src == "" {
-                None
-            } else {
-                Register::partial_parse(src).ok().map(|value| {
-                    *src = src.trim_start();
-                    value
-                })
-            }
-        })
-        .collect()
-    }
-    // TODO: consider spaces inside provided values
-    fn partial_parse(src: &mut &'a str) -> Result<Self, ParseRegisterError> {
-        if starts_with_separator(src, "later") {
-            *src = &src[5..];
-            Ok(Register::Later)
-        } else if let Some(command) = src.get(..4)
-            && src[4..].chars().next().is_some_and(<char>::is_whitespace)
-        {
-            let index = match src[4..].trim_start().find(<char>::is_whitespace) {
-                Some(index) => index + 5,
-                None => src.len(),
-            };
-            let name = &src[5..index].trim_start();
-            *src = &src[index..];
-            match command {
-                "name" => Ok(Register::Name(name)),
-                "code" => Ok(Register::Code(name)),
-                _ => Err(ParseRegisterError::UnknownCommand),
-            }
-        } else {
-            match *src {
-                "name" => Err(ParseRegisterError::NoName),
-                "code" => Err(ParseRegisterError::NoCode),
-                _ => Err(ParseRegisterError::UnknownCommand),
-            }
-        }
-    }
-}
-impl Display for Register<'_> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Register::Later => write!(f, "later")?,
-            Register::Name(name) => write!(f, "name {name}")?,
-            Register::Code(code) => write!(f, "code {code}")?,
         }
         Ok(())
     }
