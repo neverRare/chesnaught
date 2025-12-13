@@ -1047,7 +1047,10 @@ impl IndexableBoard for HashableBoard {
     }
 }
 pub trait Moveable {
-    fn move_board(&self, board: &mut Board);
+    fn as_move(&self, board: &Board) -> Move;
+    fn move_board(&self, board: &mut Board) {
+        board.move_piece(&self.as_move(board));
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct SimpleMove {
@@ -1127,6 +1130,9 @@ impl Move {
     }
 }
 impl Moveable for Move {
+    fn as_move(&self, board: &Board) -> Move {
+        *self
+    }
     fn move_board(&self, board: &mut Board) {
         let current_player = board.current_player;
         let piece = board[self.movement.index].as_mut().unwrap();
@@ -1196,11 +1202,6 @@ pub struct Lan {
     pub destination: Coord,
     pub promotion: Option<PieceKind>,
 }
-impl Lan {
-    pub fn as_move(self, board: &Board) -> Move {
-        todo!()
-    }
-}
 impl Display for Lan {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.origin, self.destination)?;
@@ -1230,8 +1231,8 @@ impl FromStr for Lan {
     }
 }
 impl Moveable for Lan {
-    fn move_board(&self, board: &mut Board) {
-        board.move_piece(&self.as_move(board));
+    fn as_move(&self, board: &Board) -> Move {
+        todo!()
     }
 }
 #[cfg(test)]
