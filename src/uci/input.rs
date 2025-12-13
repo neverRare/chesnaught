@@ -46,6 +46,71 @@ enum Input<'a> {
     Quit,
     Repl,
 }
+impl<'a> Input<'a> {
+    fn from_str(src: &'a str) -> Option<Self> {
+        for (i, _) in src.char_indices() {
+            let src = &src[i..];
+            if starts_with_separator(src, "uci") {
+                return Some(Input::Uci);
+            } else if starts_with_separator(src, "debug") {
+                let src = &src[5..].trim_start();
+                if starts_with_separator(src, "on") {
+                    return Some(Input::Debug(true));
+                } else if starts_with_separator(src, "off") {
+                    return Some(Input::Debug(false));
+                }
+            } else if starts_with_separator(src, "isready") {
+                return Some(Input::IsReady);
+            } else if starts_with_separator(src, "setoption") {
+                todo!()
+            } else if starts_with_separator(src, "register") {
+                return Some(Input::Register(Register::parse(src[8..].trim_start())));
+            } else if starts_with_separator(src, "ucinewgame") {
+                return Some(Input::UciNewGame);
+            } else if starts_with_separator(src, "position") {
+                let src = src[8..].trim_start();
+                let (move_start, move_end) = if src.ends_with(" moves") {
+                    (src.len() - 6, src.len())
+                } else {
+                    match src.find(" moves ") {
+                        Some(i) => (i, i + 7),
+                        None => (src.len(), src.len()),
+                    }
+                };
+                let Ok(position) = src[..move_start].trim_end().parse() else {
+                    continue;
+                };
+                let move_src = &mut src[move_end..].trim_start();
+                let moves = from_fn(|| {
+                    if *move_src == "" {
+                        None
+                    } else {
+                        let index = move_src
+                            .find(<char>::is_whitespace)
+                            .unwrap_or_else(|| move_src.len());
+                        src[..index].parse().ok().map(|value| {
+                            *move_src = move_src[index..].trim_start();
+                            value
+                        })
+                    }
+                })
+                .collect();
+                return Some(Input::Position { position, moves });
+            } else if starts_with_separator(src, "go") {
+                todo!()
+            } else if starts_with_separator(src, "stop") {
+                return Some(Input::Stop);
+            } else if starts_with_separator(src, "ponderhit") {
+                return Some(Input::PonderHit);
+            } else if starts_with_separator(src, "quit") {
+                return Some(Input::Quit);
+            } else if starts_with_separator(src, "repl") {
+                return Some(Input::Repl);
+            }
+        }
+        None
+    }
+}
 impl Display for Input<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -164,22 +229,22 @@ enum Register<'a> {
     Code(&'a str),
 }
 impl<'a> Register<'a> {
-    fn parse(mut src: &'a str) -> Result<Vec<Self>, ParseRegisterError> {
+    fn parse(mut src: &'a str) -> Vec<Self> {
         let src = &mut src;
         from_fn(|| {
-            (*src != "").then(|| {
-                Register::partial_parse(src).map(|value| {
+            if *src == "" {
+                None
+            } else {
+                Register::partial_parse(src).ok().map(|value| {
                     *src = src.trim_start();
                     value
                 })
-            })
+            }
         })
         .collect()
     }
     fn partial_parse(src: &mut &'a str) -> Result<Self, ParseRegisterError> {
-        if src.get(..5) == Some("later")
-            && src[5..].chars().next().is_none_or(<char>::is_whitespace)
-        {
+        if starts_with_separator(src, "later") {
             *src = &src[5..];
             Ok(Register::Later)
         } else if let Some(command) = src.get(..5) {
@@ -187,7 +252,7 @@ impl<'a> Register<'a> {
                 Some(index) => index + 5,
                 None => src.len(),
             };
-            let name = &src[5..index];
+            let name = &src[5..index].trim_start();
             *src = &src[index..];
             match command {
                 "name " => Ok(Register::Name(name)),
@@ -274,4 +339,11 @@ impl FromStr for Position {
             Err(ParsePositionError::UnknownCommand)
         }
     }
+}
+fn starts_with_separator(src: &str, search: &str) -> bool {
+    src.starts_with(search)
+        && src[search.len()..]
+            .chars()
+            .next()
+            .is_none_or(<char>::is_whitespace)
 }
