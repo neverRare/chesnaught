@@ -16,7 +16,7 @@ const CHESS960: &str = "UCI_Chess960";
 const CONFIG: [Output; 3] = [
     Output::Id {
         name: "Chesnaught",
-        author: "Koko",
+        author: "neverRare",
     },
     Output::Option {
         name: CHESS960,
@@ -24,7 +24,6 @@ const CONFIG: [Output; 3] = [
         default: Some(OptionValue::Bool(false)),
         boundary: None,
     },
-    // TODO: use `option name UCI_EngineAbout ...`
     Output::UciOk,
 ];
 macro_rules! debug_print {
