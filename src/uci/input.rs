@@ -69,7 +69,7 @@ impl<'a> Input<'a> {
                 let src = src[4..].trim_start();
                 let Some(separator) = find_separator(src, "value") else {
                     return Some(Input::SetOption {
-                        name: src.trim_end(),
+                        name: src,
                         value: None,
                     });
                 };
