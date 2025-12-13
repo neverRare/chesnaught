@@ -329,8 +329,8 @@ impl FromStr for Position {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if matches!(s, "startpos" | "startpos ") {
             Ok(Position::StartPos)
-        } else if s.starts_with("fen") {
-            Ok(Position::Fen(s[4..].trim_start().parse()?))
+        } else if starts_with_separator(s, "fen") {
+            Ok(Position::Fen(s[3..].trim_start().parse()?))
         } else if s.starts_with("startpos ") {
             Err(ParsePositionError::Unexpected(
                 s[9..].chars().next().unwrap(),
