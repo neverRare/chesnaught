@@ -1209,6 +1209,11 @@ pub struct Lan {
     pub destination: Coord,
     pub promotion: Option<PieceKind>,
 }
+impl Lan {
+    pub fn as_move(&self, board: &Board) -> Move {
+        todo!()
+    }
+}
 impl Display for Lan {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.origin, self.destination)?;
@@ -1239,7 +1244,7 @@ impl FromStr for Lan {
 }
 impl Moveable for Lan {
     fn as_move(&self, board: &Board) -> Move {
-        todo!()
+        self.as_move(board)
     }
 }
 #[cfg(test)]
