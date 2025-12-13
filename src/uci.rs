@@ -81,12 +81,16 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             }
             Input::SetOption { name, value } => match name {
                 CHESS960 => {
-                    if !matches!(value, Some("true" | "false")) {
+                    if debug && !matches!(value, Some("true" | "false")) {
                         debug_print!(output, "set {CHESS960} to invalid value; ignoring")?;
                     }
                     // The engine can already work on chess960 without telling it to use chess960
                 }
-                name => debug_print!(output, "unknown command `{name}`; ignoring")?,
+                name => {
+                    if debug {
+                        debug_print!(output, "unknown command `{name}`; ignoring")?
+                    }
+                }
             },
             Input::Register(_) => {
                 if debug {
