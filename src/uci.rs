@@ -11,13 +11,15 @@ use crate::{
 mod input;
 mod output;
 
+const CHESS_960: &str = "UCI_Chess960";
+
 const CONFIG: [Output; 3] = [
     Output::Id {
         name: "Chesnaught",
         author: "Koko",
     },
     Output::Option {
-        name: "UCI_Chess960",
+        name: CHESS_960,
         kind: OptionType::Check,
         default: Some(OptionValue::Bool(false)),
         boundary: None,
@@ -78,16 +80,18 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                     writeln!(output, "{}", Output::ReadyOk)?;
                 }
             }
-            Input::SetOption { .. } => {
-                // We can ignore options, for Chess960, the engine can
-                // automatically adjust without any extra information
-            }
-            input @ Input::Register(_) => {
+            Input::SetOption { name, value } => match name {
+                CHESS_960 => {
+                    if !matches!(value, Some("true" | "false")) {
+                        debug_print!(output, "set UCI_Chess960 to invalid value; ignoring")?;
+                    }
+                    // The engine can already work on chess 960 without telling it to use chess 960
+                }
+                name => debug_print!(output, "unknown command `{name}`; ignoring")?,
+            },
+            Input::Register(_) => {
                 if debug {
-                    debug_print!(
-                        output,
-                        "registration is ignored; command received: `{input}`"
-                    )?;
+                    debug_print!(output, "registration is ignored")?;
                 }
             }
             Input::UciNewGame => todo!(),
