@@ -47,75 +47,83 @@ enum Input<'a> {
     Repl,
 }
 impl<'a> Input<'a> {
+    fn from_str_strict(src: &'a str) -> Option<Self> {
+        if starts_with_separator(src, "uci") {
+            return Some(Input::Uci);
+        } else if starts_with_separator(src, "debug") {
+            let src = &src[5..].trim_start();
+            if starts_with_separator(src, "on") {
+                Some(Input::Debug(true))
+            } else if starts_with_separator(src, "off") {
+                Some(Input::Debug(false))
+            } else {
+                None
+            }
+        } else if starts_with_separator(src, "isready") {
+            Some(Input::IsReady)
+        } else if starts_with_separator(src, "setoption") {
+            let src = src[9..].trim_start();
+            if !starts_with_separator(src, "name") {
+                return None;
+            }
+            let src = src[4..].trim_start();
+            let Some(separator) = find_separator(src, "value") else {
+                return Some(Input::SetOption {
+                    name: src,
+                    value: None,
+                });
+            };
+            Some(Input::SetOption {
+                name: src[..separator].trim_end(),
+                value: Some(src[(separator + 5)..].trim_start()),
+            })
+        } else if starts_with_separator(src, "register") {
+            Some(Input::Register(Register::parse(src[8..].trim_start())))
+        } else if starts_with_separator(src, "ucinewgame") {
+            Some(Input::UciNewGame)
+        } else if starts_with_separator(src, "position") {
+            let src = src[8..].trim_start();
+            let (move_start, move_end) = match find_separator(src, "moves") {
+                Some(i) => (i, i + 5),
+                None => (src.len(), src.len()),
+            };
+            let Ok(position) = src[..move_start].trim_end().parse() else {
+                return None;
+            };
+            let move_src = &mut src[move_end..].trim_start();
+            let moves = from_fn(|| {
+                if *move_src == "" {
+                    None
+                } else {
+                    let index = move_src
+                        .find(<char>::is_whitespace)
+                        .unwrap_or_else(|| move_src.len());
+                    src[..index].parse().ok().map(|value| {
+                        *move_src = move_src[index..].trim_start();
+                        value
+                    })
+                }
+            })
+            .collect();
+            Some(Input::Position { position, moves })
+        } else if starts_with_separator(src, "go") {
+            todo!()
+        } else if starts_with_separator(src, "stop") {
+            Some(Input::Stop)
+        } else if starts_with_separator(src, "ponderhit") {
+            Some(Input::PonderHit)
+        } else if starts_with_separator(src, "quit") {
+            Some(Input::Quit)
+        } else if starts_with_separator(src, "repl") {
+            Some(Input::Repl)
+        } else {
+            None
+        }
+    }
     fn from_str(src: &'a str) -> Option<Self> {
         for (i, _) in src.char_indices() {
-            let src = &src[i..];
-            if starts_with_separator(src, "uci") {
-                return Some(Input::Uci);
-            } else if starts_with_separator(src, "debug") {
-                let src = &src[5..].trim_start();
-                if starts_with_separator(src, "on") {
-                    return Some(Input::Debug(true));
-                } else if starts_with_separator(src, "off") {
-                    return Some(Input::Debug(false));
-                }
-            } else if starts_with_separator(src, "isready") {
-                return Some(Input::IsReady);
-            } else if starts_with_separator(src, "setoption") {
-                let src = src[9..].trim_start();
-                if !starts_with_separator(src, "name") {
-                    continue;
-                }
-                let src = src[4..].trim_start();
-                let Some(separator) = find_separator(src, "value") else {
-                    return Some(Input::SetOption {
-                        name: src,
-                        value: None,
-                    });
-                };
-                return Some(Input::SetOption {
-                    name: src[..separator].trim_end(),
-                    value: Some(src[(separator + 5)..].trim_start()),
-                });
-            } else if starts_with_separator(src, "register") {
-                return Some(Input::Register(Register::parse(src[8..].trim_start())));
-            } else if starts_with_separator(src, "ucinewgame") {
-                return Some(Input::UciNewGame);
-            } else if starts_with_separator(src, "position") {
-                let src = src[8..].trim_start();
-                let (move_start, move_end) = match find_separator(src, "moves") {
-                    Some(i) => (i, i + 5),
-                    None => (src.len(), src.len()),
-                };
-                let Ok(position) = src[..move_start].trim_end().parse() else {
-                    continue;
-                };
-                let move_src = &mut src[move_end..].trim_start();
-                let moves = from_fn(|| {
-                    if *move_src == "" {
-                        None
-                    } else {
-                        let index = move_src
-                            .find(<char>::is_whitespace)
-                            .unwrap_or_else(|| move_src.len());
-                        src[..index].parse().ok().map(|value| {
-                            *move_src = move_src[index..].trim_start();
-                            value
-                        })
-                    }
-                })
-                .collect();
-                return Some(Input::Position { position, moves });
-            } else if starts_with_separator(src, "go") {
-                todo!()
-            } else if starts_with_separator(src, "stop") {
-                return Some(Input::Stop);
-            } else if starts_with_separator(src, "ponderhit") {
-                return Some(Input::PonderHit);
-            } else if starts_with_separator(src, "quit") {
-                return Some(Input::Quit);
-            } else if starts_with_separator(src, "repl") {
-                return Some(Input::Repl);
+            if let Some(input) = Input::from_str_strict(&src[i..]) {
+                return Some(input);
             }
         }
         None
