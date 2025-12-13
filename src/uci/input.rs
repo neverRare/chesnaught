@@ -261,6 +261,7 @@ impl<'a> Register<'a> {
         })
         .collect()
     }
+    // TODO: consider spaces inside provided values
     fn partial_parse(src: &mut &'a str) -> Result<Self, ParseRegisterError> {
         if starts_with_separator(src, "later") {
             *src = &src[5..];
