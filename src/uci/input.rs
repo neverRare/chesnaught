@@ -303,7 +303,7 @@ impl FromStr for Position {
         } else if let Some(src) = strip_prefix_token(s, "fen") {
             Ok(Position::Fen(src.trim_start().parse()?))
         } else if let Some(src) = strip_prefix_token(s, "startpos") {
-            match s.trim_start().chars().next() {
+            match src.trim_start().chars().next() {
                 Some(c) => Err(ParsePositionError::Unexpected(c)),
                 None => Ok(Position::StartPos),
             }
