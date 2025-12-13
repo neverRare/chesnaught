@@ -52,7 +52,10 @@ enum Input<'a> {
         name: &'a str,
         value: Option<&'a str>,
     },
+
+    // Recognized but ignored, hence associated data are not parsed
     Register(&'a str),
+
     UciNewGame,
     Position {
         position: Position,
