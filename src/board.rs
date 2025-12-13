@@ -1210,7 +1210,7 @@ pub struct Lan {
     pub promotion: Option<PieceKind>,
 }
 impl Lan {
-    pub fn as_move(&self, board: &Board) -> Move {
+    pub fn as_move(self, board: &Board) -> Move {
         todo!()
     }
 }
@@ -1244,7 +1244,7 @@ impl FromStr for Lan {
 }
 impl Moveable for Lan {
     fn as_move(&self, board: &Board) -> Move {
-        self.as_move(board)
+        Lan::as_move(*self, board)
     }
 }
 #[cfg(test)]
