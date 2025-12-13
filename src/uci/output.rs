@@ -24,7 +24,7 @@ pub enum Output {
     Option {
         name: &'static str,
         kind: OptionType,
-        default: OptionValue,
+        default: Option<OptionValue>,
         boundary: Option<Boundary>,
     },
 }
@@ -47,7 +47,10 @@ impl Display for Output {
                 default,
                 boundary,
             } => {
-                write!(f, "option name {name} type {kind} default {default}")?;
+                write!(f, "option name {name} type {kind}")?;
+                if let Some(default) = default {
+                    write!(f, " default {default}")?;
+                }
                 if let Some(boundary) = boundary {
                     write!(f, " {boundary}")?
                 }

@@ -19,7 +19,7 @@ const CONFIG: [Output; 3] = [
     Output::Option {
         name: "UCI_Chess960",
         kind: OptionType::Check,
-        default: OptionValue::Bool(false),
+        default: Some(OptionValue::Bool(false)),
         boundary: None,
     },
     // TODO: use `option name UCI_EngineAbout ...`
