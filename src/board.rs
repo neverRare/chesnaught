@@ -1085,55 +1085,46 @@ pub struct Move {
     castling_right: CastlingRight,
 }
 impl Move {
-    pub fn as_ambiguous_lan_pair(self, board: &Board) -> (Lan, Option<Lan>) {
+    fn as_ambiguous_lan_pair(self, board: &Board) -> (Lan, Option<Lan>) {
         let piece = board[self.movement.index].unwrap();
-        let regular = Lan {
-            origin: piece.position,
-            destination: self.movement.destination,
-            promotion: self.promotion,
-        };
-        if let Some(rook) = self.castling_rook {
-            (
-                Lan {
-                    origin: piece.position,
-                    destination: board[rook.index].unwrap().position,
-                    promotion: self.promotion,
-                },
-                Some(regular),
-            )
-        } else {
-            (regular, None)
-        }
-    }
-    pub fn as_lan_pair(self, board: &Board) -> (Lan, Option<Lan>) {
-        let (chess960, regular) = self.as_ambiguous_lan_pair(board);
         (
-            chess960,
-            regular.filter(|movement| !(movement.destination - movement.origin).is_king_move()),
+            Lan {
+                origin: piece.position,
+                destination: self.movement.destination,
+                promotion: self.promotion,
+            },
+            self.castling_rook.map(|rook| Lan {
+                origin: piece.position,
+                destination: board[rook.index].unwrap().position,
+                promotion: self.promotion,
+            }),
         )
     }
     pub fn as_lan_iter(self, board: &Board) -> impl Iterator<Item = Lan> {
-        let (chess960, regular) = self.as_ambiguous_lan_pair(board);
-        once(chess960).chain(regular.into_iter())
+        let (regular, chess960) = self.as_ambiguous_lan_pair(board);
+        if let Some(chess960) = chess960
+            && regular.origin.x() == coord_x!("e")
+            && matches!(chess960.destination.x(), coord_x!("a") | coord_x!("h"))
+        {
+            Some(regular).into_iter().chain(once(chess960))
+        } else {
+            chess960.into_iter().chain(once(regular))
+        }
     }
     pub fn as_lan(self, board: &Board) -> Lan {
-        let (chess960, regular) = self.as_ambiguous_lan_pair(board);
-        if let Some(regular) = regular {
-            let king = board[self.movement.index].unwrap();
-            let rook = board[self.castling_rook.unwrap().index].unwrap();
-            if king.position.x() == coord_x!("e")
-                && matches!(rook.position.x(), coord_x!("a") | coord_x!("h"))
-            {
-                regular
-            } else {
-                chess960
-            }
+        let (regular, chess960) = self.as_ambiguous_lan_pair(board);
+        if let Some(chess960) = chess960
+            && regular.origin.x() == coord_x!("e")
+            && matches!(chess960.destination.x(), coord_x!("a") | coord_x!("h"))
+        {
+            regular
         } else {
-            chess960
+            chess960.unwrap_or(regular)
         }
     }
     pub fn as_lan_chess960(self, board: &Board) -> Lan {
-        self.as_ambiguous_lan_pair(board).0
+        let (regular, chess960) = self.as_ambiguous_lan_pair(board);
+        chess960.unwrap_or(regular)
     }
 }
 impl Moveable for Move {
