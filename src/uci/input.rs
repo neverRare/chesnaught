@@ -9,7 +9,8 @@ use std::{
 
 use crate::{
     board::Lan,
-    fen::{Fen, ParseFenError}, misc::{extract_command, split_by_token, starts_with_token, strip_prefix_token},
+    fen::{Fen, ParseFenError},
+    misc::{extract_prefix_token, split_by_token, starts_with_token, strip_prefix_token},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -139,7 +140,9 @@ impl<'a> Input<'a> {
         } else if starts_with_token(src, "repl") {
             Ok(Input::Repl)
         } else {
-            Err(ParseInputError::UnknownCommand(extract_command(src).into()))
+            Err(ParseInputError::UnknownCommand(
+                extract_prefix_token(src).into(),
+            ))
         }
     }
     pub fn from_str(src: &'a str) -> Result<Self, Vec<ParseInputError>> {
@@ -300,7 +303,7 @@ impl FromStr for Position {
             }
         } else {
             Err(ParsePositionError::UnknownCommand(
-                extract_command(s).into(),
+                extract_prefix_token(s).into(),
             ))
         }
     }

@@ -39,7 +39,7 @@ pub fn find_token(src: &str, search: &str) -> Option<usize> {
 pub fn split_by_token<'a>(src: &'a str, search: &str) -> Option<(&'a str, &'a str)> {
     find_token(src, search).map(|i| (src[..i].trim_end(), src[(i + search.len())..].trim_start()))
 }
-pub fn extract_command(src: &str) -> &str {
+pub fn extract_prefix_token(src: &str) -> &str {
     match src.find(<char>::is_whitespace) {
         Some(i) => &src[..i],
         None => src,
