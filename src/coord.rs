@@ -61,11 +61,11 @@ impl Coord {
 
     pub const HOME_RANKS: [u8; 2] = [Coord::WHITE_HOME_RANK, Coord::BLACK_HOME_RANK];
 
-    pub const WHITE_PROMOTION_RANK: u8 = coord_y!("8");
-    pub const BLACK_PROMOTION_RANK: u8 = coord_y!("1");
-
     pub const WHITE_PAWN_HOME_RANK: u8 = coord_y!("2");
     pub const BLACK_PAWN_HOME_RANK: u8 = coord_y!("7");
+
+    pub const WHITE_PROMOTION_RANK: u8 = coord_y!("8");
+    pub const BLACK_PROMOTION_RANK: u8 = coord_y!("1");
 
     pub const WHITE_EN_PASSANT_TARGET: u8 = coord_y!("3");
     pub const BLACK_EN_PASSANT_TARGET: u8 = coord_y!("6");
