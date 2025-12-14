@@ -1229,7 +1229,7 @@ impl Lan {
                 destination: Coord::new(rook_destination, self.origin.y()),
                 capture: None,
             });
-            castling_right = board.castling_right.to_cleared(piece.piece.color())
+            castling_right = board.castling_right.to_cleared(piece.piece.color());
         } else if piece.piece.piece() == PieceKind::King
             && !(self.destination - self.origin).is_king_move()
         {
@@ -1281,7 +1281,7 @@ impl Lan {
                     .to_removed(piece.piece.color(), self.origin.x());
             } else {
                 castling_right = board.castling_right;
-            };
+            }
         }
         let castling_right = if let Some(index) = movement.capture {
             castling_right.to_removed_castling_right_for_rook_capture(board[index].unwrap())
