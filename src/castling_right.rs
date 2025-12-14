@@ -92,8 +92,8 @@ impl CastlingRight {
         new.clear(color);
         new
     }
-    pub fn x_fen(self) -> XFenCastlingRight {
-        XFenCastlingRight(self)
+    pub fn standard_fen_display(self) -> StandardCastlingRight {
+        StandardCastlingRight(self)
     }
     pub fn remove_for_rook_capture(&mut self, captured: Piece) {
         if captured.piece() == PieceKind::Rook
@@ -149,18 +149,18 @@ impl FromStr for CastlingRight {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct XFenCastlingRight(pub CastlingRight);
-impl From<CastlingRight> for XFenCastlingRight {
+pub struct StandardCastlingRight(pub CastlingRight);
+impl From<CastlingRight> for StandardCastlingRight {
     fn from(value: CastlingRight) -> Self {
-        XFenCastlingRight(value)
+        StandardCastlingRight(value)
     }
 }
-impl From<XFenCastlingRight> for CastlingRight {
-    fn from(value: XFenCastlingRight) -> Self {
+impl From<StandardCastlingRight> for CastlingRight {
+    fn from(value: StandardCastlingRight) -> Self {
         value.0
     }
 }
-impl Display for XFenCastlingRight {
+impl Display for StandardCastlingRight {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut written = false;
         for color in [Color::White, Color::Black] {
@@ -188,10 +188,10 @@ impl Display for XFenCastlingRight {
         Ok(())
     }
 }
-impl FromStr for XFenCastlingRight {
+impl FromStr for StandardCastlingRight {
     type Err = InvalidCastlingCharacter;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.parse().map(XFenCastlingRight)
+        s.parse().map(StandardCastlingRight)
     }
 }
