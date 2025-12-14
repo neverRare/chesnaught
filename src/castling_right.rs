@@ -95,24 +95,16 @@ impl CastlingRight {
     pub fn standard_fen_display(self) -> StandardCastlingRight {
         StandardCastlingRight(self)
     }
-    pub fn remove_castling_right_for_rook_capture(
-        &mut self,
-        current_player: Color,
-        captured: Piece,
-    ) {
+    pub fn remove_castling_right_for_rook_capture(&mut self, captured: Piece) {
         if captured.piece.piece() == PieceKind::Rook
-            && captured.position.y() == home_rank(!current_player)
+            && captured.position.y() == home_rank(captured.piece.color())
         {
-            self.remove(!current_player, captured.position.x());
+            self.remove(captured.piece.color(), captured.position.x());
         }
     }
-    pub fn to_removed_castling_right_for_rook_capture(
-        self,
-        current_player: Color,
-        captured: Piece,
-    ) -> Self {
+    pub fn to_removed_castling_right_for_rook_capture(self, captured: Piece) -> Self {
         let mut new = self;
-        new.remove_castling_right_for_rook_capture(current_player, captured);
+        new.remove_castling_right_for_rook_capture(captured);
         new
     }
 }
