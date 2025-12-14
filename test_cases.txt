@@ -6,6 +6,8 @@ dead position:
 - one knight
 - bishops of the same color
 
+bishop of different color is not a dead position
+
 castling
 can't castle when pieces are blocked
 can't castle after king moved

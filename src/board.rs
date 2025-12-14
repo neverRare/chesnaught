@@ -1395,6 +1395,30 @@ mod test {
         assert!(matches!(board.valid_moves(), Err(EndState::Draw)));
     }
     #[test]
+    fn dead_position() {
+        let board: Fen = "4k3/8/8/8/8/8/8/4K3 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        assert!(matches!(board.valid_moves(), Err(EndState::Draw)));
+    }
+    #[test]
+    fn dead_position_with_knight() {
+        let board: Fen = "1n2k3/8/8/8/8/8/8/4K3 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        assert!(matches!(board.valid_moves(), Err(EndState::Draw)));
+    }
+    #[test]
+    fn dead_position_with_bishops() {
+        let board: Fen = "4kb2/4b3/8/8/8/8/8/4K3 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        assert!(matches!(board.valid_moves(), Err(EndState::Draw)));
+    }
+    #[test]
+    fn bishop_of_different_color_alive() {
+        let board: Fen = "2b1kb2/8/8/8/8/8/8/4K3 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        assert!(board.valid_moves().is_ok());
+    }
+    #[test]
     fn pin() {
         let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
         let board: Board = board.board.try_into().unwrap();
