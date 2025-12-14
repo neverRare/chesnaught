@@ -1413,7 +1413,7 @@ mod test {
         assert!(matches!(board.valid_moves(), Err(EndState::Draw)));
     }
     #[test]
-    fn bishop_of_different_color_alive() {
+    fn bishop_of_different_color_is_alive() {
         let board: Fen = "2b1kb2/8/8/8/8/8/8/4K3 w - - 0 1".parse().unwrap();
         let board: Board = board.board.try_into().unwrap();
         assert!(board.valid_moves().is_ok());
