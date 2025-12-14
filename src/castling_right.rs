@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{color::Color, coord_x, piece::PieceKind};
+use crate::{board::Piece, color::Color, coord::home_rank, coord_x, piece::PieceKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InvalidCastlingCharacter(pub char);
@@ -94,6 +94,27 @@ impl CastlingRight {
     }
     pub fn standard_fen_display(self) -> StandardCastlingRight {
         StandardCastlingRight(self)
+    }
+    pub fn remove_castling_right_for_rook_capture(
+        &mut self,
+        current_player: Color,
+        captured: Piece,
+    ) {
+        if captured.piece.piece() == PieceKind::Rook
+            && captured.piece.color() != current_player
+            && captured.position.y() == home_rank(!current_player)
+        {
+            self.remove(!current_player, captured.position.x());
+        }
+    }
+    pub fn to_removed_castling_right_for_rook_capture(
+        self,
+        current_player: Color,
+        captured: Piece,
+    ) -> Self {
+        let mut new = self;
+        new.remove_castling_right_for_rook_capture(current_player, captured);
+        new
     }
 }
 impl Display for CastlingRight {

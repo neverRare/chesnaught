@@ -282,19 +282,14 @@ impl Piece {
         };
         moves.map(move |movement| {
             if let Some(capture) = movement.movement.capture {
-                let piece = board[capture].unwrap();
-                if piece.piece.piece() == PieceKind::Rook
-                    && piece.piece.color() != self.piece.color()
-                    && piece.position.y() == home_rank(piece.piece.color())
-                {
-                    Move {
-                        castling_right: movement
-                            .castling_right
-                            .to_removed(piece.piece.color(), piece.position.x()),
-                        ..movement
-                    }
-                } else {
-                    movement
+                Move {
+                    castling_right: movement
+                        .castling_right
+                        .to_removed_castling_right_for_rook_capture(
+                            self.piece.color(),
+                            board[capture].unwrap(),
+                        ),
+                    ..movement
                 }
             } else {
                 movement
@@ -1201,17 +1196,72 @@ impl Lan {
         let piece = board[index].unwrap();
         let capture = board[self.origin];
 
-        let (movement, castling_rook): (SimpleMove, Option<SimpleMove>) = if let Some(rook) =
-            capture
+        let (movement, castling_rook, castling_right) = if let Some(rook) = capture
             && board[rook].unwrap().piece
                 == ColoredPieceKind::new(piece.piece.color(), PieceKind::Rook)
         {
-            todo!()
+            let (king_destination, rook_destination) =
+                match Ord::cmp(&self.origin.x(), &self.destination.x()) {
+                    Ordering::Less => (coord_x!("g"), coord_x!("f")),
+                    Ordering::Equal => panic!("king and rook on the same file"),
+                    Ordering::Greater => (coord_x!("c"), coord_x!("d")),
+                };
+            (
+                SimpleMove {
+                    index,
+                    destination: Coord::new(king_destination, self.origin.y()),
+                    capture: None,
+                },
+                Some(SimpleMove {
+                    index: rook,
+                    destination: Coord::new(rook_destination, self.origin.y()),
+                    capture: None,
+                }),
+                board.castling_right.to_cleared(piece.piece.color()),
+            )
         } else if piece.piece.piece() == PieceKind::King
             && !(self.destination - self.origin).is_king_move()
         {
-            todo!()
+            let (king_rook_ord, rook_destination) = match self.destination.x() {
+                coord_x!("c") => (Ordering::Greater, coord_x!("d")),
+                coord_x!("g") => (Ordering::Less, coord_x!("f")),
+                _ => panic!(
+                    "invalid king destination when castling: {}",
+                    self.destination
+                ),
+            };
+            let (rook, _) = board
+                .pieces_by_kind_indexed(piece.piece.color(), PieceKind::Rook)
+                .find(|(_, rook)| {
+                    rook.position.y() == self.origin.y()
+                        && Ord::cmp(&self.origin.x(), &rook.position.x()) == king_rook_ord
+                })
+                .unwrap();
+            (
+                SimpleMove {
+                    index,
+                    destination: self.destination,
+                    capture: None,
+                },
+                Some(SimpleMove {
+                    index: rook,
+                    destination: Coord::new(rook_destination, self.origin.y()),
+                    capture: None,
+                }),
+                board.castling_right.to_cleared(piece.piece.color()),
+            )
         } else {
+            let castling_right = if piece.piece.piece() == PieceKind::King {
+                board.castling_right.to_cleared(piece.piece.color())
+            } else if piece.piece.piece() == PieceKind::Rook
+                && self.origin.y() == home_rank(piece.piece.color())
+            {
+                board
+                    .castling_right
+                    .to_removed(piece.piece.color(), self.origin.x())
+            } else {
+                board.castling_right
+            };
             (
                 SimpleMove {
                     index,
@@ -1219,9 +1269,37 @@ impl Lan {
                     capture,
                 },
                 None,
+                castling_right,
             )
         };
-        todo!()
+        let castling_right = if let Some(index) = movement.capture {
+            castling_right.to_removed_castling_right_for_rook_capture(
+                piece.piece.color(),
+                board[index].unwrap(),
+            )
+        } else {
+            castling_right
+        };
+        let en_passant_target = if piece.piece.piece() == PieceKind::Pawn
+            && (movement.destination - self.origin) == Vector::pawn_double_move(piece.piece.color())
+        {
+            let en_passant_target = self
+                .origin
+                .move_by(Vector::pawn_single_move(piece.piece.color()))
+                .unwrap();
+            board
+                .can_attack_by_pawn(en_passant_target, !piece.piece.color())
+                .then_some(en_passant_target)
+        } else {
+            None
+        };
+        Move {
+            movement,
+            castling_rook,
+            promotion: self.promotion,
+            en_passant_target,
+            castling_right,
+        }
     }
 }
 impl Display for Lan {
