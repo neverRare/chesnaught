@@ -14,9 +14,8 @@ use crate::{
     color::{Color, ParseColorError},
     coord::{
         CASTLING_ROOK_DESTINATION_KINGSIDE, CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord,
-        KING_ORIGIN, ParseCoordError, ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE,
+        KING_ORIGIN, ParseCoordError, ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE, home_rank,
     },
-    coord_y,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
 };
 
@@ -144,10 +143,7 @@ impl Display for Fen {
         }
         write!(f, " {}", self.board.current_player.lowercase())?;
         let use_standard_castling = [Color::White, Color::Black].into_iter().all(|color| {
-            let row = match color {
-                Color::White => self.board.board[coord_y!("1")],
-                Color::Black => self.board.board[coord_y!("8")],
-            };
+            let row = self.board.board[home_rank(color) as usize];
             let king_in_position = row
                 .into_iter()
                 .position(|piece| piece == Some(ColoredPieceKind::new(color, PieceKind::King)))
