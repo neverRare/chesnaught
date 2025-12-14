@@ -1197,7 +1197,7 @@ impl Lan {
     pub fn as_move(self, board: &Board) -> Move {
         let index = board[self.origin].unwrap();
         let piece = board[index].unwrap();
-        let capture = board[self.origin];
+        let capture = board[self.destination];
 
         let (movement, castling_rook, castling_right) = if let Some(rook) = capture
             && board[rook].unwrap().piece
