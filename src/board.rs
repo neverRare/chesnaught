@@ -13,14 +13,7 @@ use std::{
 };
 
 use crate::{
-    board_display::IndexableBoard,
-    castling_right::CastlingRight,
-    color::Color,
-    coord::{Coord, ParseCoordError, Vector, home_rank, pawn_home_rank, pawn_promotion_rank},
-    coord_x, coord_y,
-    end_state::EndState,
-    error::InvalidByte,
-    piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
+    board_display::IndexableBoard, castling_right::CastlingRight, color::Color, coord::{Coord, ParseCoordError, Vector, home_rank, pawn_home_rank, pawn_promotion_rank}, coord_x, coord_y, end_state::EndState, misc::InvalidByte, piece::{ColoredPieceKind, InvalidFenPiece, PieceKind}
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

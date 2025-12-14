@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{color::Color, coord_y, error::InvalidByte};
+use crate::{color::Color, coord_y, misc::InvalidByte};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ParseCoordError {

@@ -13,7 +13,6 @@ mod castling_right;
 mod color;
 mod coord;
 mod end_state;
-mod error;
 mod fen;
 mod game_tree;
 mod heuristics;

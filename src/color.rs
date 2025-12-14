@@ -5,7 +5,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::error::InvalidByte;
+use crate::misc::InvalidByte;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ParseColorError;

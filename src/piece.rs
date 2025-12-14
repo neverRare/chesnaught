@@ -4,7 +4,7 @@ use std::{
     num::NonZero,
 };
 
-use crate::{color::Color, error::InvalidByte};
+use crate::{color::Color, misc::InvalidByte, };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InvalidFenPiece(pub char);
