@@ -379,6 +379,9 @@ impl Board {
             en_passant_target: self.en_passant_target,
         }
     }
+    pub fn index(&self, position: Coord) -> Option<ColoredPieceKind> {
+        self[position].map(|index| self[index].unwrap().piece)
+    }
     fn range(&self, range: Range<usize>) -> impl Iterator<Item = Piece> {
         self.pieces[range].iter().copied().flatten()
     }
@@ -984,7 +987,7 @@ impl IndexMut<PieceIndex> for Board {
 }
 impl IndexableBoard for Board {
     fn index(&self, position: Coord) -> Option<ColoredPieceKind> {
-        self[position].map(|index| self[index].unwrap().piece)
+        self.index(position)
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
