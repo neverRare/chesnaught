@@ -17,6 +17,17 @@ pub struct BoardDisplay<'board, 'highlighted, 'info, T> {
     pub highlighted: &'highlighted [Coord],
     pub info: &'info str,
 }
+impl<'a, T> BoardDisplay<'a, 'static, 'static, T> {
+    pub fn new(board: &'a T) -> Self {
+        BoardDisplay {
+            board,
+            view: Color::White,
+            show_coordinates: true,
+            highlighted: &[],
+            info: "",
+        }
+    }
+}
 impl<T> Display for BoardDisplay<'_, '_, '_, T>
 where
     T: IndexableBoard,
