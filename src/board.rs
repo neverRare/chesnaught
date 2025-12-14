@@ -1280,6 +1280,18 @@ impl Lan {
             castling_right = board.castling_right.to_cleared(piece.piece.color());
         } else {
             // Moves other than castling
+            let capture = if board.en_passant_target == Some(self.destination) {
+                let pawn = self
+                    .destination
+                    .move_by(-Vector::pawn_single_move(!piece.piece.color()))
+                    .unwrap();
+                let (capture, _) = board
+                    .get_with_kind_indexed(pawn, !piece.piece.color(), PieceKind::Pawn)
+                    .unwrap();
+                Some(capture)
+            } else {
+                capture
+            };
             movement = SimpleMove {
                 index,
                 destination: self.destination,
