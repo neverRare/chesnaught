@@ -1377,8 +1377,23 @@ impl Moveable for Lan {
 }
 #[cfg(test)]
 mod test {
-    use crate::{board::Board, coord, fen::Fen};
+    use crate::{board::Board, color::Color, coord, end_state::EndState, fen::Fen};
 
+    #[test]
+    fn checkmate() {
+        let board: Fen = "4k3/8/r7/r3K3/r7/8/8/8 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        assert!(matches!(
+            board.valid_moves(),
+            Err(EndState::Win(Color::Black))
+        ));
+    }
+    #[test]
+    fn stalemate() {
+        let board: Fen = "3rkr2/8/r7/4K3/r7/8/8/8 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        assert!(matches!(board.valid_moves(), Err(EndState::Draw)));
+    }
     #[test]
     fn pin() {
         let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
