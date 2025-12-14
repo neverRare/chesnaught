@@ -1194,6 +1194,10 @@ pub struct Lan {
     pub promotion: Option<PieceKind>,
 }
 impl Lan {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "I hope the provided comments are enough"
+    )]
     pub fn as_move(self, board: &Board) -> Move {
         let index = board[self.origin].unwrap();
         let piece = board[index].unwrap();
@@ -1203,10 +1207,12 @@ impl Lan {
         let castling_rook;
         let castling_right;
 
+        // Handle castling
         if let Some(rook) = capture
             && board[rook].unwrap().piece
                 == ColoredPieceKind::new(piece.piece.color(), PieceKind::Rook)
         {
+            // "King takes rook" castling configuration e.g. e1h1
             let (king_destination, rook_destination) =
                 match Ord::cmp(&self.origin.x(), &self.destination.x()) {
                     Ordering::Less => (
@@ -1233,6 +1239,8 @@ impl Lan {
         } else if piece.piece.piece() == PieceKind::King
             && !(self.destination - self.origin).is_king_move()
         {
+            // "King to destination" castling configuration e.g. e1g1
+            // This doesn't apply when it's a legal king move
             let (king_rook_ord, rook_destination) = match self.destination.x() {
                 Coord::CASTLING_KING_DESTINATION_QUEENSIDE => (
                     Ordering::Greater,
@@ -1265,6 +1273,7 @@ impl Lan {
             });
             castling_right = board.castling_right.to_cleared(piece.piece.color());
         } else {
+            // Moves other than castling
             movement = SimpleMove {
                 index,
                 destination: self.destination,
