@@ -56,22 +56,43 @@ impl Coord {
 
     pub const ROOK_ORIGINS: [u8; 2] = [Coord::ROOK_ORIGIN_QUEENSIDE, Coord::ROOK_ORIGIN_KINGSIDE];
 
+    pub const WHITE_HOME_RANK: u8 = coord_y!("1");
+    pub const BLACK_HOME_RANK: u8 = coord_y!("8");
+
+    pub const HOME_RANKS: [u8; 2] = [Coord::WHITE_HOME_RANK, Coord::BLACK_HOME_RANK];
+
+    pub const WHITE_PROMOTION_RANK: u8 = coord_y!("8");
+    pub const BLACK_PROMOTION_RANK: u8 = coord_y!("1");
+
+    pub const WHITE_PAWN_HOME_RANK: u8 = coord_y!("2");
+    pub const BLACK_PAWN_HOME_RANK: u8 = coord_y!("7");
+
+    pub const WHITE_EN_PASSANT_TARGET: u8 = coord_y!("3");
+    pub const BLACK_EN_PASSANT_TARGET: u8 = coord_y!("6");
+
     pub fn home_rank(color: Color) -> u8 {
         match color {
-            Color::White => coord_y!("1"),
-            Color::Black => coord_y!("8"),
+            Color::White => Coord::WHITE_HOME_RANK,
+            Color::Black => Coord::BLACK_HOME_RANK,
         }
     }
     pub fn pawn_home_rank(color: Color) -> u8 {
         match color {
-            Color::White => coord_y!("2"),
-            Color::Black => coord_y!("7"),
+            Color::White => Coord::WHITE_PAWN_HOME_RANK,
+            Color::Black => Coord::BLACK_PAWN_HOME_RANK,
         }
     }
     pub fn pawn_promotion_rank(color: Color) -> u8 {
         match color {
-            Color::White => coord_y!("8"),
-            Color::Black => coord_y!("1"),
+            Color::White => Coord::WHITE_PROMOTION_RANK,
+            Color::Black => Coord::BLACK_PROMOTION_RANK,
+        }
+    }
+    pub fn en_passant_target_color(y: u8) -> Option<Color> {
+        match y {
+            Coord::WHITE_EN_PASSANT_TARGET => Some(Color::White),
+            Coord::BLACK_EN_PASSANT_TARGET => Some(Color::Black),
+            _ => None,
         }
     }
     pub fn new(x: u8, y: u8) -> Self {
@@ -183,6 +204,17 @@ impl Coord {
             .contains(&self.x())
             && (Ord::min(bound_1.y(), bound_2.y())..=Ord::max(bound_1.y(), bound_2.y()))
                 .contains(&self.y())
+    }
+    pub fn pawn_from_en_passant_target(self) -> Option<(Color, Self)> {
+        let color = match self.y() {
+            Coord::WHITE_EN_PASSANT_TARGET => Color::White,
+            Coord::BLACK_EN_PASSANT_TARGET => Color::Black,
+            _ => return None,
+        };
+        Some((
+            color,
+            self.move_by(Vector::pawn_single_move(color)).unwrap(),
+        ))
     }
     pub fn color(self) -> Color {
         match (self.x() + self.y()) % 2 {

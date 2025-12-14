@@ -17,7 +17,6 @@ use crate::{
     castling_right::CastlingRight,
     color::Color,
     coord::{Coord, ParseCoordError, Vector},
-    coord_y,
     end_state::EndState,
     misc::InvalidByte,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
@@ -599,17 +598,15 @@ impl Board {
             return Err(InvalidBoard::InvalidCastlingRight);
         }
         if let Some(en_passant_target) = self.en_passant_target {
-            let (color, y) = match en_passant_target.y() {
-                coord_y!("3") => (Color::White, coord_y!("4")),
-                coord_y!("6") => (Color::Black, coord_y!("5")),
-                _ => return Err(InvalidBoard::InvalidEnPassantRank),
-            };
-            if !self.position_has(Coord::new(en_passant_target.x(), y), color, PieceKind::Pawn) {
+            let (color, pawn_position) = en_passant_target
+                .pawn_from_en_passant_target()
+                .ok_or(InvalidBoard::InvalidEnPassantRank)?;
+            if !self.position_has(pawn_position, color, PieceKind::Pawn) {
                 return Err(InvalidBoard::EnPassantPawnNotFound);
             }
         }
         for pawn in self.pawns(Color::White).chain(self.pawns(Color::Black)) {
-            if matches!(pawn.position.y(), coord_y!("1") | coord_y!("8")) {
+            if Coord::HOME_RANKS.contains(&pawn.position.y()) {
                 return Err(InvalidBoard::PawnOnHomeRank);
             }
         }
@@ -1049,11 +1046,8 @@ impl TryFrom<HashableBoard> for Board {
             en_passant_target: value.en_passant_target,
         };
         if let Some(en_passant_target) = board.en_passant_target {
-            let color = match en_passant_target.y() {
-                coord_y!("3") => Color::White,
-                coord_y!("6") => Color::Black,
-                _ => return Err(InvalidBoard::InvalidEnPassantRank),
-            };
+            let color = Coord::en_passant_target_color(en_passant_target.y())
+                .ok_or(InvalidBoard::InvalidEnPassantRank)?;
             if !board.can_attack_by_pawn(en_passant_target, !color) {
                 board.en_passant_target = None;
             }
