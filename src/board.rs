@@ -903,7 +903,29 @@ impl Board {
         (non_castling_moves.chain(self.castling_moves(check)), check)
     }
     pub fn move_piece(&mut self, movement: &impl Moveable) {
-        movement.move_board(self);
+        let movement = movement.as_move(self);
+        let current_player = self.current_player;
+        let piece = self[movement.movement.index].as_mut().unwrap();
+        piece.position = movement.movement.destination;
+        if let Some(promotion) = movement.promotion {
+            piece.piece = ColoredPieceKind::new(current_player, promotion);
+        }
+        if let Some(index) = movement.movement.capture {
+            self[index] = None;
+        }
+        if let Some(movement) = movement.castling_rook {
+            let rook = self[movement.index].as_mut().unwrap();
+            rook.position = movement.destination;
+        }
+        self.en_passant_target = self.en_passant_target;
+        self.castling_right = self.castling_right;
+        self.current_player = !self.current_player;
+
+        self.indices = OnceCell::new();
+
+        if cfg!(debug_assertions) {
+            self.validate().unwrap();
+        }
     }
     pub fn move_assert(&mut self, movement: Lan) {
         let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
@@ -1055,9 +1077,6 @@ impl IndexableBoard for HashableBoard {
 }
 pub trait Moveable {
     fn as_move(&self, board: &Board) -> Move;
-    fn move_board(&self, board: &mut Board) {
-        board.move_piece(&self.as_move(board));
-    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct SimpleMove {
@@ -1130,30 +1149,6 @@ impl Move {
 impl Moveable for Move {
     fn as_move(&self, _: &Board) -> Move {
         *self
-    }
-    fn move_board(&self, board: &mut Board) {
-        let current_player = board.current_player;
-        let piece = board[self.movement.index].as_mut().unwrap();
-        piece.position = self.movement.destination;
-        if let Some(promotion) = self.promotion {
-            piece.piece = ColoredPieceKind::new(current_player, promotion);
-        }
-        if let Some(index) = self.movement.capture {
-            board[index] = None;
-        }
-        if let Some(movement) = self.castling_rook {
-            let rook = board[movement.index].as_mut().unwrap();
-            rook.position = movement.destination;
-        }
-        board.en_passant_target = self.en_passant_target;
-        board.castling_right = self.castling_right;
-        board.current_player = !board.current_player;
-
-        board.indices = OnceCell::new();
-
-        if cfg!(debug_assertions) {
-            board.validate().unwrap();
-        }
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
