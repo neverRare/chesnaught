@@ -22,10 +22,7 @@ mod repl;
 mod uci;
 
 fn main() -> io::Result<()> {
-    let mut output = stdout();
-    let lock = (!cfg!(debug_assertions)).then(|| output.lock());
-    uci_loop(&mut stdin().lock(), &mut output)?;
-    drop(lock);
+    uci_loop(&mut stdin().lock(), &mut stdout().lock())?;
     Ok(())
 }
 #[macro_export]

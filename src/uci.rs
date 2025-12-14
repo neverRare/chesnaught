@@ -114,10 +114,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             }
             Input::Repl => {
                 if !uci {
-                    let mut error = stderr();
-                    let lock = (!cfg!(debug_assertions)).then(|| error.lock());
-                    repl(input, output, &mut error)?;
-                    drop(lock);
+                    repl(input, output, &mut stderr().lock())?;
                     return Ok(());
                 }
             }
