@@ -1199,7 +1199,11 @@ impl Lan {
         let piece = board[index].unwrap();
         let capture = board[self.destination];
 
-        let (movement, castling_rook, castling_right) = if let Some(rook) = capture
+        let movement;
+        let castling_rook;
+        let castling_right;
+
+        if let Some(rook) = capture
             && board[rook].unwrap().piece
                 == ColoredPieceKind::new(piece.piece.color(), PieceKind::Rook)
         {
@@ -1215,19 +1219,17 @@ impl Lan {
                         Coord::CASTLING_ROOK_DESTINATION_QUEENSIDE,
                     ),
                 };
-            (
-                SimpleMove {
-                    index,
-                    destination: Coord::new(king_destination, self.origin.y()),
-                    capture: None,
-                },
-                Some(SimpleMove {
-                    index: rook,
-                    destination: Coord::new(rook_destination, self.origin.y()),
-                    capture: None,
-                }),
-                board.castling_right.to_cleared(piece.piece.color()),
-            )
+            movement = SimpleMove {
+                index,
+                destination: Coord::new(king_destination, self.origin.y()),
+                capture: None,
+            };
+            castling_rook = Some(SimpleMove {
+                index: rook,
+                destination: Coord::new(rook_destination, self.origin.y()),
+                capture: None,
+            });
+            castling_right = board.castling_right.to_cleared(piece.piece.color())
         } else if piece.piece.piece() == PieceKind::King
             && !(self.destination - self.origin).is_king_move()
         {
@@ -1251,41 +1253,36 @@ impl Lan {
                         && Ord::cmp(&self.origin.x(), &rook.position.x()) == king_rook_ord
                 })
                 .unwrap();
-            (
-                SimpleMove {
-                    index,
-                    destination: self.destination,
-                    capture: None,
-                },
-                Some(SimpleMove {
-                    index: rook,
-                    destination: Coord::new(rook_destination, self.origin.y()),
-                    capture: None,
-                }),
-                board.castling_right.to_cleared(piece.piece.color()),
-            )
+            movement = SimpleMove {
+                index,
+                destination: self.destination,
+                capture: None,
+            };
+            castling_rook = Some(SimpleMove {
+                index: rook,
+                destination: Coord::new(rook_destination, self.origin.y()),
+                capture: None,
+            });
+            castling_right = board.castling_right.to_cleared(piece.piece.color());
         } else {
-            let castling_right = if piece.piece.piece() == PieceKind::King {
-                board.castling_right.to_cleared(piece.piece.color())
+            movement = SimpleMove {
+                index,
+                destination: self.destination,
+                capture,
+            };
+            castling_rook = None;
+            if piece.piece.piece() == PieceKind::King {
+                castling_right = board.castling_right.to_cleared(piece.piece.color());
             } else if piece.piece.piece() == PieceKind::Rook
                 && self.origin.y() == Coord::home_rank(piece.piece.color())
             {
-                board
+                castling_right = board
                     .castling_right
-                    .to_removed(piece.piece.color(), self.origin.x())
+                    .to_removed(piece.piece.color(), self.origin.x());
             } else {
-                board.castling_right
+                castling_right = board.castling_right;
             };
-            (
-                SimpleMove {
-                    index,
-                    destination: self.destination,
-                    capture,
-                },
-                None,
-                castling_right,
-            )
-        };
+        }
         let castling_right = if let Some(index) = movement.capture {
             castling_right.to_removed_castling_right_for_rook_capture(board[index].unwrap())
         } else {
