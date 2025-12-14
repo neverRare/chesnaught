@@ -4,7 +4,7 @@ use crate::{
     repl::repl,
     uci::{
         input::Input,
-        output::{OptionType, OptionValue, Output},
+        output::{Info, OptionType, OptionValue, Output},
     },
 };
 
@@ -26,17 +26,6 @@ const CONFIG: [Output; 3] = [
     },
     Output::UciOk,
 ];
-macro_rules! debug_print {
-    ($expr:expr, $($tt:tt)*) => {
-        ::std::writeln!(
-            $expr,
-            "{}",
-            $crate::uci::output::Output::Info(::std::vec![$crate::uci::output::Info::String(
-                ::std::format!($($tt)*)
-            )])
-        )
-    };
-}
 pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result<()> {
     let mut uci = false;
     let mut debug = false;
@@ -52,10 +41,13 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             Err(err) => {
                 if debug {
                     if err.is_empty() {
-                        debug_print!(output, "error parsing input but no error information found")?;
+                        debug_print(
+                            output,
+                            format!("error parsing input but no error information found"),
+                        )?;
                     } else {
                         for err in err {
-                            debug_print!(output, "error: {err}")?;
+                            debug_print(output, format!("error: {err}"))?;
                         }
                     }
                 }
@@ -82,19 +74,19 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             Input::SetOption { name, value } => match name {
                 CHESS960 => {
                     if debug && !matches!(value, Some("true" | "false")) {
-                        debug_print!(output, "set {CHESS960} to invalid value; ignoring")?;
+                        debug_print(output, format!("set {CHESS960} to invalid value; ignoring"))?;
                     }
                     // The engine can already work on chess960 without telling it to use chess960
                 }
                 name => {
                     if debug {
-                        debug_print!(output, "unknown option `{name}`; ignoring")?;
+                        debug_print(output, format!("unknown option `{name}`; ignoring"))?;
                     }
                 }
             },
             Input::Register(_) => {
                 if debug {
-                    debug_print!(output, "registration is ignored")?;
+                    debug_print(output, format!("registration is ignored"))?;
                 }
             }
             Input::UciNewGame => todo!(),
@@ -131,4 +123,8 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             }
         }
     }
+}
+fn debug_print(output: &mut impl Write, message: String) -> io::Result<()> {
+    writeln!(output, "{}", Output::Info(vec![Info::String(message)]))?;
+    Ok(())
 }
