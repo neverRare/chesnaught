@@ -290,7 +290,7 @@ impl Piece {
                 Move {
                     castling_right: movement
                         .castling_right
-                        .to_removed_castling_right_for_rook_capture(board[capture].unwrap()),
+                        .to_removed_for_rook_capture(board[capture].unwrap()),
                     ..movement
                 }
             } else {
@@ -1316,7 +1316,7 @@ impl Lan {
             }
         }
         let castling_right = if let Some(index) = movement.capture {
-            castling_right.to_removed_castling_right_for_rook_capture(board[index].unwrap())
+            castling_right.to_removed_for_rook_capture(board[index].unwrap())
         } else {
             castling_right
         };
