@@ -96,10 +96,10 @@ impl CastlingRight {
         StandardCastlingRight(self)
     }
     pub fn remove_castling_right_for_rook_capture(&mut self, captured: Piece) {
-        if captured.piece.piece() == PieceKind::Rook
-            && captured.position.y() == Coord::home_rank(captured.piece.color())
+        if captured.piece() == PieceKind::Rook
+            && captured.position.y() == Coord::home_rank(captured.color())
         {
-            self.remove(captured.piece.color(), captured.position.x());
+            self.remove(captured.color(), captured.position.x());
         }
     }
     pub fn to_removed_castling_right_for_rook_capture(self, captured: Piece) -> Self {

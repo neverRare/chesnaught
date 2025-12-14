@@ -94,6 +94,12 @@ pub struct Piece {
     pub position: Coord,
 }
 impl Piece {
+    pub fn color(self) -> Color {
+        self.piece.color()
+    }
+    pub fn piece(self) -> PieceKind {
+        self.piece.piece()
+    }
     fn step_moves(
         self,
         index: PieceIndex,
@@ -106,7 +112,7 @@ impl Piece {
             .filter_map(move |movement| self.position.move_by(movement))
             .filter_map(move |destination| {
                 if let Some(capture) = board[destination] {
-                    (board[capture].unwrap().piece.color() != self.piece.color()).then_some({
+                    (board[capture].unwrap().color() != self.color()).then_some({
                         SimpleMove {
                             index,
                             destination,
@@ -135,7 +141,7 @@ impl Piece {
                 if resume {
                     if let Some(capture) = board[destination] {
                         resume = false;
-                        (board[capture].unwrap().piece.color() != self.piece.color()).then_some({
+                        (board[capture].unwrap().color() != self.color()).then_some({
                             SimpleMove {
                                 index,
                                 destination,
@@ -166,13 +172,13 @@ impl Piece {
             .flat_map(move |direction| self.directional_moves(index, board, direction))
     }
     fn pawn_moves(self, index: PieceIndex, board: &Board) -> impl Iterator<Item = Move> {
-        let forward_jumps = if self.position.y() == Coord::pawn_home_rank(self.piece.color()) {
+        let forward_jumps = if self.position.y() == Coord::pawn_home_rank(self.color()) {
             2
         } else {
             1
         };
         self.position
-            .line_exclusive(Vector::pawn_single_move(self.piece.color()))
+            .line_exclusive(Vector::pawn_single_move(self.color()))
             .take(forward_jumps)
             .take_while(|position| board[*position].is_none())
             .map(move |destination| Move {
@@ -184,19 +190,19 @@ impl Piece {
                 castling_rook: None,
                 promotion: None,
                 en_passant_target: ((destination - self.position)
-                    == Vector::pawn_double_move(self.piece.color()))
+                    == Vector::pawn_double_move(self.color()))
                 .then(|| {
                     self.position
-                        .move_by(Vector::pawn_single_move(self.piece.color()))
+                        .move_by(Vector::pawn_single_move(self.color()))
                         .unwrap()
                 })
                 .filter(|en_passant_target| {
-                    board.can_attack_by_pawn(*en_passant_target, !self.piece.color())
+                    board.can_attack_by_pawn(*en_passant_target, !self.color())
                 }),
                 castling_right: board.castling_right,
             })
             .chain(
-                Vector::pawn_attacks(self.piece.color())
+                Vector::pawn_attacks(self.color())
                     .into_iter()
                     .filter_map(move |movement| self.position.move_by(movement))
                     .filter_map(move |destination| {
@@ -204,9 +210,9 @@ impl Piece {
                             board
                                 .get_index_with_kind(
                                     destination
-                                        .move_by(Vector::pawn_single_move(!self.piece.color()))
+                                        .move_by(Vector::pawn_single_move(!self.color()))
                                         .unwrap(),
-                                    !self.piece.color(),
+                                    !self.color(),
                                     PieceKind::Pawn,
                                 )
                                 .unwrap()
@@ -223,7 +229,7 @@ impl Piece {
             )
             .flat_map(move |movement| {
                 let promotion_choices: &'static [_] = if movement.movement.destination.y()
-                    == Coord::pawn_promotion_rank(self.piece.color())
+                    == Coord::pawn_promotion_rank(self.color())
                 {
                     &[
                         Some(PieceKind::Queen),
@@ -244,7 +250,7 @@ impl Piece {
             })
     }
     fn non_castling_moves(self, index: PieceIndex, board: &Board) -> impl Iterator<Item = Move> {
-        let moves: Box<dyn Iterator<Item = Move>> = match self.piece.piece() {
+        let moves: Box<dyn Iterator<Item = Move>> = match self.piece() {
             PieceKind::Pawn => Box::new(self.pawn_moves(index, board)),
             PieceKind::Knight => Box::new(
                 self.step_moves(index, board, &Vector::KNIGHT_MOVES)
@@ -255,10 +261,10 @@ impl Piece {
                     .map(|movement| movement.to_simple_move(board.castling_right)),
             ),
             PieceKind::Rook => {
-                let castling_right = if self.position.y() == Coord::home_rank(self.piece.color()) {
+                let castling_right = if self.position.y() == Coord::home_rank(self.color()) {
                     board
                         .castling_right
-                        .to_removed(self.piece.color(), self.position.x())
+                        .to_removed(self.color(), self.position.x())
                 } else {
                     board.castling_right
                 };
@@ -272,7 +278,7 @@ impl Piece {
                     .map(|movement| movement.to_simple_move(board.castling_right)),
             ),
             PieceKind::King => {
-                let castling_right = board.castling_right.to_cleared(self.piece.color());
+                let castling_right = board.castling_right.to_cleared(self.color());
                 Box::new(
                     self.step_moves(index, board, &Vector::KING_MOVES)
                         .map(move |movement| movement.to_simple_move(castling_right)),
@@ -295,7 +301,7 @@ impl Piece {
     fn can_be_blocked(self, target: Coord, blocker: Coord) -> bool {
         self.position == blocker
             || (matches!(
-                self.piece.piece(),
+                self.piece(),
                 PieceKind::Bishop | PieceKind::Rook | PieceKind::Queen
             ) && (target - self.position).is_aligned(blocker - self.position)
                 && blocker.is_inside_of(self.position, target))
@@ -422,7 +428,7 @@ impl Board {
         };
         definite_pieces.chain(
             self.range(original_piece_range(color, PieceKind::Pawn))
-                .filter(move |item| item.piece.piece() == piece),
+                .filter(move |item| item.piece() == piece),
         )
     }
     fn pieces_by_kind_indexed(
@@ -437,7 +443,7 @@ impl Board {
         };
         self.range_indexed(range).chain(
             self.range_indexed(original_piece_range(color, PieceKind::Pawn))
-                .filter(move |(_, item)| item.piece.piece() == piece),
+                .filter(move |(_, item)| item.piece() == piece),
         )
     }
     fn pieces_by_kinds(&self, color: Color, pieces: &[PieceKind]) -> impl Iterator<Item = Piece> {
@@ -454,7 +460,7 @@ impl Board {
             .flat_map(|range| self.range(range))
             .chain(
                 self.range(original_piece_range(color, PieceKind::Pawn))
-                    .filter(move |piece| pieces.contains(&piece.piece.piece())),
+                    .filter(move |piece| pieces.contains(&piece.piece())),
             )
     }
     fn get_with_kind_indexed(
@@ -489,7 +495,7 @@ impl Board {
         if let Some(indices) = self.indices.get() {
             indices[position.y() as usize * 8 + position.x() as usize].is_some_and(|index| {
                 let b = self[index].unwrap();
-                b.piece.color() == color && b.piece.piece() == piece
+                b.color() == color && b.piece() == piece
             })
         } else {
             self.pieces_by_kind(color, piece)
@@ -512,7 +518,7 @@ impl Board {
                     indices[position.y() as usize * 8 + position.x() as usize].is_some_and(
                         |index| {
                             let b = self[index].unwrap();
-                            b.piece.color() == color && b.piece.piece() == piece
+                            b.color() == color && b.piece() == piece
                         },
                     )
                 })
@@ -558,7 +564,7 @@ impl Board {
     }
     fn pawns(&self, color: Color) -> impl Iterator<Item = Piece> {
         self.range(original_piece_range(color, PieceKind::Pawn))
-            .filter(|item| item.piece.piece() == PieceKind::Pawn)
+            .filter(|item| item.piece() == PieceKind::Pawn)
     }
     pub fn validate(&self) -> Result<(), InvalidBoard> {
         let (Some(king), Some(opponent_king)) = (
@@ -618,24 +624,23 @@ impl Board {
         color: Color,
         checker: impl Fn(Coord) -> bool + Clone,
     ) -> impl FusedIterator<Item = Piece> {
-        self.pieces(color)
-            .filter(move |piece| match piece.piece.piece() {
-                PieceKind::Pawn => (position - piece.position).is_pawn_attack(color),
-                PieceKind::Knight => (position - piece.position).is_knight_move(),
-                PieceKind::Bishop => piece
-                    .position
-                    .is_aligned_with_bishop(position)
-                    .is_some_and(|mut inside| !inside.any(checker.clone())),
-                PieceKind::Rook => piece
-                    .position
-                    .is_aligned_with_rook(position)
-                    .is_some_and(|mut inside| !inside.any(checker.clone())),
-                PieceKind::Queen => piece
-                    .position
-                    .is_aligned_with_queen(position)
-                    .is_some_and(|mut inside| !inside.any(checker.clone())),
-                PieceKind::King => (position - piece.position).is_king_move(),
-            })
+        self.pieces(color).filter(move |piece| match piece.piece() {
+            PieceKind::Pawn => (position - piece.position).is_pawn_attack(color),
+            PieceKind::Knight => (position - piece.position).is_knight_move(),
+            PieceKind::Bishop => piece
+                .position
+                .is_aligned_with_bishop(position)
+                .is_some_and(|mut inside| !inside.any(checker.clone())),
+            PieceKind::Rook => piece
+                .position
+                .is_aligned_with_rook(position)
+                .is_some_and(|mut inside| !inside.any(checker.clone())),
+            PieceKind::Queen => piece
+                .position
+                .is_aligned_with_queen(position)
+                .is_some_and(|mut inside| !inside.any(checker.clone())),
+            PieceKind::King => (position - piece.position).is_king_move(),
+        })
     }
     fn attackers(&self, position: Coord, color: Color) -> impl FusedIterator<Item = Piece> {
         self.attackers_with_inspect(position, color, |position| self[position].is_some())
@@ -711,7 +716,7 @@ impl Board {
             Bishop(Color),
         }
         self.non_kings(color)
-            .try_fold(None, |piece_left, piece| match piece.piece.piece() {
+            .try_fold(None, |piece_left, piece| match piece.piece() {
                 PieceKind::Knight => piece_left.is_none().then_some(Some(PieceLeft::Knight)),
                 PieceKind::Bishop => {
                     let color = piece.position.color();
@@ -846,7 +851,7 @@ impl Board {
             .pieces_indexed(self.current_player)
             .flat_map(move |(index, piece)| {
                 let valid_destination_when_pinned: Option<Rc<[_]>> =
-                    if piece.piece.piece() == PieceKind::King {
+                    if piece.piece() == PieceKind::King {
                         None
                     } else {
                         self.valid_destinations_when_pinned(
@@ -861,7 +866,7 @@ impl Board {
                     .map(move |movement| (movement, piece, valid_destination_when_pinned.clone()))
             })
             .filter(move |(movement, piece, valid_destination_when_pinned)| {
-                if piece.piece.piece() == PieceKind::King {
+                if piece.piece() == PieceKind::King {
                     !self.is_move_attacked(
                         &[movement.movement.index],
                         piece.position,
@@ -889,7 +894,7 @@ impl Board {
                                     .pinned_with_inspect(
                                         king.position,
                                         self[movement.movement.capture.unwrap()].unwrap().position,
-                                        piece.piece.color(),
+                                        piece.color(),
                                         |position| {
                                             position != piece.position
                                                 && (position == movement.movement.destination
@@ -1026,7 +1031,7 @@ impl TryFrom<HashableBoard> for Board {
                             if pieces[original_piece_range(piece.color(), PieceKind::Pawn)]
                                 .iter()
                                 .copied()
-                                .all(|piece| piece.unwrap().piece.piece() == PieceKind::Pawn)
+                                .all(|piece| piece.unwrap().piece() == PieceKind::Pawn)
                             {
                                 return Err(ExceededPieces::Pawn.into());
                             }
@@ -1215,8 +1220,7 @@ impl Lan {
 
         // Handle castling
         if let Some(rook) = capture
-            && board[rook].unwrap().piece
-                == ColoredPieceKind::new(piece.piece.color(), PieceKind::Rook)
+            && board[rook].unwrap().piece == ColoredPieceKind::new(piece.color(), PieceKind::Rook)
         {
             // "King takes rook" castling configuration e.g. e1h1
             let (king_destination, rook_destination) =
@@ -1241,8 +1245,8 @@ impl Lan {
                 destination: Coord::new(rook_destination, self.origin.y()),
                 capture: None,
             });
-            castling_right = board.castling_right.to_cleared(piece.piece.color());
-        } else if piece.piece.piece() == PieceKind::King
+            castling_right = board.castling_right.to_cleared(piece.color());
+        } else if piece.piece() == PieceKind::King
             && !(self.destination - self.origin).is_king_move()
         {
             // "King to destination" castling configuration e.g. e1g1
@@ -1261,7 +1265,7 @@ impl Lan {
                 ),
             };
             let (rook, _) = board
-                .pieces_by_kind_indexed(piece.piece.color(), PieceKind::Rook)
+                .pieces_by_kind_indexed(piece.color(), PieceKind::Rook)
                 .find(|(_, rook)| {
                     rook.position.y() == self.origin.y()
                         && Ord::cmp(&self.origin.x(), &rook.position.x()) == king_rook_ord
@@ -1277,17 +1281,17 @@ impl Lan {
                 destination: Coord::new(rook_destination, self.origin.y()),
                 capture: None,
             });
-            castling_right = board.castling_right.to_cleared(piece.piece.color());
+            castling_right = board.castling_right.to_cleared(piece.color());
         } else {
             // Moves other than castling
             let capture = if board.en_passant_target == Some(self.destination) {
                 let pawn = self
                     .destination
-                    .move_by(Vector::pawn_single_move(!piece.piece.color()))
+                    .move_by(Vector::pawn_single_move(!piece.color()))
                     .unwrap();
                 Some(
                     board
-                        .get_index_with_kind(pawn, !piece.piece.color(), PieceKind::Pawn)
+                        .get_index_with_kind(pawn, !piece.color(), PieceKind::Pawn)
                         .unwrap(),
                 )
             } else {
@@ -1299,14 +1303,14 @@ impl Lan {
                 capture,
             };
             castling_rook = None;
-            if piece.piece.piece() == PieceKind::King {
-                castling_right = board.castling_right.to_cleared(piece.piece.color());
-            } else if piece.piece.piece() == PieceKind::Rook
-                && self.origin.y() == Coord::home_rank(piece.piece.color())
+            if piece.piece() == PieceKind::King {
+                castling_right = board.castling_right.to_cleared(piece.color());
+            } else if piece.piece() == PieceKind::Rook
+                && self.origin.y() == Coord::home_rank(piece.color())
             {
                 castling_right = board
                     .castling_right
-                    .to_removed(piece.piece.color(), self.origin.x());
+                    .to_removed(piece.color(), self.origin.x());
             } else {
                 castling_right = board.castling_right;
             }
@@ -1316,15 +1320,15 @@ impl Lan {
         } else {
             castling_right
         };
-        let en_passant_target = if piece.piece.piece() == PieceKind::Pawn
-            && (movement.destination - self.origin) == Vector::pawn_double_move(piece.piece.color())
+        let en_passant_target = if piece.piece() == PieceKind::Pawn
+            && (movement.destination - self.origin) == Vector::pawn_double_move(piece.color())
         {
             let en_passant_target = self
                 .origin
-                .move_by(Vector::pawn_single_move(piece.piece.color()))
+                .move_by(Vector::pawn_single_move(piece.color()))
                 .unwrap();
             board
-                .can_attack_by_pawn(en_passant_target, !piece.piece.color())
+                .can_attack_by_pawn(en_passant_target, !piece.color())
                 .then_some(en_passant_target)
         } else {
             None
