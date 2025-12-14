@@ -51,7 +51,7 @@ enum Input {
     Help,
     Flip,
     Restart,
-    Exit,
+    Quit,
     Import(Fen),
     ExportFen,
     Coord(Coord),
@@ -63,7 +63,7 @@ impl Display for Input {
             Input::Help => write!(f, "help")?,
             Input::Flip => write!(f, "flip")?,
             Input::Restart => write!(f, "restart")?,
-            Input::Exit => write!(f, "exit")?,
+            Input::Quit => write!(f, "quit")?,
             Input::Import(fen) => write!(f, "import {fen}")?,
             Input::ExportFen => write!(f, "fen")?,
             Input::Coord(position) => write!(f, "{position}")?,
@@ -80,7 +80,7 @@ impl FromStr for Input {
             "help" => Ok(Input::Help),
             "flip" => Ok(Input::Flip),
             "restart" => Ok(Input::Restart),
-            "exit" => Ok(Input::Exit),
+            "quit" => Ok(Input::Quit),
             "fen" => Ok(Input::ExportFen),
             s => {
                 if let Some(s) = strip_prefix_token(s, "import") {
@@ -157,7 +157,7 @@ pub fn repl(
                 Input::Help => {
                     writeln!(output, "flip           - flip the board")?;
                     writeln!(output, "restart        - reset to starting position")?;
-                    writeln!(output, "exit           - exit the game")?;
+                    writeln!(output, "quit           - quit the game")?;
                     writeln!(output, "import <fen>   - import a position")?;
                     writeln!(output, "fen            - export the position as fen")?;
                     writeln!(output, "e2             - view valid moves")?;
@@ -173,7 +173,7 @@ pub fn repl(
                     update = true;
                     highlighted.clear();
                 }
-                Input::Exit => return Ok(()),
+                Input::Quit => return Ok(()),
                 Input::Import(fen) => {
                     board = match fen.board.try_into() {
                         Ok(board) => board,
