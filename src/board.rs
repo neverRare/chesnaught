@@ -1389,10 +1389,9 @@ mod test {
             .flat_map(|movement| movement.as_lan_iter(&board))
             .collect();
         assert!(
-            valid_moves
+            !valid_moves
                 .iter()
-                .find(|movement| movement.origin == coord!("e2"))
-                .is_none()
+                .any(|movement| movement.origin == coord!("e2"))
         );
     }
 }
