@@ -1265,7 +1265,7 @@ impl Lan {
         } else if piece.piece() == PieceKind::King
             && !(self.destination - self.origin).is_king_move()
         {
-            // "King to destination" castling configuration e.g. e1g1
+            // "King to king's destination" castling configuration e.g. e1g1
             // This doesn't apply when it's a legal king move
             let (king_rook_ord, rook_destination) = match self.destination.x() {
                 Coord::CASTLING_KING_DESTINATION_QUEENSIDE => (
