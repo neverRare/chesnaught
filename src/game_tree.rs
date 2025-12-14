@@ -115,8 +115,8 @@ impl GameTree {
             let mut beta = beta;
             let mut best_movement = None;
             let mut best_score = match current_player {
-                Color::White => Advantage::End(EndState::Win(Color::Black)),
-                Color::Black => Advantage::End(EndState::Win(Color::White)),
+                Color::White => Advantage::BLACK_WINS,
+                Color::Black => Advantage::WHITE_WINS,
             };
             if multithread_depth == Some(0) {
                 for chunk in children.chunks_mut(thread_count) {
@@ -228,8 +228,8 @@ impl GameTree {
             thread_count.is_ok().then_some(depth / 2),
             thread_count.unwrap_or_default(),
             |game_tree| GameTree::estimate(game_tree),
-            Advantage::End(EndState::Win(Color::Black)),
-            Advantage::End(EndState::Win(Color::White)),
+            Advantage::BLACK_WINS,
+            Advantage::WHITE_WINS,
         );
         self.advantage.unwrap()
     }

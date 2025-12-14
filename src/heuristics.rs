@@ -25,6 +25,11 @@ pub enum Advantage {
     End(EndState),
     Estimated(Estimated),
 }
+impl Advantage {
+    pub const WHITE_WINS: Self = Advantage::End(EndState::Win(Color::White));
+    pub const BLACK_WINS: Self = Advantage::End(EndState::Win(Color::Black));
+    pub const DRAW: Self = Advantage::End(EndState::Draw);
+}
 impl Display for Advantage {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -47,31 +52,22 @@ impl PartialOrd for Advantage {
 }
 impl Ord for Advantage {
     fn cmp(&self, other: &Self) -> Ordering {
-        #[allow(clippy::match_same_arms)]
         match (self, other) {
             (Advantage::Estimated(a), Advantage::Estimated(b)) => Ord::cmp(a, b),
-            (Advantage::End(EndState::Draw), Advantage::Estimated(advantage)) => {
+            (&Advantage::DRAW, Advantage::Estimated(advantage)) => {
                 Ord::cmp(&Estimated::default(), advantage)
             }
-            (Advantage::Estimated(advantage), Advantage::End(EndState::Draw)) => {
+            (Advantage::Estimated(advantage), &Advantage::DRAW) => {
                 Ord::cmp(advantage, &Estimated::default())
             }
 
-            (
-                Advantage::End(EndState::Win(Color::Black)),
-                Advantage::End(EndState::Win(Color::Black)),
-            ) => Ordering::Equal,
-            (Advantage::End(EndState::Win(Color::Black)), _) => Ordering::Less,
-            (_, Advantage::End(EndState::Win(Color::Black))) => Ordering::Greater,
+            (&Advantage::BLACK_WINS, &Advantage::BLACK_WINS)
+            | (&Advantage::WHITE_WINS, &Advantage::WHITE_WINS)
+            | (&Advantage::DRAW, &Advantage::DRAW) => Ordering::Equal,
 
-            (
-                Advantage::End(EndState::Win(Color::White)),
-                Advantage::End(EndState::Win(Color::White)),
-            ) => Ordering::Equal,
-            (Advantage::End(EndState::Win(Color::White)), _) => Ordering::Greater,
-            (_, Advantage::End(EndState::Win(Color::White))) => Ordering::Less,
+            (_, &Advantage::BLACK_WINS) | (&Advantage::WHITE_WINS, _) => Ordering::Greater,
 
-            (Advantage::End(EndState::Draw), Advantage::End(EndState::Draw)) => Ordering::Equal,
+            (&Advantage::BLACK_WINS, _) | (_, &Advantage::WHITE_WINS) => Ordering::Less,
         }
     }
 }
