@@ -43,7 +43,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                     if err.is_empty() {
                         debug_print(
                             output,
-                            format!("error parsing input but no error information found"),
+                            "error parsing input but no error information found".to_string(),
                         )?;
                     } else {
                         for err in err {
@@ -86,7 +86,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             },
             Input::Register(_) => {
                 if debug {
-                    debug_print(output, format!("registration is ignored"))?;
+                    debug_print(output, "registration is ignored".to_string())?;
                 }
             }
             Input::UciNewGame => todo!(),

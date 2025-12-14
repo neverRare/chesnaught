@@ -14,7 +14,7 @@ use crate::{
     color::{Color, ParseColorError},
     coord::{
         CASTLING_KING_DESTINATION_KINGSIDE, CASTLING_ROOK_DESTINATION_KINGSIDE,
-        CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord, ParseCoordError, KING_ORIGIN,
+        CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord, KING_ORIGIN, ParseCoordError,
         ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE,
     },
     coord_x, coord_y,
@@ -165,7 +165,7 @@ impl Display for Fen {
                         _ => return false,
                     };
                     !range.into_iter().any(|x| {
-                        let x: usize = x.try_into().unwrap();
+                        let x: usize = x.into();
                         row[x] == Some(ColoredPieceKind::new(color, PieceKind::Rook))
                     })
                 } else {

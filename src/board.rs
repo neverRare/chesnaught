@@ -19,10 +19,10 @@ use crate::{
     coord::{
         CASTLING_KING_DESTINATION_KINGSIDE, CASTLING_KING_DESTINATION_QUEENSIDE,
         CASTLING_ROOK_DESTINATION_KINGSIDE, CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord,
-        KING_ORIGIN, ParseCoordError, ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE, ROOK_ORIGINS,
-        Vector, home_rank, pawn_home_rank, pawn_promotion_rank,
+        KING_ORIGIN, ParseCoordError, ROOK_ORIGINS, Vector, home_rank, pawn_home_rank,
+        pawn_promotion_rank,
     },
-    coord_x, coord_y,
+    coord_y,
     end_state::EndState,
     misc::InvalidByte,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},

@@ -8,7 +8,6 @@ use crate::{
     board::Piece,
     color::Color,
     coord::{ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE, home_rank},
-    coord_x,
     piece::PieceKind,
 };
 

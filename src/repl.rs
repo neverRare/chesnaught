@@ -7,7 +7,7 @@ use crate::{
     misc::strip_prefix_token,
 };
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     error::Error,
     fmt::{self, Display, Formatter, Write as _},
     io::{self, BufRead, Write},
