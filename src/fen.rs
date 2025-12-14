@@ -168,7 +168,7 @@ impl Display for Fen {
             })
         });
         if use_standard_castling {
-            write!(f, " {}", self.board.castling_right.standard_fen_display())?;
+            write!(f, " {}", self.board.castling_right.x_fen())?;
         } else {
             write!(f, " {}", self.board.castling_right)?;
         }
