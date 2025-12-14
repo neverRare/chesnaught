@@ -926,8 +926,8 @@ impl Board {
             let rook = self[movement.index].as_mut().unwrap();
             rook.position = movement.destination;
         }
-        self.en_passant_target = self.en_passant_target;
-        self.castling_right = self.castling_right;
+        self.en_passant_target = movement.en_passant_target;
+        self.castling_right = movement.castling_right;
         self.current_player = !self.current_player;
 
         self.indices = OnceCell::new();
