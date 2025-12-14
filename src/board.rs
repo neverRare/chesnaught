@@ -14,7 +14,7 @@ use std::{
 
 use crate::{
     board_display::IndexableBoard,
-    castling_right::CastlingRight,
+    castling_right::{self, CastlingRight},
     color::Color,
     coord::{Coord, ParseCoordError, Vector, home_rank, pawn_home_rank, pawn_promotion_rank},
     coord_x, coord_y,
@@ -1197,6 +1197,30 @@ pub struct Lan {
 }
 impl Lan {
     pub fn as_move(self, board: &Board) -> Move {
+        let index = board[self.origin].unwrap();
+        let piece = board[index].unwrap();
+        let capture = board[self.origin];
+
+        let (movement, castling_rook): (SimpleMove, Option<SimpleMove>) = if let Some(rook) =
+            capture
+            && board[rook].unwrap().piece
+                == ColoredPieceKind::new(piece.piece.color(), PieceKind::Rook)
+        {
+            todo!()
+        } else if piece.piece.piece() == PieceKind::King
+            && !(self.destination - self.origin).is_king_move()
+        {
+            todo!()
+        } else {
+            (
+                SimpleMove {
+                    index,
+                    destination: self.destination,
+                    capture,
+                },
+                None,
+            )
+        };
         todo!()
     }
 }
