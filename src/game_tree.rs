@@ -14,7 +14,7 @@ use crate::{
     board::{Board, Move},
     color::Color,
     end_state::EndState,
-    heuristics::{Advantage, estimate},
+    heuristics::{Advantage, Estimated, estimate},
 };
 
 #[derive(Debug, Clone)]
@@ -104,7 +104,11 @@ impl GameTree {
         beta: Advantage,
     ) {
         self.advantage = Some(if let GameTreeData::End(state) = self.data {
-            (None, Advantage::End(state))
+            let advantage = match state {
+                EndState::Win(color) => Advantage::Win(color),
+                EndState::Draw => Advantage::Estimated(Estimated::default()),
+            };
+            (None, advantage)
         } else if depth == 0 {
             scorer(self)
         } else {
