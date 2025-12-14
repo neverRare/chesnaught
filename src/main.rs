@@ -17,6 +17,7 @@ mod error;
 mod fen;
 mod game_tree;
 mod heuristics;
+mod misc;
 mod piece;
 mod repl;
 mod uci;

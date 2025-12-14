@@ -4,6 +4,7 @@ use crate::{
     color::Color,
     coord::Coord,
     fen::{Fen, ParseFenError},
+    misc::strip_prefix_token,
 };
 use std::{
     collections::HashMap,
@@ -82,8 +83,8 @@ impl FromStr for Input {
             "exit" => Ok(Input::Exit),
             "fen" => Ok(Input::ExportFen),
             s => {
-                if let Some(s) = s.strip_prefix("import ") {
-                    Ok(Input::Import(s.trim_start().parse()?))
+                if let Some(s) = strip_prefix_token(s, "import") {
+                    Ok(Input::Import(s.parse()?))
                 } else if let Ok(position) = s.parse() {
                     Ok(Input::Coord(position))
                 } else {

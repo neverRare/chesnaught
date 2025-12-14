@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     board::Lan,
-    fen::{Fen, ParseFenError},
+    fen::{Fen, ParseFenError}, misc::{extract_command, split_by_token, starts_with_token, strip_prefix_token},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -303,36 +303,5 @@ impl FromStr for Position {
                 extract_command(s).into(),
             ))
         }
-    }
-}
-fn strip_prefix_token_untrimmed<'a>(src: &'a str, search: &str) -> Option<&'a str> {
-    src.strip_prefix(search)
-        .filter(|src| src.chars().next().is_none_or(<char>::is_whitespace))
-}
-fn starts_with_token(src: &str, search: &str) -> bool {
-    strip_prefix_token_untrimmed(src, search).is_some()
-}
-fn strip_prefix_token<'a>(src: &'a str, search: &str) -> Option<&'a str> {
-    strip_prefix_token_untrimmed(src, search).map(<str>::trim_start)
-}
-fn find_token(src: &str, search: &str) -> Option<usize> {
-    src.match_indices(search).map(|(i, _)| i).find(|i| {
-        src[(i + search.len())..]
-            .chars()
-            .next()
-            .is_none_or(<char>::is_whitespace)
-            && src[..*i]
-                .chars()
-                .next_back()
-                .is_none_or(<char>::is_whitespace)
-    })
-}
-fn split_by_token<'a>(src: &'a str, search: &str) -> Option<(&'a str, &'a str)> {
-    find_token(src, search).map(|i| (src[..i].trim_end(), src[(i + search.len())..].trim_start()))
-}
-fn extract_command(src: &str) -> &str {
-    match src.find(<char>::is_whitespace) {
-        Some(i) => &src[..i],
-        None => src,
     }
 }
