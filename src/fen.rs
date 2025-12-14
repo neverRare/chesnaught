@@ -13,11 +13,10 @@ use crate::{
     castling_right::InvalidCastlingCharacter,
     color::{Color, ParseColorError},
     coord::{
-        CASTLING_KING_DESTINATION_KINGSIDE, CASTLING_ROOK_DESTINATION_KINGSIDE,
-        CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord, KING_ORIGIN, ParseCoordError,
-        ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE,
+        CASTLING_ROOK_DESTINATION_KINGSIDE, CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord,
+        KING_ORIGIN, ParseCoordError, ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE,
     },
-    coord_x, coord_y,
+    coord_y,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
 };
 
@@ -157,10 +156,10 @@ impl Display for Fen {
                 if king_in_position {
                     let range = match rook {
                         ROOK_ORIGIN_QUEENSIDE => {
-                            coord_x!("b")..=CASTLING_ROOK_DESTINATION_QUEENSIDE
+                            (ROOK_ORIGIN_QUEENSIDE + 1)..=CASTLING_ROOK_DESTINATION_QUEENSIDE
                         }
                         ROOK_ORIGIN_KINGSIDE => {
-                            CASTLING_ROOK_DESTINATION_KINGSIDE..=CASTLING_KING_DESTINATION_KINGSIDE
+                            CASTLING_ROOK_DESTINATION_KINGSIDE..=(ROOK_ORIGIN_KINGSIDE - 1)
                         }
                         _ => return false,
                     };
