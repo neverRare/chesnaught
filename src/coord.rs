@@ -206,15 +206,12 @@ impl Coord {
                 .contains(&self.y())
     }
     pub fn pawn_from_en_passant_target(self) -> Option<(Color, Self)> {
-        let color = match self.y() {
-            Coord::WHITE_EN_PASSANT_TARGET => Color::White,
-            Coord::BLACK_EN_PASSANT_TARGET => Color::Black,
-            _ => return None,
-        };
-        Some((
-            color,
-            self.move_by(Vector::pawn_single_move(color)).unwrap(),
-        ))
+        Coord::en_passant_target_color(self.y()).map(|color| {
+            (
+                color,
+                self.move_by(Vector::pawn_single_move(color)).unwrap(),
+            )
+        })
     }
     pub fn color(self) -> Color {
         match (self.x() + self.y()) % 2 {
