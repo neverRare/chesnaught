@@ -56,7 +56,7 @@ impl CastlingRight {
         }
     }
     pub fn get(self, color: Color, x: u8) -> bool {
-        debug_assert!(x < 8);
+        debug_assert!(x < 8, "{x} should be < 8");
         match (self.byte(color) >> x) & 0b_1 {
             0 => false,
             1 => true,
@@ -64,7 +64,7 @@ impl CastlingRight {
         }
     }
     pub fn add(&mut self, color: Color, x: u8) {
-        debug_assert!(x < 8);
+        debug_assert!(x < 8, "{x} should be < 8");
         let byte = self.byte_mut(color);
         *byte |= 0b_1 << x;
     }
@@ -74,7 +74,7 @@ impl CastlingRight {
         new
     }
     pub fn remove(&mut self, color: Color, x: u8) {
-        debug_assert!(x < 8);
+        debug_assert!(x < 8, "{x} should be < 8");
         let byte = self.byte_mut(color);
         *byte &= !(0b_1 << x);
     }

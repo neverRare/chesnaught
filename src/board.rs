@@ -845,7 +845,11 @@ impl Board {
         let king = self.king(self.current_player).unwrap();
         let mut attackers_iter = self.attackers(king.position, !self.current_player).fuse();
         let attackers = [attackers_iter.next(), attackers_iter.next()];
-        debug_assert_eq!(attackers_iter.next(), None);
+        debug_assert_eq!(
+            attackers_iter.next(),
+            None,
+            "more than 2 pieces checking the king"
+        );
         let check = attackers[0].is_some();
         let non_castling_moves = self
             .pieces_indexed(self.current_player)
@@ -938,10 +942,13 @@ impl Board {
         new.move_piece(movement);
         new
     }
-    pub fn move_assert(&mut self, movement: Lan) {
+    pub fn move_assert(&mut self, lan: Lan) {
         let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
-        let movement = movement.as_move(self);
-        assert!(valid_moves.contains(&movement));
+        let movement = lan.as_move(self);
+        assert!(
+            valid_moves.contains(&movement),
+            "`{lan}` is an invalid move"
+        );
         self.move_piece(&movement);
     }
     pub fn assert_piece_cant_move(&self, position: Coord) {
@@ -949,7 +956,8 @@ impl Board {
         assert!(
             !valid_moves
                 .into_iter()
-                .any(|movement| self[movement.movement.index].unwrap().position == position)
+                .any(|movement| self[movement.movement.index].unwrap().position == position),
+            "found valid move for piece in position {position}",
         );
     }
 }

@@ -96,8 +96,8 @@ impl Coord {
         }
     }
     pub fn new(x: u8, y: u8) -> Self {
-        debug_assert!(x < 8);
-        debug_assert!(y < 8);
+        debug_assert!(x < 8, "{x} should be < 8");
+        debug_assert!(y < 8, "{x} should be < 8");
         let byte = 0b1000_0000 | (x << 3) | y;
         Coord(NonZero::new(byte).unwrap())
     }
@@ -154,8 +154,12 @@ impl Coord {
         self.is_aligned(other, &Vector::QUEEN_DIRECTIONS)
     }
     pub fn line(self, direction: Vector, start: i8) -> impl Iterator<Item = Self> {
-        debug_assert_ne!(direction, Vector::ZERO);
-        debug_assert_eq!(direction, direction.as_unit());
+        debug_assert_ne!(direction, Vector::ZERO, "direction can't be zero");
+        debug_assert_eq!(
+            direction,
+            direction.as_unit(),
+            "{direction:?} is not a unit"
+        );
         (start..).map_while(move |difference| self.move_by(direction * difference))
     }
     pub fn line_inclusive(self, direction: Vector) -> impl Iterator<Item = Self> {
