@@ -1,0 +1,25 @@
+checkmate
+stalemate
+
+dead position:
+- lone king
+- one knight
+- bishops of the same color
+
+castling
+can't castle when pieces are blocked
+can't castle after king moved
+can't castle after rook moved
+can't castle after rook captured
+can't castle while checked
+can't castle through attacked squares
+can't castle into check
+chess960 edge case: king on e1, rook on b1, opponent's rook on a1, can't castle in this situation
+
+en passant
+lose of en passant right
+en passant edge cases: captured pawn is pinned
+
+king can't move to check
+absolute pins
+- if it's bishop to bishop, it can still move on the line and capture but not away from the line
