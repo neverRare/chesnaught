@@ -129,7 +129,7 @@ pub fn repl(
             first_time = false;
         }
         update = false;
-        write!(
+        writeln!(
             output,
             "{}",
             BoardDisplay {

@@ -35,6 +35,9 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut lines = self.info.lines().fuse();
         for y in 0..8 {
+            if y != 0 {
+                writeln!(f)?;
+            }
             let y = match self.view {
                 Color::White => y,
                 Color::Black => 7 - y,
@@ -66,9 +69,9 @@ where
             if let Some(line) = lines.next() {
                 write!(f, "{space}{line}")?;
             }
-            writeln!(f)?;
         }
         if self.show_coordinates {
+            writeln!(f)?;
             match self.view {
                 Color::White => write!(f, "a b c d e f g h")?,
                 Color::Black => write!(f, "h g f e d c b a")?,
@@ -76,7 +79,6 @@ where
             if let Some(line) = lines.next() {
                 write!(f, "    {line}")?;
             }
-            writeln!(f)?;
         }
         let spaces = if self.show_coordinates {
             "                   "
@@ -84,7 +86,8 @@ where
             "                 "
         };
         for line in lines {
-            writeln!(f, "{spaces}{line}")?;
+            writeln!(f)?;
+            write!(f, "{spaces}{line}")?;
         }
         Ok(())
     }
