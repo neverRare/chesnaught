@@ -85,7 +85,6 @@ impl<'a> Input<'a> {
         if starts_with_token(src, "uci") {
             Ok(Input::Uci)
         } else if let Some(src) = strip_prefix_token(src, "debug") {
-            let src = src.trim_start();
             if starts_with_token(src, "on") {
                 Ok(Input::Debug(true))
             } else if starts_with_token(src, "off") {
@@ -96,11 +95,9 @@ impl<'a> Input<'a> {
         } else if starts_with_token(src, "isready") {
             Ok(Input::IsReady)
         } else if let Some(src) = strip_prefix_token(src, "setoption") {
-            let src = src.trim_start();
             let Some(src) = strip_prefix_token(src, "name") else {
                 return Err(ParseInputError::NoName);
             };
-            let src = src.trim_start();
             let Some((name, value)) = split_by_token(src, "value") else {
                 return Ok(Input::SetOption {
                     name: src,
@@ -108,18 +105,17 @@ impl<'a> Input<'a> {
                 });
             };
             Ok(Input::SetOption {
-                name: name.trim_end(),
-                value: Some(value.trim_start()),
+                name,
+                value: Some(value),
             })
         } else if let Some(src) = strip_prefix_token(src, "register") {
-            Ok(Input::Register(src.trim_start()))
+            Ok(Input::Register(src))
         } else if starts_with_token(src, "ucinewgame") {
             Ok(Input::UciNewGame)
         } else if let Some(src) = strip_prefix_token(src, "position") {
-            let src = src.trim_start();
-            let (position, moves) = split_by_token(src, "moves").unwrap_or((src, ""));
-            let position = position.trim_end().parse()?;
-            let moves = &mut moves.trim_start();
+            let (position, mut moves) = split_by_token(src, "moves").unwrap_or((src, ""));
+            let position = position.parse()?;
+            let moves = &mut moves;
             let moves = from_fn(|| {
                 if moves.is_empty() {
                     None
@@ -296,9 +292,9 @@ impl FromStr for Position {
         if s == "startpos" {
             Ok(Position::StartPos)
         } else if let Some(src) = strip_prefix_token(s, "fen") {
-            Ok(Position::Fen(src.trim_start().parse()?))
+            Ok(Position::Fen(src.parse()?))
         } else if let Some(src) = strip_prefix_token(s, "startpos") {
-            match src.trim_start().chars().next() {
+            match src.chars().next() {
                 Some(c) => Err(ParsePositionError::Unexpected(c)),
                 None => Ok(Position::StartPos),
             }
@@ -309,12 +305,15 @@ impl FromStr for Position {
         }
     }
 }
-fn starts_with_token(src: &str, search: &str) -> bool {
-    strip_prefix_token(src, search).is_some()
-}
-fn strip_prefix_token<'a>(src: &'a str, search: &str) -> Option<&'a str> {
+fn strip_prefix_token_untrimmed<'a>(src: &'a str, search: &str) -> Option<&'a str> {
     src.strip_prefix(search)
         .filter(|src| src.chars().next().is_none_or(<char>::is_whitespace))
+}
+fn starts_with_token(src: &str, search: &str) -> bool {
+    strip_prefix_token_untrimmed(src, search).is_some()
+}
+fn strip_prefix_token<'a>(src: &'a str, search: &str) -> Option<&'a str> {
+    strip_prefix_token_untrimmed(src, search).map(<str>::trim_start)
 }
 fn find_token(src: &str, search: &str) -> Option<usize> {
     src.match_indices(search).map(|(i, _)| i).find(|i| {
@@ -329,7 +328,7 @@ fn find_token(src: &str, search: &str) -> Option<usize> {
     })
 }
 fn split_by_token<'a>(src: &'a str, search: &str) -> Option<(&'a str, &'a str)> {
-    find_token(src, search).map(|i| (&src[..i], &src[(i + search.len())..]))
+    find_token(src, search).map(|i| (src[..i].trim_end(), src[(i + search.len())..].trim_start()))
 }
 fn extract_command(src: &str) -> &str {
     match src.find(<char>::is_whitespace) {
