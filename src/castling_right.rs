@@ -101,7 +101,6 @@ impl CastlingRight {
         captured: Piece,
     ) {
         if captured.piece.piece() == PieceKind::Rook
-            && captured.piece.color() != current_player
             && captured.position.y() == home_rank(!current_player)
         {
             self.remove(!current_player, captured.position.x());
