@@ -8,19 +8,6 @@ use std::{
 
 use crate::{color::Color, coord_x, coord_y, misc::InvalidByte};
 
-pub const CASTLING_KING_DESTINATION_QUEENSIDE: u8 = coord_x!("c");
-pub const CASTLING_KING_DESTINATION_KINGSIDE: u8 = coord_x!("g");
-
-pub const CASTLING_ROOK_DESTINATION_QUEENSIDE: u8 = coord_x!("d");
-pub const CASTLING_ROOK_DESTINATION_KINGSIDE: u8 = coord_x!("f");
-
-pub const KING_ORIGIN: u8 = coord_x!("e");
-
-pub const ROOK_ORIGIN_QUEENSIDE: u8 = coord_x!("a");
-pub const ROOK_ORIGIN_KINGSIDE: u8 = coord_x!("h");
-
-pub const ROOK_ORIGINS: [u8; 2] = [ROOK_ORIGIN_QUEENSIDE, ROOK_ORIGIN_KINGSIDE];
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ParseCoordError {
     InvalidX(char),
@@ -56,6 +43,37 @@ impl Error for ParseCoordError {}
 pub struct Coord(NonZero<u8>);
 
 impl Coord {
+    pub const CASTLING_KING_DESTINATION_QUEENSIDE: u8 = coord_x!("c");
+    pub const CASTLING_KING_DESTINATION_KINGSIDE: u8 = coord_x!("g");
+
+    pub const CASTLING_ROOK_DESTINATION_QUEENSIDE: u8 = coord_x!("d");
+    pub const CASTLING_ROOK_DESTINATION_KINGSIDE: u8 = coord_x!("f");
+
+    pub const KING_ORIGIN: u8 = coord_x!("e");
+
+    pub const ROOK_ORIGIN_QUEENSIDE: u8 = coord_x!("a");
+    pub const ROOK_ORIGIN_KINGSIDE: u8 = coord_x!("h");
+
+    pub const ROOK_ORIGINS: [u8; 2] = [Coord::ROOK_ORIGIN_QUEENSIDE, Coord::ROOK_ORIGIN_KINGSIDE];
+
+    pub fn home_rank(color: Color) -> u8 {
+        match color {
+            Color::White => coord_y!("1"),
+            Color::Black => coord_y!("8"),
+        }
+    }
+    pub fn pawn_home_rank(color: Color) -> u8 {
+        match color {
+            Color::White => coord_y!("2"),
+            Color::Black => coord_y!("7"),
+        }
+    }
+    pub fn pawn_promotion_rank(color: Color) -> u8 {
+        match color {
+            Color::White => coord_y!("8"),
+            Color::Black => coord_y!("1"),
+        }
+    }
     pub fn new(x: u8, y: u8) -> Self {
         debug_assert!(x < 8);
         debug_assert!(y < 8);
@@ -172,24 +190,6 @@ impl Coord {
             1 => Color::Black,
             _ => unreachable!(),
         }
-    }
-}
-pub fn home_rank(color: Color) -> u8 {
-    match color {
-        Color::White => coord_y!("1"),
-        Color::Black => coord_y!("8"),
-    }
-}
-pub fn pawn_home_rank(color: Color) -> u8 {
-    match color {
-        Color::White => coord_y!("2"),
-        Color::Black => coord_y!("7"),
-    }
-}
-pub fn pawn_promotion_rank(color: Color) -> u8 {
-    match color {
-        Color::White => coord_y!("8"),
-        Color::Black => coord_y!("1"),
     }
 }
 impl Display for Coord {

@@ -16,12 +16,7 @@ use crate::{
     board_display::IndexableBoard,
     castling_right::CastlingRight,
     color::Color,
-    coord::{
-        CASTLING_KING_DESTINATION_KINGSIDE, CASTLING_KING_DESTINATION_QUEENSIDE,
-        CASTLING_ROOK_DESTINATION_KINGSIDE, CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord,
-        KING_ORIGIN, ParseCoordError, ROOK_ORIGINS, Vector, home_rank, pawn_home_rank,
-        pawn_promotion_rank,
-    },
+    coord::{Coord, ParseCoordError, Vector},
     coord_y,
     end_state::EndState,
     misc::InvalidByte,
@@ -172,7 +167,7 @@ impl Piece {
             .flat_map(move |direction| self.directional_moves(index, board, direction))
     }
     fn pawn_moves(self, index: PieceIndex, board: &Board) -> impl Iterator<Item = Move> {
-        let forward_jumps = if self.position.y() == pawn_home_rank(self.piece.color()) {
+        let forward_jumps = if self.position.y() == Coord::pawn_home_rank(self.piece.color()) {
             2
         } else {
             1
@@ -229,7 +224,7 @@ impl Piece {
             )
             .flat_map(move |movement| {
                 let promotion_choices: &'static [_] = if movement.movement.destination.y()
-                    == pawn_promotion_rank(self.piece.color())
+                    == Coord::pawn_promotion_rank(self.piece.color())
                 {
                     &[
                         Some(PieceKind::Queen),
@@ -261,7 +256,7 @@ impl Piece {
                     .map(|movement| movement.to_simple_move(board.castling_right)),
             ),
             PieceKind::Rook => {
-                let castling_right = if self.position.y() == home_rank(self.piece.color()) {
+                let castling_right = if self.position.y() == Coord::home_rank(self.piece.color()) {
                     board
                         .castling_right
                         .to_removed(self.piece.color(), self.position.x())
@@ -589,12 +584,12 @@ impl Board {
         }
         if ![Color::White, Color::Black].into_iter().all(|color| {
             let king = self.king(color).unwrap();
-            let king_on_home = king.position.y() == home_rank(color);
+            let king_on_home = king.position.y() == Coord::home_rank(color);
             self.castling_right.all(color).all(|x| {
                 king_on_home
                     && self
                         .get_with_kind_indexed(
-                            Coord::new(x, home_rank(color)),
+                            Coord::new(x, Coord::home_rank(color)),
                             color,
                             PieceKind::Rook,
                         )
@@ -770,7 +765,7 @@ impl Board {
             .filter_map(move |x| {
                 let (rook_index, rook) = self
                     .get_with_kind_indexed(
-                        Coord::new(x, home_rank(self.current_player)),
+                        Coord::new(x, Coord::home_rank(self.current_player)),
                         self.current_player,
                         PieceKind::Rook,
                     )
@@ -779,23 +774,23 @@ impl Board {
                     match Ord::cmp(&king.position.x(), &rook.position.x()) {
                         Ordering::Less => (
                             Coord::new(
-                                CASTLING_KING_DESTINATION_KINGSIDE,
-                                home_rank(self.current_player),
+                                Coord::CASTLING_KING_DESTINATION_KINGSIDE,
+                                Coord::home_rank(self.current_player),
                             ),
                             Coord::new(
-                                CASTLING_ROOK_DESTINATION_KINGSIDE,
-                                home_rank(self.current_player),
+                                Coord::CASTLING_ROOK_DESTINATION_KINGSIDE,
+                                Coord::home_rank(self.current_player),
                             ),
                         ),
                         Ordering::Equal => unreachable!(),
                         Ordering::Greater => (
                             Coord::new(
-                                CASTLING_KING_DESTINATION_QUEENSIDE,
-                                home_rank(self.current_player),
+                                Coord::CASTLING_KING_DESTINATION_QUEENSIDE,
+                                Coord::home_rank(self.current_player),
                             ),
                             Coord::new(
-                                CASTLING_ROOK_DESTINATION_QUEENSIDE,
-                                home_rank(self.current_player),
+                                Coord::CASTLING_ROOK_DESTINATION_QUEENSIDE,
+                                Coord::home_rank(self.current_player),
                             ),
                         ),
                     };
@@ -1131,8 +1126,8 @@ impl Move {
     pub fn as_lan_iter(self, board: &Board) -> impl Iterator<Item = Lan> {
         let (regular, chess960) = self.as_ambiguous_lan_pair(board);
         if let Some(chess960) = chess960
-            && regular.origin.x() == KING_ORIGIN
-            && ROOK_ORIGINS.contains(&chess960.destination.x())
+            && regular.origin.x() == Coord::KING_ORIGIN
+            && Coord::ROOK_ORIGINS.contains(&chess960.destination.x())
         {
             Some(regular).into_iter().chain(once(chess960))
         } else {
@@ -1142,8 +1137,8 @@ impl Move {
     pub fn as_lan(self, board: &Board) -> Lan {
         let (regular, chess960) = self.as_ambiguous_lan_pair(board);
         if let Some(chess960) = chess960
-            && regular.origin.x() == KING_ORIGIN
-            && ROOK_ORIGINS.contains(&chess960.destination.x())
+            && regular.origin.x() == Coord::KING_ORIGIN
+            && Coord::ROOK_ORIGINS.contains(&chess960.destination.x())
         {
             regular
         } else {
@@ -1217,13 +1212,13 @@ impl Lan {
             let (king_destination, rook_destination) =
                 match Ord::cmp(&self.origin.x(), &self.destination.x()) {
                     Ordering::Less => (
-                        CASTLING_KING_DESTINATION_KINGSIDE,
-                        CASTLING_ROOK_DESTINATION_KINGSIDE,
+                        Coord::CASTLING_KING_DESTINATION_KINGSIDE,
+                        Coord::CASTLING_ROOK_DESTINATION_KINGSIDE,
                     ),
                     Ordering::Equal => panic!("king and rook on the same file"),
                     Ordering::Greater => (
-                        CASTLING_KING_DESTINATION_QUEENSIDE,
-                        CASTLING_ROOK_DESTINATION_QUEENSIDE,
+                        Coord::CASTLING_KING_DESTINATION_QUEENSIDE,
+                        Coord::CASTLING_ROOK_DESTINATION_QUEENSIDE,
                     ),
                 };
             (
@@ -1243,11 +1238,12 @@ impl Lan {
             && !(self.destination - self.origin).is_king_move()
         {
             let (king_rook_ord, rook_destination) = match self.destination.x() {
-                CASTLING_KING_DESTINATION_QUEENSIDE => {
-                    (Ordering::Greater, CASTLING_ROOK_DESTINATION_QUEENSIDE)
-                }
-                CASTLING_KING_DESTINATION_KINGSIDE => {
-                    (Ordering::Less, CASTLING_ROOK_DESTINATION_KINGSIDE)
+                Coord::CASTLING_KING_DESTINATION_QUEENSIDE => (
+                    Ordering::Greater,
+                    Coord::CASTLING_ROOK_DESTINATION_QUEENSIDE,
+                ),
+                Coord::CASTLING_KING_DESTINATION_KINGSIDE => {
+                    (Ordering::Less, Coord::CASTLING_ROOK_DESTINATION_KINGSIDE)
                 }
                 _ => panic!(
                     "invalid king destination when castling: {}",
@@ -1278,7 +1274,7 @@ impl Lan {
             let castling_right = if piece.piece.piece() == PieceKind::King {
                 board.castling_right.to_cleared(piece.piece.color())
             } else if piece.piece.piece() == PieceKind::Rook
-                && self.origin.y() == home_rank(piece.piece.color())
+                && self.origin.y() == Coord::home_rank(piece.piece.color())
             {
                 board
                     .castling_right

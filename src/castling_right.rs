@@ -4,12 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{
-    board::Piece,
-    color::Color,
-    coord::{ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE, home_rank},
-    piece::PieceKind,
-};
+use crate::{board::Piece, color::Color, coord::Coord, piece::PieceKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InvalidCastlingCharacter(pub char);
@@ -102,7 +97,7 @@ impl CastlingRight {
     }
     pub fn remove_castling_right_for_rook_capture(&mut self, captured: Piece) {
         if captured.piece.piece() == PieceKind::Rook
-            && captured.position.y() == home_rank(captured.piece.color())
+            && captured.position.y() == Coord::home_rank(captured.piece.color())
         {
             self.remove(captured.piece.color(), captured.position.x());
         }
@@ -139,10 +134,10 @@ impl FromStr for CastlingRight {
         let mut castling_right = CastlingRight::none();
         for c in s.chars() {
             match c {
-                'Q' => castling_right.add(Color::White, ROOK_ORIGIN_QUEENSIDE),
-                'K' => castling_right.add(Color::White, ROOK_ORIGIN_KINGSIDE),
-                'q' => castling_right.add(Color::Black, ROOK_ORIGIN_QUEENSIDE),
-                'k' => castling_right.add(Color::Black, ROOK_ORIGIN_KINGSIDE),
+                'Q' => castling_right.add(Color::White, Coord::ROOK_ORIGIN_QUEENSIDE),
+                'K' => castling_right.add(Color::White, Coord::ROOK_ORIGIN_KINGSIDE),
+                'q' => castling_right.add(Color::Black, Coord::ROOK_ORIGIN_QUEENSIDE),
+                'k' => castling_right.add(Color::Black, Coord::ROOK_ORIGIN_KINGSIDE),
                 'A'..='H' => castling_right.add(Color::White, c as u8 - b'A'),
                 'a'..='h' => castling_right.add(Color::Black, c as u8 - b'a'),
                 '-' => (),
@@ -171,10 +166,10 @@ impl Display for StandardCastlingRight {
         for color in [Color::White, Color::Black] {
             for x in self.0.all(color) {
                 let c = match (color, x) {
-                    (Color::White, ROOK_ORIGIN_QUEENSIDE) => 'Q',
-                    (Color::White, ROOK_ORIGIN_KINGSIDE) => 'K',
-                    (Color::Black, ROOK_ORIGIN_QUEENSIDE) => 'q',
-                    (Color::Black, ROOK_ORIGIN_KINGSIDE) => 'k',
+                    (Color::White, Coord::ROOK_ORIGIN_QUEENSIDE) => 'Q',
+                    (Color::White, Coord::ROOK_ORIGIN_KINGSIDE) => 'K',
+                    (Color::Black, Coord::ROOK_ORIGIN_QUEENSIDE) => 'q',
+                    (Color::Black, Coord::ROOK_ORIGIN_KINGSIDE) => 'k',
                     (color, x) => {
                         let start = match color {
                             Color::White => b'A',

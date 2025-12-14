@@ -12,10 +12,7 @@ use crate::{
     board_display::IndexableBoard,
     castling_right::InvalidCastlingCharacter,
     color::{Color, ParseColorError},
-    coord::{
-        CASTLING_ROOK_DESTINATION_KINGSIDE, CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord,
-        KING_ORIGIN, ParseCoordError, ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE, home_rank,
-    },
+    coord::{Coord, ParseCoordError},
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
 };
 
@@ -143,19 +140,21 @@ impl Display for Fen {
         }
         write!(f, " {}", self.board.current_player.lowercase())?;
         let use_standard_castling = [Color::White, Color::Black].into_iter().all(|color| {
-            let row = self.board.board[home_rank(color) as usize];
+            let row = self.board.board[Coord::home_rank(color) as usize];
             let king_in_position = row
                 .into_iter()
                 .position(|piece| piece == Some(ColoredPieceKind::new(color, PieceKind::King)))
-                == Some(KING_ORIGIN as usize);
+                == Some(Coord::KING_ORIGIN as usize);
             self.board.castling_right.all(color).all(|rook| {
                 if king_in_position {
                     let range = match rook {
-                        ROOK_ORIGIN_QUEENSIDE => {
-                            (ROOK_ORIGIN_QUEENSIDE + 1)..=CASTLING_ROOK_DESTINATION_QUEENSIDE
+                        Coord::ROOK_ORIGIN_QUEENSIDE => {
+                            (Coord::ROOK_ORIGIN_QUEENSIDE + 1)
+                                ..=Coord::CASTLING_ROOK_DESTINATION_QUEENSIDE
                         }
-                        ROOK_ORIGIN_KINGSIDE => {
-                            CASTLING_ROOK_DESTINATION_KINGSIDE..=(ROOK_ORIGIN_KINGSIDE - 1)
+                        Coord::ROOK_ORIGIN_KINGSIDE => {
+                            Coord::CASTLING_ROOK_DESTINATION_KINGSIDE
+                                ..=(Coord::ROOK_ORIGIN_KINGSIDE - 1)
                         }
                         _ => return false,
                     };
