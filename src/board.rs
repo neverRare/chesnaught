@@ -1283,12 +1283,13 @@ impl Lan {
             let capture = if board.en_passant_target == Some(self.destination) {
                 let pawn = self
                     .destination
-                    .move_by(-Vector::pawn_single_move(!piece.piece.color()))
+                    .move_by(Vector::pawn_single_move(!piece.piece.color()))
                     .unwrap();
-                let (capture, _) = board
-                    .get_with_kind_indexed(pawn, !piece.piece.color(), PieceKind::Pawn)
-                    .unwrap();
-                Some(capture)
+                Some(
+                    board
+                        .get_index_with_kind(pawn, !piece.piece.color(), PieceKind::Pawn)
+                        .unwrap(),
+                )
             } else {
                 capture
             };
