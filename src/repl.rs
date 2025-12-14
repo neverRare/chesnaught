@@ -7,7 +7,7 @@ use crate::{
     misc::strip_prefix_token,
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     error::Error,
     fmt::{self, Display, Formatter, Write as _},
     io::{self, BufRead, Write},
@@ -106,7 +106,7 @@ pub fn repl(
     let mut board = Board::starting_position();
     let mut info = String::new();
     let mut highlighted = Vec::new();
-    let mut valid_moves = HashMap::new();
+    let mut valid_moves = HashSet::new();
     let mut update = true;
     let mut view = Color::White;
     let mut first_time = true;
@@ -116,9 +116,7 @@ pub fn repl(
             info.clear();
             match board.valid_moves() {
                 Ok(moves) => {
-                    valid_moves.extend(moves.flat_map(|movement| {
-                        movement.as_lan_iter(&board).map(move |lan| (lan, movement))
-                    }));
+                    valid_moves.extend(moves.flat_map(|movement| movement.as_lan_iter(&board)));
                     writeln!(&mut info, "{} plays", board.current_player()).unwrap();
                 }
                 Err(end_state) => {
@@ -202,7 +200,7 @@ pub fn repl(
                     highlighted.clear();
                     highlighted.extend(
                         valid_moves
-                            .keys()
+                            .iter()
                             .copied()
                             .filter(|movement| movement.origin == position)
                             .map(|movement| movement.destination),
