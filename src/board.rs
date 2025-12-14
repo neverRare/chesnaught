@@ -933,16 +933,24 @@ impl Board {
             self.validate().unwrap();
         }
     }
+    pub fn clone_and_move(&self, movement: &impl Moveable) -> Self {
+        let mut new = self.clone();
+        new.move_piece(movement);
+        new
+    }
     pub fn move_assert(&mut self, movement: Lan) {
         let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
         let movement = movement.as_move(self);
         assert!(valid_moves.contains(&movement));
         self.move_piece(&movement);
     }
-    pub fn clone_and_move(&self, movement: &impl Moveable) -> Self {
-        let mut new = self.clone();
-        new.move_piece(movement);
-        new
+    pub fn assert_piece_cant_move(&self, position: Coord) {
+        let valid_moves: Vec<_> = self.valid_moves().into_iter().flatten().collect();
+        assert!(
+            !valid_moves
+                .into_iter()
+                .any(|movement| self[movement.movement.index].unwrap().position == position)
+        );
     }
 }
 impl Index<Coord> for Board {
@@ -1422,15 +1430,6 @@ mod test {
     fn pin() {
         let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
         let board: Board = board.board.try_into().unwrap();
-        let valid_moves: Vec<_> = board
-            .valid_moves()
-            .unwrap()
-            .flat_map(|movement| movement.as_lan_iter(&board))
-            .collect();
-        assert!(
-            !valid_moves
-                .iter()
-                .any(|movement| movement.origin == coord!("e2"))
-        );
+        board.assert_piece_cant_move(coord!("e2"));
     }
 }
