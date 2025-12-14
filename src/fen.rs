@@ -12,7 +12,11 @@ use crate::{
     board_display::IndexableBoard,
     castling_right::InvalidCastlingCharacter,
     color::{Color, ParseColorError},
-    coord::{Coord, ParseCoordError},
+    coord::{
+        CASTLING_KING_DESTINATION_KINGSIDE, CASTLING_ROOK_DESTINATION_KINGSIDE,
+        CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord, ParseCoordError, KING_ORIGIN,
+        ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE,
+    },
     coord_x, coord_y,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
 };
@@ -148,12 +152,16 @@ impl Display for Fen {
             let king_in_position = row
                 .into_iter()
                 .position(|piece| piece == Some(ColoredPieceKind::new(color, PieceKind::King)))
-                == Some(coord_x!("e"));
+                == Some(KING_ORIGIN as usize);
             self.board.castling_right.all(color).all(|rook| {
                 if king_in_position {
                     let range = match rook {
-                        coord_x!("a") => coord_x!("b")..=coord_x!("d"),
-                        coord_x!("h") => coord_x!("f")..=coord_x!("g"),
+                        ROOK_ORIGIN_QUEENSIDE => {
+                            coord_x!("b")..=CASTLING_ROOK_DESTINATION_QUEENSIDE
+                        }
+                        ROOK_ORIGIN_KINGSIDE => {
+                            CASTLING_ROOK_DESTINATION_KINGSIDE..=CASTLING_KING_DESTINATION_KINGSIDE
+                        }
                         _ => return false,
                     };
                     !range.into_iter().any(|x| {

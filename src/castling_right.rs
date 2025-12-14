@@ -4,7 +4,13 @@ use std::{
     str::FromStr,
 };
 
-use crate::{board::Piece, color::Color, coord::home_rank, coord_x, piece::PieceKind};
+use crate::{
+    board::Piece,
+    color::Color,
+    coord::{ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE, home_rank},
+    coord_x,
+    piece::PieceKind,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InvalidCastlingCharacter(pub char);
@@ -134,10 +140,10 @@ impl FromStr for CastlingRight {
         let mut castling_right = CastlingRight::none();
         for c in s.chars() {
             match c {
-                'Q' => castling_right.add(Color::White, coord_x!("a")),
-                'K' => castling_right.add(Color::White, coord_x!("h")),
-                'q' => castling_right.add(Color::Black, coord_x!("a")),
-                'k' => castling_right.add(Color::Black, coord_x!("h")),
+                'Q' => castling_right.add(Color::White, ROOK_ORIGIN_QUEENSIDE),
+                'K' => castling_right.add(Color::White, ROOK_ORIGIN_KINGSIDE),
+                'q' => castling_right.add(Color::Black, ROOK_ORIGIN_QUEENSIDE),
+                'k' => castling_right.add(Color::Black, ROOK_ORIGIN_KINGSIDE),
                 'A'..='H' => castling_right.add(Color::White, c as u8 - b'A'),
                 'a'..='h' => castling_right.add(Color::Black, c as u8 - b'a'),
                 '-' => (),
@@ -166,10 +172,10 @@ impl Display for StandardCastlingRight {
         for color in [Color::White, Color::Black] {
             for x in self.0.all(color) {
                 let c = match (color, x) {
-                    (Color::White, coord_x!("a")) => 'Q',
-                    (Color::White, coord_x!("h")) => 'K',
-                    (Color::Black, coord_x!("a")) => 'q',
-                    (Color::Black, coord_x!("h")) => 'k',
+                    (Color::White, ROOK_ORIGIN_QUEENSIDE) => 'Q',
+                    (Color::White, ROOK_ORIGIN_KINGSIDE) => 'K',
+                    (Color::Black, ROOK_ORIGIN_QUEENSIDE) => 'q',
+                    (Color::Black, ROOK_ORIGIN_KINGSIDE) => 'k',
                     (color, x) => {
                         let start = match color {
                             Color::White => b'A',

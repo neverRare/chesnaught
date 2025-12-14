@@ -6,7 +6,20 @@ use std::{
     str::FromStr,
 };
 
-use crate::{color::Color, coord_y, misc::InvalidByte};
+use crate::{color::Color, coord_x, coord_y, misc::InvalidByte};
+
+pub const CASTLING_KING_DESTINATION_QUEENSIDE: u8 = coord_x!("c");
+pub const CASTLING_KING_DESTINATION_KINGSIDE: u8 = coord_x!("g");
+
+pub const CASTLING_ROOK_DESTINATION_QUEENSIDE: u8 = coord_x!("d");
+pub const CASTLING_ROOK_DESTINATION_KINGSIDE: u8 = coord_x!("f");
+
+pub const KING_ORIGIN: u8 = coord_x!("e");
+
+pub const ROOK_ORIGIN_QUEENSIDE: u8 = coord_x!("a");
+pub const ROOK_ORIGIN_KINGSIDE: u8 = coord_x!("h");
+
+pub const ROOK_ORIGINS: [u8; 2] = [ROOK_ORIGIN_QUEENSIDE, ROOK_ORIGIN_KINGSIDE];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ParseCoordError {

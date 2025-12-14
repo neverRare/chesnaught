@@ -16,7 +16,12 @@ use crate::{
     board_display::IndexableBoard,
     castling_right::CastlingRight,
     color::Color,
-    coord::{Coord, ParseCoordError, Vector, home_rank, pawn_home_rank, pawn_promotion_rank},
+    coord::{
+        CASTLING_KING_DESTINATION_KINGSIDE, CASTLING_KING_DESTINATION_QUEENSIDE,
+        CASTLING_ROOK_DESTINATION_KINGSIDE, CASTLING_ROOK_DESTINATION_QUEENSIDE, Coord,
+        KING_ORIGIN, ParseCoordError, ROOK_ORIGIN_KINGSIDE, ROOK_ORIGIN_QUEENSIDE, ROOK_ORIGINS,
+        Vector, home_rank, pawn_home_rank, pawn_promotion_rank,
+    },
     coord_x, coord_y,
     end_state::EndState,
     misc::InvalidByte,
@@ -773,13 +778,25 @@ impl Board {
                 let (king_destination, rook_destination) =
                     match Ord::cmp(&king.position.x(), &rook.position.x()) {
                         Ordering::Less => (
-                            Coord::new(coord_x!("g"), home_rank(self.current_player)),
-                            Coord::new(coord_x!("f"), home_rank(self.current_player)),
+                            Coord::new(
+                                CASTLING_KING_DESTINATION_KINGSIDE,
+                                home_rank(self.current_player),
+                            ),
+                            Coord::new(
+                                CASTLING_ROOK_DESTINATION_KINGSIDE,
+                                home_rank(self.current_player),
+                            ),
                         ),
                         Ordering::Equal => unreachable!(),
                         Ordering::Greater => (
-                            Coord::new(coord_x!("c"), home_rank(self.current_player)),
-                            Coord::new(coord_x!("d"), home_rank(self.current_player)),
+                            Coord::new(
+                                CASTLING_KING_DESTINATION_QUEENSIDE,
+                                home_rank(self.current_player),
+                            ),
+                            Coord::new(
+                                CASTLING_ROOK_DESTINATION_QUEENSIDE,
+                                home_rank(self.current_player),
+                            ),
                         ),
                     };
                 [
@@ -1114,8 +1131,8 @@ impl Move {
     pub fn as_lan_iter(self, board: &Board) -> impl Iterator<Item = Lan> {
         let (regular, chess960) = self.as_ambiguous_lan_pair(board);
         if let Some(chess960) = chess960
-            && regular.origin.x() == coord_x!("e")
-            && matches!(chess960.destination.x(), coord_x!("a") | coord_x!("h"))
+            && regular.origin.x() == KING_ORIGIN
+            && ROOK_ORIGINS.contains(&chess960.destination.x())
         {
             Some(regular).into_iter().chain(once(chess960))
         } else {
@@ -1125,8 +1142,8 @@ impl Move {
     pub fn as_lan(self, board: &Board) -> Lan {
         let (regular, chess960) = self.as_ambiguous_lan_pair(board);
         if let Some(chess960) = chess960
-            && regular.origin.x() == coord_x!("e")
-            && matches!(chess960.destination.x(), coord_x!("a") | coord_x!("h"))
+            && regular.origin.x() == KING_ORIGIN
+            && ROOK_ORIGINS.contains(&chess960.destination.x())
         {
             regular
         } else {
@@ -1199,9 +1216,15 @@ impl Lan {
         {
             let (king_destination, rook_destination) =
                 match Ord::cmp(&self.origin.x(), &self.destination.x()) {
-                    Ordering::Less => (coord_x!("g"), coord_x!("f")),
+                    Ordering::Less => (
+                        CASTLING_KING_DESTINATION_KINGSIDE,
+                        CASTLING_ROOK_DESTINATION_KINGSIDE,
+                    ),
                     Ordering::Equal => panic!("king and rook on the same file"),
-                    Ordering::Greater => (coord_x!("c"), coord_x!("d")),
+                    Ordering::Greater => (
+                        CASTLING_KING_DESTINATION_QUEENSIDE,
+                        CASTLING_ROOK_DESTINATION_QUEENSIDE,
+                    ),
                 };
             (
                 SimpleMove {
@@ -1220,8 +1243,12 @@ impl Lan {
             && !(self.destination - self.origin).is_king_move()
         {
             let (king_rook_ord, rook_destination) = match self.destination.x() {
-                coord_x!("c") => (Ordering::Greater, coord_x!("d")),
-                coord_x!("g") => (Ordering::Less, coord_x!("f")),
+                CASTLING_KING_DESTINATION_QUEENSIDE => {
+                    (Ordering::Greater, CASTLING_ROOK_DESTINATION_QUEENSIDE)
+                }
+                CASTLING_KING_DESTINATION_KINGSIDE => {
+                    (Ordering::Less, CASTLING_ROOK_DESTINATION_KINGSIDE)
+                }
                 _ => panic!(
                     "invalid king destination when castling: {}",
                     self.destination
