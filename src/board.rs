@@ -869,7 +869,7 @@ impl Board {
                 if piece.piece() == PieceKind::King {
                     !self.is_move_attacked(
                         &[movement.movement.index],
-                        piece.position,
+                        movement.movement.destination,
                         !self.current_player,
                     )
                 } else {
