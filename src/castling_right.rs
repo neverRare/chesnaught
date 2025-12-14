@@ -43,13 +43,21 @@ impl CastlingRight {
     pub fn all(self, color: Color) -> impl Iterator<Item = u8> {
         (0..8).filter(move |x| self.get(color, *x))
     }
-    pub fn get(self, color: Color, x: u8) -> bool {
-        debug_assert!(x < 8);
-        let byte = match color {
+    fn byte(self, color: Color) -> u8 {
+        match color {
             Color::White => self.white,
             Color::Black => self.black,
-        };
-        match (byte >> x) & 0b_1 {
+        }
+    }
+    fn byte_mut(&mut self, color: Color) -> &mut u8 {
+        match color {
+            Color::White => &mut self.white,
+            Color::Black => &mut self.black,
+        }
+    }
+    pub fn get(self, color: Color, x: u8) -> bool {
+        debug_assert!(x < 8);
+        match (self.byte(color) >> x) & 0b_1 {
             0 => false,
             1 => true,
             _ => unreachable!(),
@@ -57,10 +65,7 @@ impl CastlingRight {
     }
     pub fn add(&mut self, color: Color, x: u8) {
         debug_assert!(x < 8);
-        let byte = match color {
-            Color::White => &mut self.white,
-            Color::Black => &mut self.black,
-        };
+        let byte = self.byte_mut(color);
         *byte |= 0b_1 << x;
     }
     pub fn to_added(self, color: Color, x: u8) -> Self {
@@ -70,10 +75,7 @@ impl CastlingRight {
     }
     pub fn remove(&mut self, color: Color, x: u8) {
         debug_assert!(x < 8);
-        let byte = match color {
-            Color::White => &mut self.white,
-            Color::Black => &mut self.black,
-        };
+        let byte = self.byte_mut(color);
         *byte &= !(0b_1 << x);
     }
     pub fn to_removed(self, color: Color, x: u8) -> Self {
@@ -82,10 +84,8 @@ impl CastlingRight {
         new
     }
     pub fn clear(&mut self, color: Color) {
-        match color {
-            Color::White => self.white = 0,
-            Color::Black => self.black = 0,
-        }
+        let byte = self.byte_mut(color);
+        *byte = 0;
     }
     pub fn to_cleared(self, color: Color) -> Self {
         let mut new = self;
