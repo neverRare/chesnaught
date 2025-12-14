@@ -101,15 +101,15 @@ impl<'a> Input<'a> {
                 return Err(ParseInputError::NoName);
             };
             let src = src.trim_start();
-            let Some(i) = find_token(src, "value") else {
+            let Some((name, value)) = split_by_token(src, "value") else {
                 return Ok(Input::SetOption {
                     name: src,
                     value: None,
                 });
             };
             Ok(Input::SetOption {
-                name: src[..i].trim_end(),
-                value: Some(src[(i + 5)..].trim_start()),
+                name: name.trim_end(),
+                value: Some(value.trim_start()),
             })
         } else if let Some(src) = strip_prefix_token(src, "register") {
             Ok(Input::Register(src.trim_start()))
@@ -117,22 +117,17 @@ impl<'a> Input<'a> {
             Ok(Input::UciNewGame)
         } else if let Some(src) = strip_prefix_token(src, "position") {
             let src = src.trim_start();
-            let (move_start, move_end) = match find_token(src, "moves") {
-                Some(i) => (i, i + 5),
-                None => (src.len(), src.len()),
-            };
-            let position = src[..move_start].trim_end().parse()?;
-            let move_src = &mut src[move_end..].trim_start();
+            let (position, moves) = split_by_token(src, "moves").unwrap_or((src, ""));
+            let position = position.trim_end().parse()?;
+            let moves = &mut moves.trim_start();
             let moves = from_fn(|| {
-                if move_src.is_empty() {
+                if moves.is_empty() {
                     None
                 } else {
-                    let index = move_src
-                        .find(<char>::is_whitespace)
-                        .unwrap_or(move_src.len());
-                    src[..index].parse().ok().inspect(|_| {
-                        *move_src = move_src[index..].trim_start();
-                    })
+                    let index = moves.find(<char>::is_whitespace).unwrap_or(moves.len());
+                    let (movement, rest) = src.split_at(index);
+                    *moves = rest.trim_start();
+                    movement.parse().ok()
                 }
             })
             .collect();
@@ -332,6 +327,9 @@ fn find_token(src: &str, search: &str) -> Option<usize> {
                 .next_back()
                 .is_none_or(<char>::is_whitespace)
     })
+}
+fn split_by_token<'a>(src: &'a str, search: &str) -> Option<(&'a str, &'a str)> {
+    find_token(src, search).map(|i| (&src[..i], &src[(i + search.len())..]))
 }
 fn extract_command(src: &str) -> &str {
     match src.find(<char>::is_whitespace) {
