@@ -819,7 +819,7 @@ impl Board {
                                 && (piece != PieceKind::King
                                     || !self.is_move_attacked(
                                         &[king_index, rook_index],
-                                        destination,
+                                        position,
                                         !self.current_player,
                                     ))
                         })
