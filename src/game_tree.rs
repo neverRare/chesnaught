@@ -80,8 +80,8 @@ impl GameTree {
             GameTreeData::End(_) => None,
         }
     }
-    fn board_and_children(&mut self) -> Option<(HashableBoard, &mut Vec<MoveTreePair>)> {
-        let board = match &mut self.data {
+    fn children(&mut self) -> Option<&mut Vec<MoveTreePair>> {
+        match &mut self.data {
             GameTreeData::Board(board) => {
                 let board = Board::clone(board);
                 let hashable = board.as_hashable();
@@ -100,15 +100,14 @@ impl GameTree {
                         })
                         .collect(),
                 };
-                hashable
             }
-            GameTreeData::Children { board, .. } => **board,
+            GameTreeData::Children { .. } => (),
             GameTreeData::End(_) => return None,
-        };
+        }
         let GameTreeData::Children { children, .. } = &mut self.data else {
             unreachable!()
         };
-        Some((board, children))
+        Some(children)
     }
     fn current_player(&self) -> Option<Color> {
         match &self.data {
@@ -131,59 +130,62 @@ impl GameTree {
                 EndState::Draw => Advantage::Estimated(Estimated::default()),
             };
             self.advantage = Some((None, advantage));
-        } else if let Some(advantage) = transposition_table.get(&self.board().unwrap()) {
-            self.advantage = Some(*advantage);
-        } else if depth == 0 {
-            self.advantage = Some(scorer(self));
         } else {
-            let current_player = self.current_player().unwrap();
-            let (board, children) = self.board_and_children().unwrap();
+            let board = self.board().unwrap();
+            if let Some(advantage) = transposition_table.get(&board) {
+                self.advantage = Some(*advantage);
+                return;
+            } else if depth == 0 {
+                self.advantage = Some(scorer(self));
+            } else {
+                let current_player = self.current_player().unwrap();
+                let children = self.children().unwrap();
 
-            let mut alpha = alpha;
-            let mut beta = beta;
-            let mut best_movement = None;
-            let mut best_score = match current_player {
-                Color::White => Advantage::BLACK_WINS,
-                Color::Black => Advantage::WHITE_WINS,
-            };
-            for (movement, _, game_tree) in children.iter_mut() {
-                game_tree.alpha_beta(depth - 1, scorer, alpha, beta, transposition_table);
-                let score = game_tree.advantage.unwrap().1;
-                match current_player {
-                    Color::White => {
-                        if score > best_score {
-                            best_score = score;
-                            best_movement = Some(*movement);
+                let mut alpha = alpha;
+                let mut beta = beta;
+                let mut best_movement = None;
+                let mut best_score = match current_player {
+                    Color::White => Advantage::BLACK_WINS,
+                    Color::Black => Advantage::WHITE_WINS,
+                };
+                for (movement, _, game_tree) in children.iter_mut() {
+                    game_tree.alpha_beta(depth - 1, scorer, alpha, beta, transposition_table);
+                    let score = game_tree.advantage.unwrap().1;
+                    match current_player {
+                        Color::White => {
+                            if score > best_score {
+                                best_score = score;
+                                best_movement = Some(*movement);
+                            }
+                            if best_score >= beta {
+                                break;
+                            }
+                            alpha = Ord::max(alpha, best_score);
                         }
-                        if best_score >= beta {
-                            break;
+                        Color::Black => {
+                            if score < best_score {
+                                best_score = score;
+                                best_movement = Some(*movement);
+                            }
+                            if best_score <= alpha {
+                                break;
+                            }
+                            beta = Ord::min(beta, best_score);
                         }
-                        alpha = Ord::max(alpha, best_score);
-                    }
-                    Color::Black => {
-                        if score < best_score {
-                            best_score = score;
-                            best_movement = Some(*movement);
-                        }
-                        if best_score <= alpha {
-                            break;
-                        }
-                        beta = Ord::min(beta, best_score);
                     }
                 }
+                children.sort_unstable_by(|a, b| match (a.2.advantage, b.2.advantage) {
+                    (None, None) => Ordering::Equal,
+                    (None, Some(_)) => Ordering::Less,
+                    (Some(_), None) => Ordering::Greater,
+                    (Some((_, a)), Some((_, b))) => match current_player {
+                        Color::White => Ord::cmp(&b, &a),
+                        Color::Black => Ord::cmp(&a, &b),
+                    },
+                });
+                self.advantage = Some((best_movement, best_score));
             }
-            children.sort_unstable_by(|a, b| match (a.2.advantage, b.2.advantage) {
-                (None, None) => Ordering::Equal,
-                (None, Some(_)) => Ordering::Less,
-                (Some(_), None) => Ordering::Greater,
-                (Some((_, a)), Some((_, b))) => match current_player {
-                    Color::White => Ord::cmp(&b, &a),
-                    Color::Black => Ord::cmp(&a, &b),
-                },
-            });
-            let advantage = (best_movement, best_score);
-            transposition_table.insert(board, advantage);
-            self.advantage = Some(advantage);
+            transposition_table.insert(board, self.advantage.unwrap());
         }
     }
     fn estimate(&self) -> (Option<Lan>, Advantage) {
