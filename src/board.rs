@@ -968,6 +968,14 @@ impl Board {
             "found valid move for piece in position {position}",
         );
     }
+    pub fn assert_move_is_valid(&self, lan: Lan) {
+        let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
+        let movement = lan.as_move(self);
+        assert!(
+            valid_moves.contains(&movement),
+            "`{lan}` is an invalid move"
+        );
+    }
     pub fn assert_move_is_invalid(&self, lan: Lan) {
         let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
         let movement = lan.as_move(self);
@@ -1499,6 +1507,23 @@ mod test {
                 full_move: 1,
             },
             "r3k2r/8/8/8/8/8/8/R4RK1 b - - 0 1".parse().unwrap()
+        );
+    }
+    #[test]
+    fn cant_castle_after_rook_captured() {
+        let board: Fen = "r3k2r/8/6N1/8/8/8/8/4K3 w kq - 0 1".parse().unwrap();
+        let mut board: Board = board.board.try_into().unwrap();
+        board.move_assert("g6h8".parse().unwrap());
+        board.assert_move_is_invalid("e8g8".parse().unwrap());
+        board.assert_move_is_valid("e8c8".parse().unwrap());
+
+        assert_eq!(
+            Fen {
+                board: board.as_hashable(),
+                half_move: 0,
+                full_move: 1,
+            },
+            "r3k2N/8/8/8/8/8/8/4K3 b q - 0 1".parse().unwrap()
         );
     }
     #[test]
