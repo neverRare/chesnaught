@@ -140,38 +140,13 @@ impl GameTree {
             } else {
                 let current_player = self.current_player().unwrap();
                 let children = self.children().unwrap();
+                let mut alpha_beta = AlphaBetaState::new(current_player, alpha, beta);
 
-                let mut alpha = alpha;
-                let mut beta = beta;
-                let mut best_movement = None;
-                let mut best_score = match current_player {
-                    Color::White => Advantage::BLACK_WINS,
-                    Color::Black => Advantage::WHITE_WINS,
-                };
                 for (movement, _, game_tree) in children.iter_mut() {
                     game_tree.alpha_beta(depth - 1, scorer, alpha, beta, transposition_table);
                     let score = game_tree.advantage.unwrap().1;
-                    match current_player {
-                        Color::White => {
-                            if score > best_score {
-                                best_score = score;
-                                best_movement = Some(*movement);
-                            }
-                            if best_score >= beta {
-                                break;
-                            }
-                            alpha = Ord::max(alpha, best_score);
-                        }
-                        Color::Black => {
-                            if score < best_score {
-                                best_score = score;
-                                best_movement = Some(*movement);
-                            }
-                            if best_score <= alpha {
-                                break;
-                            }
-                            beta = Ord::min(beta, best_score);
-                        }
+                    if alpha_beta.set(*movement, score) {
+                        break;
                     }
                 }
                 children.sort_unstable_by(|a, b| match (a.2.advantage, b.2.advantage) {
@@ -183,7 +158,7 @@ impl GameTree {
                         Color::Black => Ord::cmp(&a, &b),
                     },
                 });
-                self.advantage = Some((best_movement, best_score));
+                self.advantage = Some((alpha_beta.best_move, alpha_beta.best_score));
             }
             transposition_table.insert(board, self.advantage.unwrap());
         }
@@ -223,9 +198,49 @@ impl GameTree {
     }
 }
 struct AlphaBetaState {
-    player: Color,
+    current_player: Color,
     alpha: Advantage,
     beta: Advantage,
     best_move: Option<Lan>,
     best_score: Advantage,
+}
+impl AlphaBetaState {
+    fn new(current_player: Color, alpha: Advantage, beta: Advantage) -> Self {
+        AlphaBetaState {
+            current_player,
+            alpha,
+            beta,
+            best_move: None,
+            best_score: match current_player {
+                Color::White => Advantage::BLACK_WINS,
+                Color::Black => Advantage::WHITE_WINS,
+            },
+        }
+    }
+    fn set(&mut self, movement: Lan, score: Advantage) -> bool {
+        match self.current_player {
+            Color::White => {
+                if score > self.best_score {
+                    self.best_score = score;
+                    self.best_move = Some(movement);
+                }
+                if self.best_score >= self.beta {
+                    return true;
+                }
+                self.alpha = Ord::max(self.alpha, self.best_score);
+                false
+            }
+            Color::Black => {
+                if score < self.best_score {
+                    self.best_score = score;
+                    self.best_move = Some(movement);
+                }
+                if self.best_score <= self.alpha {
+                    return true;
+                }
+                self.beta = Ord::min(self.beta, self.best_score);
+                false
+            }
+        }
+    }
 }
