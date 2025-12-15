@@ -17,7 +17,6 @@ use crate::{
     castling_right::CastlingRight,
     color::Color,
     coord::{Coord, ParseCoordError, Vector},
-    coord_x,
     end_state::EndState,
     misc::InvalidByte,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
@@ -1083,12 +1082,12 @@ impl HashableBoard {
                 for x in self.castling_right.all(color) {
                     if row[x as usize] != Some(ColoredPieceKind::new(color, PieceKind::Rook)) {
                         let range = match Ord::cmp(&king, &x) {
-                            Ordering::Less => (king + 1)..=coord_x!("h"),
+                            Ordering::Less => (king + 1)..=Coord::LAST_FILE,
                             Ordering::Equal => {
                                 self.castling_right.remove(color, x);
                                 continue;
                             }
-                            Ordering::Greater => coord_x!("a")..=(king - 1),
+                            Ordering::Greater => Coord::FIRST_FILE..=(king - 1),
                         };
                         let mut rooks = range.filter(|x| {
                             row[*x as usize] == Some(ColoredPieceKind::new(color, PieceKind::Rook))

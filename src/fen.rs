@@ -157,12 +157,10 @@ impl Display for Fen {
                 if king_in_position {
                     let range = match rook {
                         Coord::ROOK_ORIGIN_QUEENSIDE => {
-                            (Coord::ROOK_ORIGIN_QUEENSIDE + 1)
-                                ..=Coord::CASTLING_ROOK_DESTINATION_QUEENSIDE
+                            (Coord::ROOK_ORIGIN_QUEENSIDE + 1)..=(Coord::KING_ORIGIN - 1)
                         }
                         Coord::ROOK_ORIGIN_KINGSIDE => {
-                            Coord::CASTLING_ROOK_DESTINATION_KINGSIDE
-                                ..=(Coord::ROOK_ORIGIN_KINGSIDE - 1)
+                            (Coord::KING_ORIGIN + 1)..=(Coord::ROOK_ORIGIN_KINGSIDE - 1)
                         }
                         _ => return false,
                     };

@@ -43,6 +43,9 @@ impl Error for ParseCoordError {}
 pub struct Coord(NonZero<u8>);
 
 impl Coord {
+    pub const FIRST_FILE: u8 = coord_x!("a");
+    pub const LAST_FILE: u8 = coord_x!("h");
+
     pub const CASTLING_KING_DESTINATION_QUEENSIDE: u8 = coord_x!("c");
     pub const CASTLING_KING_DESTINATION_KINGSIDE: u8 = coord_x!("g");
 
