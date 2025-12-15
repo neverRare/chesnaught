@@ -1,3 +1,5 @@
+use rand::random_range;
+
 use crate::{
     board::{Board, Lan, ParseLanError},
     board_display::BoardDisplay,
@@ -51,6 +53,7 @@ enum Input {
     Help,
     Flip,
     Restart,
+    StartChess960,
     Quit,
     Import(Fen),
     ExportFen,
@@ -63,6 +66,7 @@ impl Display for Input {
             Input::Help => write!(f, "help")?,
             Input::Flip => write!(f, "flip")?,
             Input::Restart => write!(f, "restart")?,
+            Input::StartChess960 => write!(f, "start chess960")?,
             Input::Quit => write!(f, "quit")?,
             Input::Import(fen) => write!(f, "import {fen}")?,
             Input::ExportFen => write!(f, "fen")?,
@@ -80,6 +84,7 @@ impl FromStr for Input {
             "help" => Ok(Input::Help),
             "flip" => Ok(Input::Flip),
             "restart" => Ok(Input::Restart),
+            "start chess960" => Ok(Input::StartChess960),
             "quit" => Ok(Input::Quit),
             "fen" => Ok(Input::ExportFen),
             s => {
@@ -157,6 +162,7 @@ pub fn repl(
                 Input::Help => {
                     writeln!(output, "flip           - flip the board")?;
                     writeln!(output, "restart        - reset to starting position")?;
+                    writeln!(output, "start chess960 - start a new chess960 game")?;
                     writeln!(output, "quit           - quit the game")?;
                     writeln!(output, "import <fen>   - import a position")?;
                     writeln!(output, "fen            - export the position as fen")?;
@@ -170,6 +176,11 @@ pub fn repl(
                 }
                 Input::Restart => {
                     board = Board::starting_position();
+                    update = true;
+                    highlighted.clear();
+                }
+                Input::StartChess960 => {
+                    board = Board::chess960(random_range(0..960));
                     update = true;
                     highlighted.clear();
                 }

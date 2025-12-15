@@ -48,7 +48,7 @@ impl PieceKind {
         PieceKind::Knight,
         PieceKind::Rook,
     ];
-    pub fn chess960_configuration(id: u16) -> [Self; 8] {
+    pub fn chess960(id: u16) -> [Self; 8] {
         fn insert(configuration: &mut [PieceKind], mut index: usize, piece: PieceKind) {
             for cell in configuration {
                 if *cell != PieceKind::Pawn {

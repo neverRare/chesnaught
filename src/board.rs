@@ -359,6 +359,9 @@ impl Board {
     pub fn starting_position() -> Self {
         Board::from_configuration(PieceKind::STARTING_CONFIGURATION)
     }
+    pub fn chess960(id: u16) -> Self {
+        Board::from_configuration(PieceKind::chess960(id))
+    }
     pub fn from_configuration(configuration: [PieceKind; 8]) -> Self {
         HashableBoard::from_configuration(configuration)
             .try_into()
@@ -1037,6 +1040,9 @@ pub struct HashableBoard {
 impl HashableBoard {
     pub fn starting_position() -> Self {
         HashableBoard::from_configuration(PieceKind::STARTING_CONFIGURATION)
+    }
+    pub fn chess960(id: u16) -> Self {
+        HashableBoard::from_configuration(PieceKind::chess960(id))
     }
     pub fn from_configuration(configuration: [PieceKind; 8]) -> Self {
         let castling_right = CastlingRight::from_configuration(configuration);
