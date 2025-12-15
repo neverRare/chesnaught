@@ -170,13 +170,7 @@ impl Display for StandardCastlingRight {
                     (Color::White, Coord::ROOK_ORIGIN_KINGSIDE) => 'K',
                     (Color::Black, Coord::ROOK_ORIGIN_QUEENSIDE) => 'q',
                     (Color::Black, Coord::ROOK_ORIGIN_KINGSIDE) => 'k',
-                    (color, x) => {
-                        let start = match color {
-                            Color::White => b'A',
-                            Color::Black => b'a',
-                        };
-                        (x + start) as char
-                    }
+                    (_, x) => panic!("non-standard rook position: {x}"),
                 };
                 written = true;
                 write!(f, "{c}")?;
