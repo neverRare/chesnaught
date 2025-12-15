@@ -111,8 +111,8 @@ impl Piece {
             .copied()
             .filter_map(move |movement| self.position.move_by(movement))
             .filter_map(move |destination| {
-                if let Some(capture) = board[destination] {
-                    (board[capture].unwrap().color() != self.color()).then_some({
+                if let Some((capture, piece)) = board.index_and_piece(destination) {
+                    (piece.color() != self.color()).then_some({
                         SimpleMove {
                             index,
                             destination,
@@ -139,9 +139,9 @@ impl Piece {
             .line_exclusive(direction)
             .map_while(move |destination| {
                 if resume {
-                    if let Some(capture) = board[destination] {
+                    if let Some((capture, piece)) = board.index_and_piece(destination) {
                         resume = false;
-                        (board[capture].unwrap().color() != self.color()).then_some({
+                        (piece.color() != self.color()).then_some({
                             SimpleMove {
                                 index,
                                 destination,
@@ -381,6 +381,9 @@ impl Board {
     }
     pub fn index(&self, position: Coord) -> Option<ColoredPieceKind> {
         self[position].map(|index| self[index].unwrap().piece)
+    }
+    fn index_and_piece(&self, position: Coord) -> Option<(PieceIndex, ColoredPieceKind)> {
+        self[position].map(|index| (index, self[index].unwrap().piece))
     }
     fn range(&self, range: Range<usize>) -> impl Iterator<Item = Piece> {
         self.pieces[range].iter().copied().flatten()
@@ -1247,8 +1250,7 @@ impl Lan {
         reason = "I hope the provided comments are enough"
     )]
     pub fn as_move(self, board: &Board) -> Move {
-        let index = board[self.origin].unwrap();
-        let piece = board[index].unwrap();
+        let (index, piece) = board.index_and_piece(self.origin).unwrap();
         let capture = board[self.destination];
 
         let movement;
