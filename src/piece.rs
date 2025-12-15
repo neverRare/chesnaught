@@ -4,6 +4,8 @@ use std::{
     num::NonZero,
 };
 
+use rand::Rng;
+
 use crate::{color::Color, misc::InvalidByte};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -48,6 +50,50 @@ impl PieceKind {
         PieceKind::Knight,
         PieceKind::Rook,
     ];
+    pub fn chess960_configuration(rng: &mut impl Rng) -> [Self; 8] {
+        fn insert(configuration: &mut [PieceKind], mut index: usize, piece: PieceKind) {
+            for cell in configuration {
+                if *cell != PieceKind::Pawn {
+                    if index == 0 {
+                        *cell = piece;
+                        break;
+                    }
+                    index -= 1;
+                }
+            }
+        }
+
+        let mut configuration = [PieceKind::Pawn; 8];
+        let bishop = rng.random_range(0..4) * 2;
+        configuration[bishop] = PieceKind::Bishop;
+        let bishop = rng.random_range(0..4) * 2 + 1;
+        configuration[bishop] = PieceKind::Bishop;
+
+        insert(&mut configuration, rng.random_range(0..6), PieceKind::Queen);
+
+        let (a, b) = match rng.random_range(0..10) {
+            n @ 0..4 => (n, 4),
+            n @ 4..7 => (n - 4, 3),
+            n @ 7..9 => (n - 7, 2),
+            9 => (0, 1),
+            _ => unreachable!(),
+        };
+        insert(&mut configuration, a, PieceKind::Knight);
+        insert(&mut configuration, b, PieceKind::Knight);
+
+        let mut piece = PieceKind::Rook;
+        for cell in &mut configuration {
+            if *cell == PieceKind::Pawn {
+                *cell = piece;
+                piece = match piece {
+                    PieceKind::King => PieceKind::Rook,
+                    PieceKind::Rook => PieceKind::King,
+                    _ => unreachable!(),
+                };
+            }
+        }
+        configuration
+    }
     pub fn uppercase(self) -> char {
         match self {
             PieceKind::Pawn => 'P',
