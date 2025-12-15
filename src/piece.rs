@@ -4,8 +4,6 @@ use std::{
     num::NonZero,
 };
 
-use rand::Rng;
-
 use crate::{color::Color, misc::InvalidByte};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -50,7 +48,7 @@ impl PieceKind {
         PieceKind::Knight,
         PieceKind::Rook,
     ];
-    pub fn chess960_configuration(rng: &mut impl Rng) -> [Self; 8] {
+    pub fn chess960_configuration(id: u16) -> [Self; 8] {
         fn insert(configuration: &mut [PieceKind], mut index: usize, piece: PieceKind) {
             for cell in configuration {
                 if *cell != PieceKind::Pawn {
@@ -63,15 +61,30 @@ impl PieceKind {
             }
         }
 
+        assert!(id < 960, "{id} must be < 960");
+
+        let mut state = id;
+
+        let bishop_1 = state % 4;
+        state /= 4;
+
+        let bishop_2 = state % 4;
+        state /= 4;
+
+        let queen = state % 6;
+        state /= 6;
+
+        let knights = state;
+
         let mut configuration = [PieceKind::Pawn; 8];
-        let bishop = rng.random_range(0..4) * 2;
-        configuration[bishop] = PieceKind::Bishop;
-        let bishop = rng.random_range(0..4) * 2 + 1;
-        configuration[bishop] = PieceKind::Bishop;
 
-        insert(&mut configuration, rng.random_range(0..6), PieceKind::Queen);
+        configuration[bishop_1 as usize * 2] = PieceKind::Bishop;
 
-        let (a, b) = match rng.random_range(0..10) {
+        configuration[bishop_2 as usize * 2 + 1] = PieceKind::Bishop;
+
+        insert(&mut configuration, queen as usize, PieceKind::Queen);
+
+        let (a, b) = match knights as usize {
             n @ 0..4 => (n, 4),
             n @ 4..7 => (n - 4, 3),
             n @ 7..9 => (n - 7, 2),
