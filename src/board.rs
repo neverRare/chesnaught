@@ -28,7 +28,7 @@ pub enum InvalidBoard {
     NoKing,
     NonPlayerInCheck,
     MoreThanTwoCheckers,
-    InvalidCastlingRight,
+    RookNotFound,
     InvalidEnPassantRank,
     EnPassantPawnNotFound,
     PawnOnHomeRank,
@@ -47,7 +47,7 @@ impl Display for InvalidBoard {
             InvalidBoard::MoreThanTwoCheckers => {
                 write!(f, "found more than 2 pieces delivering check")?;
             }
-            InvalidBoard::InvalidCastlingRight => write!(f, "rook not found for castling right")?,
+            InvalidBoard::RookNotFound => write!(f, "rook not found for castling right")?,
             InvalidBoard::InvalidEnPassantRank => {
                 write!(f, "en passant target may only be on ranks 3 or 6")?;
             }
@@ -607,7 +607,7 @@ impl Board {
                         .is_some()
             })
         }) {
-            return Err(InvalidBoard::InvalidCastlingRight);
+            return Err(InvalidBoard::RookNotFound);
         }
         if let Some(en_passant_target) = self.en_passant_target {
             let (color, pawn_position) = en_passant_target
