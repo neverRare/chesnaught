@@ -46,7 +46,7 @@ impl GameTree {
             advantage: None,
         }
     }
-    pub fn move_piece(&mut self, movement: Lan) {
+    pub fn drop(self) {
         static DROPPER: LazyLock<Sender<GameTree>> = LazyLock::new(|| {
             let (sender, receiver) = channel();
             spawn(|| {
@@ -56,6 +56,9 @@ impl GameTree {
             });
             sender
         });
+        DROPPER.send(self).unwrap();
+    }
+    pub fn move_piece(&mut self, movement: Lan) {
         let new = match &mut self.data {
             GameTreeData::Board(board) => GameTree::new(board.clone_and_move(&movement)),
             GameTreeData::Children { children, .. } => {
@@ -69,8 +72,7 @@ impl GameTree {
             }
             GameTreeData::End(_) => panic!("cannot move on end state"),
         };
-        let game_tree = replace(self, new);
-        DROPPER.send(game_tree).unwrap();
+        replace(self, new).drop();
     }
     fn board(&self) -> Option<HashableBoard> {
         match &self.data {
