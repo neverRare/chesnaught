@@ -215,7 +215,7 @@ impl Piece {
                                     !self.color(),
                                     PieceKind::Pawn,
                                 )
-                                .unwrap()
+                                .expect("pawn that performed double move not found")
                         } else {
                             board[destination]?
                         };
@@ -288,9 +288,9 @@ impl Piece {
         moves.map(move |movement| {
             if let Some(capture) = movement.movement.capture {
                 Move {
-                    castling_right: movement
-                        .castling_right
-                        .to_removed_for_rook_capture(board[capture].unwrap()),
+                    castling_right: movement.castling_right.to_removed_for_rook_capture(
+                        board[capture].expect("captured piece not found"),
+                    ),
                     ..movement
                 }
             } else {
@@ -764,7 +764,9 @@ impl Board {
         }
     }
     fn castling_moves(&self, check: bool) -> impl Iterator<Item = Move> {
-        let (king_index, king) = self.king_indexed(self.current_player).unwrap();
+        let (king_index, king) = self
+            .king_indexed(self.current_player)
+            .expect("king not found");
         let castling_right = self.castling_right;
         let new_castling_right = castling_right.to_cleared(self.current_player);
         castling_right
@@ -777,7 +779,7 @@ impl Board {
                         self.current_player,
                         PieceKind::Rook,
                     )
-                    .unwrap();
+                    .expect("rook not found");
                 let (king_destination, rook_destination) =
                     match Ord::cmp(&king.position.x(), &rook.position.x()) {
                         Ordering::Less => (
@@ -853,7 +855,7 @@ impl Board {
             })
     }
     fn valid_moves_and_check(&self) -> (impl Iterator<Item = Move> + '_, bool) {
-        let king = self.king(self.current_player).unwrap();
+        let king = self.king(self.current_player).expect("king not found");
         let mut attackers_iter = self.attackers(king.position, !self.current_player).fuse();
         let attackers = [attackers_iter.next(), attackers_iter.next()];
         debug_assert_eq!(
@@ -901,22 +903,29 @@ impl Board {
                             })
                         && {
                             // special case for en passant when the captured pawn is pinned
-                            let en_passant = movement.movement.capture.is_some_and(|index| {
-                                self[index].unwrap().position != movement.movement.destination
-                            });
-                            (!en_passant)
-                                || self
-                                    .pinned_with_inspect(
-                                        king.position,
-                                        self[movement.movement.capture.unwrap()].unwrap().position,
-                                        piece.color(),
-                                        |position| {
-                                            position != piece.position
-                                                && (position == movement.movement.destination
-                                                    || self[position].is_some())
-                                        },
-                                    )
-                                    .is_none()
+                            if let Some(index) = movement.movement.capture {
+                                let captured = self[index].expect("captured piece not found");
+
+                                // check if the captured piece is also located
+                                // on the piece's destination
+
+                                // otherwise, it's en passant and check for the pin
+                                (captured.position == movement.movement.destination)
+                                    || self
+                                        .pinned_with_inspect(
+                                            king.position,
+                                            captured.position,
+                                            piece.color(),
+                                            |position| {
+                                                position != piece.position
+                                                    && (position == movement.movement.destination
+                                                        || self[position].is_some())
+                                            },
+                                        )
+                                        .is_none()
+                            } else {
+                                true
+                            }
                         }
                 }
             })
@@ -926,7 +935,9 @@ impl Board {
     pub fn move_piece(&mut self, movement: &impl Moveable) {
         let movement = movement.as_move(self);
         let current_player = self.current_player;
-        let piece = self[movement.movement.index].as_mut().unwrap();
+        let piece = self[movement.movement.index]
+            .as_mut()
+            .expect("piece not found");
         piece.position = movement.movement.destination;
         if let Some(promotion) = movement.promotion {
             piece.piece = ColoredPieceKind::new(current_player, promotion);
@@ -935,7 +946,7 @@ impl Board {
             self[index] = None;
         }
         if let Some(movement) = movement.castling_rook {
-            let rook = self[movement.index].as_mut().unwrap();
+            let rook = self[movement.index].as_mut().expect("rook not found");
             rook.position = movement.destination;
         }
         self.en_passant_target = movement.en_passant_target;
@@ -1148,7 +1159,7 @@ pub struct Move {
 }
 impl Move {
     fn as_ambiguous_lan_pair(self, board: &Board) -> (Lan, Option<Lan>) {
-        let piece = board[self.movement.index].unwrap();
+        let piece = board[self.movement.index].expect("piece not found");
         (
             Lan {
                 origin: piece.position,
@@ -1157,7 +1168,9 @@ impl Move {
             },
             self.castling_rook.map(|rook| Lan {
                 origin: piece.position,
-                destination: board[rook.index].unwrap().position,
+                destination: board[rook.index]
+                    .expect("captured piece not found")
+                    .position,
                 promotion: self.promotion,
             }),
         )
@@ -1250,7 +1263,7 @@ impl Lan {
         reason = "I hope the provided comments are enough"
     )]
     pub fn as_move(self, board: &Board) -> Move {
-        let (index, piece) = board.index_and_piece(self.origin).unwrap();
+        let (index, piece) = board.index_and_piece(self.origin).expect("piece not found");
         let capture = board[self.destination];
 
         let movement;
@@ -1309,7 +1322,7 @@ impl Lan {
                     rook.position.y() == self.origin.y()
                         && Ord::cmp(&self.origin.x(), &rook.position.x()) == king_rook_ord
                 })
-                .unwrap();
+                .expect("rook not found");
             movement = SimpleMove {
                 index,
                 destination: self.destination,
@@ -1331,7 +1344,7 @@ impl Lan {
                 Some(
                     board
                         .get_index_with_kind(pawn, !piece.color(), PieceKind::Pawn)
-                        .unwrap(),
+                        .expect("pawn that performed double move not found"),
                 )
             } else {
                 capture
@@ -1355,7 +1368,8 @@ impl Lan {
             }
         }
         let castling_right = if let Some(index) = movement.capture {
-            castling_right.to_removed_for_rook_capture(board[index].unwrap())
+            castling_right
+                .to_removed_for_rook_capture(board[index].expect("captured piece not found"))
         } else {
             castling_right
         };

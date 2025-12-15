@@ -144,7 +144,7 @@ pub fn repl(
             write!(output, "> ")?;
             output.flush()?;
             let mut text = String::new();
-            input.read_line(&mut text).unwrap();
+            input.read_line(&mut text)?;
             let input = match text.trim().parse() {
                 Ok(input) => input,
                 Err(err) => {
