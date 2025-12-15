@@ -1586,6 +1586,23 @@ mod test {
         );
     }
     #[test]
+    fn lose_of_en_passant_right() {
+        let board: Fen = "4k3/8/8/8/5p2/8/4P3/4K3 w - - 0 1".parse().unwrap();
+        let mut board: Board = board.board.try_into().unwrap();
+        board.move_assert("e2e4".parse().unwrap());
+        board.move_assert("e8d8".parse().unwrap());
+        board.move_assert("e1d1".parse().unwrap());
+        board.assert_move_is_invalid("f4e3".parse().unwrap());
+        assert_eq!(
+            Fen {
+                board: board.as_hashable(),
+                half_move: 0,
+                full_move: 1,
+            },
+            "3k4/8/8/8/4Pp2/8/8/3K4 b - - 0 1".parse().unwrap()
+        );
+    }
+    #[test]
     fn pin() {
         let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
         let board: Board = board.board.try_into().unwrap();
