@@ -357,13 +357,12 @@ fn original_piece_range(color: Color, piece: PieceKind) -> Range<usize> {
 }
 impl Board {
     pub fn starting_position() -> Self {
-        Board::from_configuration(PieceKind::STARTING_CONFIGURATION)
+        HashableBoard::from_configuration(PieceKind::STARTING_CONFIGURATION)
+            .try_into()
+            .unwrap()
     }
     pub fn chess960(id: u16) -> Self {
-        Board::from_configuration(PieceKind::chess960(id))
-    }
-    pub fn from_configuration(configuration: [PieceKind; 8]) -> Self {
-        HashableBoard::from_configuration(configuration)
+        HashableBoard::from_configuration(PieceKind::chess960(id))
             .try_into()
             .unwrap()
     }
