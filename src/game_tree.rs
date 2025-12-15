@@ -59,14 +59,13 @@ impl GameTree {
         let new = match &mut self.data {
             GameTreeData::Board(board) => GameTree::new(board.clone_and_move(&movement)),
             GameTreeData::Children { children, .. } => {
+                let (_, _, children) = children.remove(
+                    children
+                        .iter()
+                        .position(|(b, c, _)| movement == *b || Some(movement) == *c)
+                        .unwrap(),
+                );
                 children
-                    .remove(
-                        children
-                            .iter()
-                            .position(|(b, c, _)| movement == *b || Some(movement) == *c)
-                            .unwrap(),
-                    )
-                    .2
             }
             GameTreeData::End(_) => panic!("cannot move on end state"),
         };
@@ -165,14 +164,16 @@ impl GameTree {
                     }
                 }
                 repetition_table.remove(&board);
-                children.sort_unstable_by(|a, b| match (a.2.advantage, b.2.advantage) {
-                    (None, None) => Ordering::Equal,
-                    (None, Some(_)) => Ordering::Less,
-                    (Some(_), None) => Ordering::Greater,
-                    (Some((_, a)), Some((_, b))) => match current_player {
-                        Color::White => Ord::cmp(&b, &a),
-                        Color::Black => Ord::cmp(&a, &b),
-                    },
+                children.sort_unstable_by(|(_, _, a), (_, _, b)| {
+                    match (a.advantage, b.advantage) {
+                        (None, None) => Ordering::Equal,
+                        (None, Some(_)) => Ordering::Less,
+                        (Some(_), None) => Ordering::Greater,
+                        (Some((_, a)), Some((_, b))) => match current_player {
+                            Color::White => Ord::cmp(&b, &a),
+                            Color::Black => Ord::cmp(&a, &b),
+                        },
+                    }
                 });
                 self.advantage = Some((alpha_beta.best_move, alpha_beta.best_score));
             }
@@ -200,7 +201,8 @@ impl GameTree {
     pub fn line(&self) -> impl Iterator<Item = Lan> {
         let mut game_tree = self;
         from_fn(move || {
-            game_tree.advantage.unwrap().0.map(|movement| {
+            let (movement, _) = game_tree.advantage.unwrap();
+            movement.map(|movement| {
                 if let GameTreeData::Children { children, .. } = &game_tree.data {
                     game_tree = children
                         .iter()
