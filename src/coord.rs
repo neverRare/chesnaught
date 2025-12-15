@@ -157,7 +157,6 @@ impl Coord {
         self.is_aligned(other, &Vector::QUEEN_DIRECTIONS)
     }
     pub fn line(self, direction: Vector, start: i8) -> impl Iterator<Item = Self> {
-        debug_assert_ne!(direction, Vector::ZERO, "direction can't be zero");
         debug_assert_eq!(
             direction,
             direction.as_unit(),
@@ -176,6 +175,10 @@ impl Coord {
         end: Coord,
         direction: Vector,
     ) -> impl Iterator<Item = Self> {
+        debug_assert!(
+            direction != Vector::ZERO || self == end,
+            "direction can only be zero if the start and end positions are the same"
+        );
         self.line_inclusive(direction)
             .take_while(move |position| *position != end)
     }
@@ -191,6 +194,10 @@ impl Coord {
         end: Coord,
         direction: Vector,
     ) -> impl Iterator<Item = Self> {
+        debug_assert!(
+            direction != Vector::ZERO || self == end,
+            "direction can only be zero if the start and end positions are the same"
+        );
         let mut resume = true;
         self.line_inclusive(direction).take_while(move |position| {
             resume && {
@@ -433,5 +440,20 @@ mod test {
                 .next(),
             None
         );
+    }
+    #[test]
+    fn zero_inclusive_inclusive_is_has_one_item() {
+        let mut line = coord!("e4").line_inclusive_inclusive(coord!("e4"), Vector { x: 0, y: 0 });
+        assert_eq!(line.next(), Some(coord!("e4")));
+        assert_eq!(line.next(), None);
+    }
+    #[test]
+    fn zero_exclusive_has_none() {
+        let mut line = coord!("e4").line_exclusive_inclusive(coord!("e4"), Vector { x: 0, y: 0 });
+        assert_eq!(line.next(), None);
+        let mut line = coord!("e4").line_inclusive_exclusive(coord!("e4"), Vector { x: 0, y: 0 });
+        assert_eq!(line.next(), None);
+        let mut line = coord!("e4").line_exclusive_exclusive(coord!("e4"), Vector { x: 0, y: 0 });
+        assert_eq!(line.next(), None);
     }
 }
