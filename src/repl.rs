@@ -197,18 +197,27 @@ pub fn repl(
                     )?;
                 }
                 Input::Coord(position) => {
-                    highlighted.clear();
-                    highlighted.extend(
-                        valid_moves
-                            .iter()
-                            .copied()
-                            .filter(|movement| movement.origin == position)
-                            .map(|movement| movement.destination),
-                    );
+                    if let Some(piece) = board.index(position) {
+                        if piece.color() != board.current_player() {
+                            writeln!(error, "Error: It is {}'s turn", board.current_player())?;
+                            continue;
+                        }
+                        highlighted.clear();
+                        highlighted.extend(
+                            valid_moves
+                                .iter()
+                                .copied()
+                                .filter(|movement| movement.origin == position)
+                                .map(|movement| movement.destination),
+                        );
+                    } else {
+                        writeln!(error, "Error: No piece found on {position}")?;
+                        continue;
+                    }
                 }
                 Input::Move(lan) => {
                     let Some(movement) = valid_moves.get(&lan) else {
-                        writeln!(error, "Error: {text} is an invalid move")?;
+                        writeln!(error, "Error: {lan} is an invalid move")?;
                         continue;
                     };
                     board.move_piece(movement);
