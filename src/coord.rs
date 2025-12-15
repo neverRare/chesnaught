@@ -141,7 +141,7 @@ impl Coord {
     ) -> Option<impl Iterator<Item = Self>> {
         directions.iter().copied().find_map(|direction| {
             if direction.is_aligned(other - self) {
-                Some(self.line_exclusive_exclusive(other, direction))
+                Some(self.line_ex_ex(other, direction))
             } else {
                 None
             }
@@ -170,11 +170,7 @@ impl Coord {
     pub fn line_exclusive(self, direction: Vector) -> impl Iterator<Item = Self> {
         self.line(direction, 1)
     }
-    pub fn line_inclusive_exclusive(
-        self,
-        end: Coord,
-        direction: Vector,
-    ) -> impl Iterator<Item = Self> {
+    pub fn line_in_ex(self, end: Coord, direction: Vector) -> impl Iterator<Item = Self> {
         debug_assert!(
             direction != Vector::ZERO || self == end,
             "direction can only be zero if the start and end positions are the same"
@@ -186,18 +182,10 @@ impl Coord {
         self.line_inclusive(direction)
             .take_while(move |position| *position != end)
     }
-    pub fn line_exclusive_exclusive(
-        self,
-        end: Coord,
-        direction: Vector,
-    ) -> impl Iterator<Item = Self> {
-        self.line_inclusive_exclusive(end, direction).skip(1)
+    pub fn line_ex_ex(self, end: Coord, direction: Vector) -> impl Iterator<Item = Self> {
+        self.line_in_ex(end, direction).skip(1)
     }
-    pub fn line_inclusive_inclusive(
-        self,
-        end: Coord,
-        direction: Vector,
-    ) -> impl Iterator<Item = Self> {
+    pub fn line_in_in(self, end: Coord, direction: Vector) -> impl Iterator<Item = Self> {
         debug_assert!(
             direction != Vector::ZERO || self == end,
             "direction can only be zero if the start and end positions are the same"
@@ -214,12 +202,8 @@ impl Coord {
             }
         })
     }
-    pub fn line_exclusive_inclusive(
-        self,
-        end: Coord,
-        direction: Vector,
-    ) -> impl Iterator<Item = Self> {
-        self.line_inclusive_inclusive(end, direction).skip(1)
+    pub fn line_ex_in(self, end: Coord, direction: Vector) -> impl Iterator<Item = Self> {
+        self.line_in_in(end, direction).skip(1)
     }
     pub fn is_inside_of(self, bound_1: Self, bound_2: Self) -> bool {
         (Ord::min(bound_1.x(), bound_2.x())..=Ord::max(bound_1.x(), bound_2.x()))
@@ -444,24 +428,24 @@ mod test {
     fn adjacent_exclusive_exclusive_line_is_empty() {
         assert_eq!(
             coord!("e4")
-                .line_exclusive_exclusive(coord!("e5"), Vector { x: 0, y: -1 })
+                .line_ex_ex(coord!("e5"), Vector { x: 0, y: -1 })
                 .next(),
             None
         );
     }
     #[test]
     fn zero_inclusive_inclusive_is_has_one_item() {
-        let mut line = coord!("e4").line_inclusive_inclusive(coord!("e4"), Vector { x: 0, y: 0 });
+        let mut line = coord!("e4").line_in_in(coord!("e4"), Vector { x: 0, y: 0 });
         assert_eq!(line.next(), Some(coord!("e4")));
         assert_eq!(line.next(), None);
     }
     #[test]
     fn zero_exclusive_has_none() {
-        let mut line = coord!("e4").line_exclusive_inclusive(coord!("e4"), Vector { x: 0, y: 0 });
+        let mut line = coord!("e4").line_ex_in(coord!("e4"), Vector { x: 0, y: 0 });
         assert_eq!(line.next(), None);
-        let mut line = coord!("e4").line_inclusive_exclusive(coord!("e4"), Vector { x: 0, y: 0 });
+        let mut line = coord!("e4").line_in_ex(coord!("e4"), Vector { x: 0, y: 0 });
         assert_eq!(line.next(), None);
-        let mut line = coord!("e4").line_exclusive_exclusive(coord!("e4"), Vector { x: 0, y: 0 });
+        let mut line = coord!("e4").line_ex_ex(coord!("e4"), Vector { x: 0, y: 0 });
         assert_eq!(line.next(), None);
     }
 }

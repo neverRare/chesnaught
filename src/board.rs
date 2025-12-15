@@ -674,7 +674,7 @@ impl Board {
         {
             let direction = direction.as_unit();
             if pinned_position
-                .line_exclusive_exclusive(king, -direction)
+                .line_ex_ex(king, -direction)
                 .any(checker.clone())
             {
                 None
@@ -691,13 +691,9 @@ impl Board {
                         {
                             (!pinning_piece
                                 .position
-                                .line_exclusive_exclusive(pinned_position, -direction)
+                                .line_ex_ex(pinned_position, -direction)
                                 .any(checker.clone()))
-                            .then(|| {
-                                pinning_piece
-                                    .position
-                                    .line_inclusive_exclusive(king, -direction)
-                            })
+                            .then(|| pinning_piece.position.line_in_ex(king, -direction))
                         } else {
                             None
                         }
@@ -828,17 +824,15 @@ impl Board {
                         direction.y, 0,
                         "{origin} and {destination} are not in the same rank",
                     );
-                    origin
-                        .line_exclusive_inclusive(destination, direction)
-                        .all(|position| {
-                            (position == other_position || self[position].is_none())
-                                && (piece != PieceKind::King
-                                    || !self.is_move_attacked(
-                                        &[king_index, rook_index],
-                                        position,
-                                        !self.current_player,
-                                    ))
-                        })
+                    origin.line_ex_in(destination, direction).all(|position| {
+                        (position == other_position || self[position].is_none())
+                            && (piece != PieceKind::King
+                                || !self.is_move_attacked(
+                                    &[king_index, rook_index],
+                                    position,
+                                    !self.current_player,
+                                ))
+                    })
                 })
                 .then_some(Move {
                     movement: SimpleMove {
