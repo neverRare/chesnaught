@@ -792,6 +792,7 @@ impl Board {
                                 Coord::home_rank(self.current_player),
                             ),
                         ),
+
                         Ordering::Equal => unreachable!(),
                         Ordering::Greater => (
                             Coord::new(
@@ -1081,8 +1082,8 @@ impl HashableBoard {
                         });
                         let rook = match king_rook_ord {
                             Ordering::Less => rooks.next_back(),
-                            Ordering::Greater => rooks.next(),
                             Ordering::Equal => unreachable!(),
+                            Ordering::Greater => rooks.next(),
                         };
                         let Some(new_x) = rook else {
                             self.castling_right.remove(color, x);
