@@ -1571,6 +1571,21 @@ mod test {
         board.assert_move_is_invalid("e1b1".parse().unwrap());
     }
     #[test]
+    fn en_passant() {
+        let board: Fen = "4k3/8/8/8/5p2/8/4P3/4K3 w - - 0 1".parse().unwrap();
+        let mut board: Board = board.board.try_into().unwrap();
+        board.move_assert("e2e4".parse().unwrap());
+        board.move_assert("f4e3".parse().unwrap());
+        assert_eq!(
+            Fen {
+                board: board.as_hashable(),
+                half_move: 0,
+                full_move: 1,
+            },
+            "4k3/8/8/8/8/4p3/8/4K3 w - - 0 1".parse().unwrap()
+        );
+    }
+    #[test]
     fn pin() {
         let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
         let board: Board = board.board.try_into().unwrap();
