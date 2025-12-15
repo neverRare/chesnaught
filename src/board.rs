@@ -968,6 +968,11 @@ impl Board {
             "found valid move for piece in position {position}",
         );
     }
+    pub fn assert_move_is_invalid(&self, lan: Lan) {
+        let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
+        let movement = lan.as_move(self);
+        assert!(!valid_moves.contains(&movement), "`{lan}` is valid move");
+    }
 }
 impl Index<Coord> for Board {
     type Output = Option<PieceIndex>;
@@ -1456,6 +1461,22 @@ mod test {
                 full_move: 1,
             },
             "2kr3r/8/8/8/8/8/8/R4RK1 w - - 0 1".parse().unwrap()
+        );
+    }
+    #[test]
+    fn cant_castle_when_blocked() {
+        let board: Fen = "r3k2r/8/8/8/8/8/8/R3K1NR w KQkq - 0 1".parse().unwrap();
+        let mut board: Board = board.board.try_into().unwrap();
+        board.assert_move_is_invalid("e1g1".parse().unwrap());
+        board.move_assert("e1c1".parse().unwrap());
+
+        assert_eq!(
+            Fen {
+                board: board.as_hashable(),
+                half_move: 0,
+                full_move: 1,
+            },
+            "r3k2r/8/8/8/8/8/8/2KR2NR b kq - 0 1".parse().unwrap()
         );
     }
     #[test]
