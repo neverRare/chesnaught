@@ -1547,6 +1547,30 @@ mod test {
         );
     }
     #[test]
+    fn cant_castle_while_checked() {
+        let board: Fen = "4k3/4r3/8/8/8/8/8/R3K2R w KQ - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        board.assert_move_is_invalid("e1g1".parse().unwrap());
+    }
+    #[test]
+    fn cant_castle_through_checked() {
+        let board: Fen = "4k3/5r2/8/8/8/8/8/R3K2R w KQ - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        board.assert_move_is_invalid("e1g1".parse().unwrap());
+    }
+    #[test]
+    fn cant_castle_into_checked() {
+        let board: Fen = "4k3/6r1/8/8/8/8/8/R3K2R w KQ - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        board.assert_move_is_invalid("e1g1".parse().unwrap());
+    }
+    #[test]
+    fn chess960_castling_special_case() {
+        let board: Fen = "4k3/8/8/8/8/8/8/rR2K2R w BH - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        board.assert_move_is_invalid("e1b1".parse().unwrap());
+    }
+    #[test]
     fn pin() {
         let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
         let board: Board = board.board.try_into().unwrap();
