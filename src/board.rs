@@ -1480,6 +1480,28 @@ mod test {
         );
     }
     #[test]
+    fn cant_castle_after_move() {
+        let board: Fen = "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1".parse().unwrap();
+        let mut board: Board = board.board.try_into().unwrap();
+        board.move_assert("a1a2".parse().unwrap());
+        board.move_assert("e8e7".parse().unwrap());
+        board.move_assert("a2a1".parse().unwrap());
+        board.move_assert("e7e8".parse().unwrap());
+        board.assert_move_is_invalid("e1c1".parse().unwrap());
+        board.move_assert("e1g1".parse().unwrap());
+        board.assert_move_is_invalid("e8c8".parse().unwrap());
+        board.assert_move_is_invalid("e8g8".parse().unwrap());
+
+        assert_eq!(
+            Fen {
+                board: board.as_hashable(),
+                half_move: 0,
+                full_move: 1,
+            },
+            "r3k2r/8/8/8/8/8/8/R4RK1 b - - 0 1".parse().unwrap()
+        );
+    }
+    #[test]
     fn pin() {
         let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
         let board: Board = board.board.try_into().unwrap();
