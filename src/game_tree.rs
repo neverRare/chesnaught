@@ -73,6 +73,13 @@ impl GameTree {
         let game_tree = replace(self, new);
         DROPPER.send(game_tree).unwrap();
     }
+    fn board(&self) -> Option<HashableBoard> {
+        match &self.data {
+            GameTreeData::Board(board) => Some(board.as_hashable()),
+            GameTreeData::Children { board, .. } => Some(**board),
+            GameTreeData::End(_) => None,
+        }
+    }
     fn board_and_children(&mut self) -> Option<(HashableBoard, &mut Vec<MoveTreePair>)> {
         let board = match &mut self.data {
             GameTreeData::Board(board) => {
@@ -124,9 +131,7 @@ impl GameTree {
                 EndState::Draw => Advantage::Estimated(Estimated::default()),
             };
             self.advantage = Some((None, advantage));
-        } else if let GameTreeData::Board(board) = &self.data
-            && let Some(advantage) = transposition_table.get(&board.as_hashable())
-        {
+        } else if let Some(advantage) = transposition_table.get(&self.board().unwrap()) {
             self.advantage = Some(*advantage);
         } else if depth == 0 {
             self.advantage = Some(scorer(self));
@@ -214,4 +219,11 @@ impl GameTree {
             })
         })
     }
+}
+struct AlphaBetaState {
+    player: Color,
+    alpha: Advantage,
+    beta: Advantage,
+    best_move: Option<Lan>,
+    best_score: Advantage,
 }
