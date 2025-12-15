@@ -71,8 +71,13 @@ impl GameTree {
         let game_tree = replace(self, new);
         DROPPER.send(game_tree).unwrap();
     }
-    fn children(&mut self) -> Option<&mut Vec<(Lan, Option<Lan>, GameTree)>> {
-        match &mut self.data {
+    fn board_and_children(
+        &mut self,
+    ) -> Option<(
+        Option<HashableBoard>,
+        &mut Vec<(Lan, Option<Lan>, GameTree)>,
+    )> {
+        let board = match &mut self.data {
             GameTreeData::Board(board) => {
                 let board = Board::clone(board);
                 self.data = GameTreeData::Children {
@@ -90,14 +95,15 @@ impl GameTree {
                         })
                         .collect(),
                 };
+                Some(board.as_hashable())
             }
-            GameTreeData::Children { .. } => (),
+            GameTreeData::Children { .. } => None,
             GameTreeData::End(_) => return None,
-        }
+        };
         let GameTreeData::Children { children, .. } = &mut self.data else {
             unreachable!()
         };
-        Some(children)
+        Some((board, children))
     }
     fn current_player(&self) -> Option<Color> {
         match &self.data {
@@ -112,7 +118,7 @@ impl GameTree {
         scorer: fn(&mut Self) -> (Option<Lan>, Advantage),
         alpha: Advantage,
         beta: Advantage,
-        transposition_table: &mut HashMap<HashableBoard, Advantage>,
+        transposition_table: &mut HashMap<HashableBoard, (Option<Lan>, Advantage)>,
     ) {
         if let GameTreeData::End(state) = self.data {
             let advantage = match state {
@@ -120,11 +126,15 @@ impl GameTree {
                 EndState::Draw => Advantage::Estimated(Estimated::default()),
             };
             self.advantage = Some((None, advantage));
+        } else if let GameTreeData::Board(board) = &self.data
+            && let Some(advantage) = transposition_table.get(&board.as_hashable())
+        {
+            self.advantage = Some(*advantage);
         } else if depth == 0 {
             self.advantage = Some(scorer(self));
         } else {
             let current_player = self.current_player().unwrap();
-            let children = self.children().unwrap();
+            let (board, children) = self.board_and_children().unwrap();
 
             let mut alpha = alpha;
             let mut beta = beta;
@@ -168,7 +178,11 @@ impl GameTree {
                     Color::Black => Ord::cmp(&a, &b),
                 },
             });
-            self.advantage = Some((best_movement, best_score));
+            let advantage = (best_movement, best_score);
+            if let Some(board) = board {
+                transposition_table.insert(board, advantage);
+            }
+            self.advantage = Some(advantage);
         }
     }
     fn estimate(&self) -> (Option<Lan>, Advantage) {
