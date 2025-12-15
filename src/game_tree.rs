@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     iter::from_fn,
     mem::replace,
     sync::{
@@ -123,6 +123,7 @@ impl GameTree {
         alpha: Advantage,
         beta: Advantage,
         transposition_table: &mut HashMap<HashableBoard, (Option<Lan>, Advantage)>,
+        repetition_table: &mut HashSet<HashableBoard>,
     ) {
         if let GameTreeData::End(state) = self.data {
             let advantage = match state {
@@ -132,23 +133,38 @@ impl GameTree {
             self.advantage = Some((None, advantage));
         } else {
             let board = self.board().unwrap();
+
             if let Some(advantage) = transposition_table.get(&board) {
                 self.advantage = Some(*advantage);
                 return;
-            } else if depth == 0 {
+            }
+            if repetition_table.contains(&board) {
+                return;
+            }
+            if depth == 0 {
                 self.advantage = Some(scorer(self));
             } else {
                 let current_player = self.current_player().unwrap();
                 let children = self.children().unwrap();
                 let mut alpha_beta = AlphaBetaState::new(current_player, alpha, beta);
 
+                repetition_table.insert(board);
                 for (movement, _, game_tree) in children.iter_mut() {
-                    game_tree.alpha_beta(depth - 1, scorer, alpha, beta, transposition_table);
-                    let score = game_tree.advantage.unwrap().1;
-                    if alpha_beta.set(*movement, score) {
+                    game_tree.alpha_beta(
+                        depth - 1,
+                        scorer,
+                        alpha,
+                        beta,
+                        transposition_table,
+                        repetition_table,
+                    );
+                    if let Some((_, score)) = game_tree.advantage
+                        && alpha_beta.set(*movement, score)
+                    {
                         break;
                     }
                 }
+                repetition_table.remove(&board);
                 children.sort_unstable_by(|a, b| match (a.2.advantage, b.2.advantage) {
                     (None, None) => Ordering::Equal,
                     (None, Some(_)) => Ordering::Less,
@@ -177,6 +193,7 @@ impl GameTree {
             Advantage::BLACK_WINS,
             Advantage::WHITE_WINS,
             &mut HashMap::new(),
+            &mut HashSet::new(),
         );
         self.advantage.unwrap()
     }
