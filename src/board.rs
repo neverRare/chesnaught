@@ -1686,4 +1686,38 @@ mod test {
             "4k3/4r3/4R3/8/8/8/8/4K3 b - - 0 1".parse().unwrap()
         );
     }
+    #[test]
+    fn check_must_be_responded() {
+        let board: Fen = "4k3/4r3/8/8/8/8/P7/4K3 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        board.assert_move_is_invalid("a2a4".parse().unwrap());
+    }
+    #[test]
+    fn can_take_checking_piece() {
+        let board: Fen = "4k3/4r3/5B2/8/8/8/8/4K3 w - - 0 1".parse().unwrap();
+        let mut board: Board = board.board.try_into().unwrap();
+        board.move_assert("f6e7".parse().unwrap());
+        assert_eq!(
+            Fen {
+                board: board.as_hashable(),
+                half_move: 0,
+                full_move: 1,
+            },
+            "4k3/4B3/8/8/8/8/8/4K3 b - - 0 1".parse().unwrap()
+        );
+    }
+    #[test]
+    fn can_block_check() {
+        let board: Fen = "4k3/4r3/5B2/8/8/8/8/4K3 w - - 0 1".parse().unwrap();
+        let mut board: Board = board.board.try_into().unwrap();
+        board.move_assert("f6e5".parse().unwrap());
+        assert_eq!(
+            Fen {
+                board: board.as_hashable(),
+                half_move: 0,
+                full_move: 1,
+            },
+            "4k3/4r3/8/4B3/8/8/8/4K3 b - - 0 1".parse().unwrap()
+        );
+    }
 }
