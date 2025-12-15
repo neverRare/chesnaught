@@ -979,7 +979,7 @@ impl Board {
     pub fn assert_move_is_invalid(&self, lan: Lan) {
         let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
         let movement = lan.as_move(self);
-        assert!(!valid_moves.contains(&movement), "`{lan}` is valid move");
+        assert!(!valid_moves.contains(&movement), "`{lan}` is a valid move");
     }
 }
 impl Index<Coord> for Board {
