@@ -40,7 +40,7 @@ impl CastlingRight {
         }
         castling_right
     }
-    pub fn all(self, color: Color) -> impl Iterator<Item = u8> {
+    pub fn all(self, color: Color) -> impl DoubleEndedIterator<Item = u8> {
         (0..8).filter(move |x| self.get(color, *x))
     }
     fn byte(self, color: Color) -> u8 {
@@ -164,7 +164,7 @@ impl Display for StandardCastlingRight {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut written = false;
         for color in [Color::White, Color::Black] {
-            for x in self.0.all(color) {
+            for x in self.0.all(color).rev() {
                 let c = match (color, x) {
                     (Color::White, Coord::ROOK_ORIGIN_QUEENSIDE) => 'Q',
                     (Color::White, Coord::ROOK_ORIGIN_KINGSIDE) => 'K',
