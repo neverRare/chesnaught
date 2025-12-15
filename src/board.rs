@@ -562,7 +562,7 @@ impl Board {
     fn king_indexed(&self, color: Color) -> Option<(PieceIndex, Piece)> {
         match color {
             Color::White => self.pieces[0].map(|piece| (0.try_into().unwrap(), piece)),
-            Color::Black => self.pieces[0].map(|piece| (16.try_into().unwrap(), piece)),
+            Color::Black => self.pieces[16].map(|piece| (16.try_into().unwrap(), piece)),
         }
     }
     fn pawns(&self, color: Color) -> impl Iterator<Item = Piece> {
