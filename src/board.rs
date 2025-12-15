@@ -1027,20 +1027,6 @@ impl IndexableBoard for Board {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct AmbiguousRook;
-
-impl Display for AmbiguousRook {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "multiple rooks found on one side of the king; can't determine which to use for castling"
-        )?;
-        Ok(())
-    }
-}
-impl Error for AmbiguousRook {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HashableBoard {
     pub board: [[Option<ColoredPieceKind>; 8]; 8],
     pub current_player: Color,
@@ -1070,7 +1056,7 @@ impl HashableBoard {
             en_passant_target: None,
         }
     }
-    pub fn fix_castling_rights(&mut self) -> Result<(), AmbiguousRook> {
+    pub fn fix_castling_rights(&mut self) {
         for color in [Color::White, Color::Black] {
             let row = self.board[Coord::home_rank(color) as usize];
             if let Some(king) = row
@@ -1081,7 +1067,8 @@ impl HashableBoard {
 
                 for x in self.castling_right.all(color) {
                     if row[x as usize] != Some(ColoredPieceKind::new(color, PieceKind::Rook)) {
-                        let range = match Ord::cmp(&king, &x) {
+                        let king_rook_ord = Ord::cmp(&king, &x);
+                        let range = match king_rook_ord {
                             Ordering::Less => (king + 1)..=Coord::LAST_FILE,
                             Ordering::Equal => {
                                 self.castling_right.remove(color, x);
@@ -1092,13 +1079,15 @@ impl HashableBoard {
                         let mut rooks = range.filter(|x| {
                             row[*x as usize] == Some(ColoredPieceKind::new(color, PieceKind::Rook))
                         });
-                        let Some(new_x) = rooks.next() else {
+                        let rook = match king_rook_ord {
+                            Ordering::Less => rooks.next_back(),
+                            Ordering::Greater => todo!(),
+                            Ordering::Equal => rooks.next(),
+                        };
+                        let Some(new_x) = rook else {
                             self.castling_right.remove(color, x);
                             continue;
                         };
-                        if rooks.next().is_some() {
-                            return Err(AmbiguousRook);
-                        }
                         self.castling_right.remove(color, x);
                         self.castling_right.add(color, new_x);
                     }
@@ -1107,7 +1096,6 @@ impl HashableBoard {
                 self.castling_right.clear(color);
             }
         }
-        Ok(())
     }
 }
 impl TryFrom<HashableBoard> for Board {
