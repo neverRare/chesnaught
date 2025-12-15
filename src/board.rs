@@ -1707,4 +1707,11 @@ mod test {
                 .board
         );
     }
+    #[test]
+    fn cant_take_on_double_check() {
+        let board: Fen = "4k3/4r1R1/8/8/8/8/6n1/4K3 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        board.assert_move_is_invalid("g7e7".parse().unwrap());
+        board.assert_move_is_invalid("g7g2".parse().unwrap());
+    }
 }
