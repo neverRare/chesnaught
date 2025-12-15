@@ -768,10 +768,6 @@ impl Board {
             .all(self.current_player)
             .filter(move |_| !check)
             .filter_map(move |x| {
-                debug_assert!(
-                    Coord::HOME_RANKS.contains(&king.position.y()),
-                    "king not in home rank"
-                );
                 let (rook_index, rook) = self
                     .get_with_kind_indexed(
                         Coord::new(x, Coord::home_rank(self.current_player)),
@@ -779,10 +775,6 @@ impl Board {
                         PieceKind::Rook,
                     )
                     .unwrap();
-                debug_assert!(
-                    Coord::HOME_RANKS.contains(&rook.position.y()),
-                    "rook not in home rank"
-                );
                 let (king_destination, rook_destination) =
                     match Ord::cmp(&king.position.x(), &rook.position.x()) {
                         Ordering::Less => (
