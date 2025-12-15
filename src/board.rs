@@ -1081,8 +1081,8 @@ impl HashableBoard {
                         });
                         let rook = match king_rook_ord {
                             Ordering::Less => rooks.next_back(),
-                            Ordering::Greater => todo!(),
-                            Ordering::Equal => rooks.next(),
+                            Ordering::Greater => rooks.next(),
+                            Ordering::Equal => unreachable!(),
                         };
                         let Some(new_x) = rook else {
                             self.castling_right.remove(color, x);
