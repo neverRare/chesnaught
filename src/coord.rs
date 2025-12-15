@@ -179,6 +179,10 @@ impl Coord {
             direction != Vector::ZERO || self == end,
             "direction can only be zero if the start and end positions are the same"
         );
+        debug_assert!(
+            direction.is_aligned(end - self),
+            "direction and start and end must be aligned"
+        );
         self.line_inclusive(direction)
             .take_while(move |position| *position != end)
     }
@@ -197,6 +201,10 @@ impl Coord {
         debug_assert!(
             direction != Vector::ZERO || self == end,
             "direction can only be zero if the start and end positions are the same"
+        );
+        debug_assert!(
+            direction.is_aligned(end - self),
+            "direction and start and end must be aligned"
         );
         let mut resume = true;
         self.line_inclusive(direction).take_while(move |position| {
