@@ -816,7 +816,7 @@ impl Board {
                 .into_iter()
                 .all(|(origin, destination, other_position, piece)| {
                     let direction = (destination - origin).as_unit();
-                    debug_assert_ne!(
+                    debug_assert_eq!(
                         direction.y, 0,
                         "{origin} and {destination} are not in the same rank",
                     );
