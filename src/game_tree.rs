@@ -120,7 +120,6 @@ impl GameTree {
     fn alpha_beta(
         &mut self,
         depth: u32,
-        scorer: fn(&mut Self) -> (Option<Lan>, Advantage),
         alpha: Advantage,
         beta: Advantage,
         transposition_table: &mut HashMap<HashableBoard, (Option<Lan>, Advantage)>,
@@ -143,7 +142,7 @@ impl GameTree {
                 return;
             }
             if depth == 0 {
-                self.advantage = Some(scorer(self));
+                self.advantage = Some(self.estimate());
             } else {
                 let current_player = self.current_player().unwrap();
                 let children = self.children().unwrap();
@@ -153,7 +152,6 @@ impl GameTree {
                 for (movement, _, game_tree) in children.iter_mut() {
                     game_tree.alpha_beta(
                         depth - 1,
-                        scorer,
                         alpha,
                         beta,
                         transposition_table,
@@ -208,7 +206,6 @@ impl GameTree {
     pub fn best(&mut self, depth: u32) -> (Option<Lan>, Advantage) {
         self.alpha_beta(
             depth,
-            |game_tree| GameTree::estimate(game_tree),
             Advantage::BLACK_WINS,
             Advantage::WHITE_WINS,
             &mut HashMap::new(),
