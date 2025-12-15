@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    collections::HashMap,
     iter::from_fn,
     mem::replace,
     sync::{
@@ -10,7 +11,7 @@ use std::{
 };
 
 use crate::{
-    board::{Board, Lan},
+    board::{Board, HashableBoard, Lan},
     color::Color,
     end_state::EndState,
     heuristics::{Advantage, Estimated, estimate},
@@ -111,6 +112,7 @@ impl GameTree {
         scorer: fn(&mut Self) -> (Option<Lan>, Advantage),
         alpha: Advantage,
         beta: Advantage,
+        transposition_table: &mut HashMap<HashableBoard, Advantage>,
     ) {
         self.advantage = Some(if let GameTreeData::End(state) = self.data {
             let advantage = match state {
@@ -132,7 +134,7 @@ impl GameTree {
                 Color::Black => Advantage::WHITE_WINS,
             };
             for (movement, _, game_tree) in children.iter_mut() {
-                game_tree.alpha_beta(depth - 1, scorer, alpha, beta);
+                game_tree.alpha_beta(depth - 1, scorer, alpha, beta, transposition_table);
                 let score = game_tree.advantage.unwrap().1;
                 match current_player {
                     Color::White => {
@@ -182,6 +184,7 @@ impl GameTree {
             |game_tree| GameTree::estimate(game_tree),
             Advantage::BLACK_WINS,
             Advantage::WHITE_WINS,
+            &mut HashMap::new(),
         );
         self.advantage.unwrap()
     }
