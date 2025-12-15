@@ -51,7 +51,7 @@ impl PieceKind {
     pub fn chess960(id: u16) -> [Self; 8] {
         fn insert(configuration: &mut [PieceKind], mut index: usize, piece: PieceKind) {
             for cell in configuration {
-                if *cell != PieceKind::Pawn {
+                if *cell == PieceKind::Pawn {
                     if index == 0 {
                         *cell = piece;
                         break;
