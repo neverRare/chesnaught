@@ -1483,12 +1483,11 @@ mod test {
         board.move_assert("e8a8".parse().unwrap());
 
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "2kr3r/8/8/8/8/8/8/R4RK1 w - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "2kr3r/8/8/8/8/8/8/R4RK1 w - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1499,12 +1498,11 @@ mod test {
         board.move_assert("e1c1".parse().unwrap());
 
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "r3k2r/8/8/8/8/8/8/2KR2NR b kq - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "r3k2r/8/8/8/8/8/8/2KR2NR b kq - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1521,12 +1519,11 @@ mod test {
         board.assert_move_is_invalid("e8g8".parse().unwrap());
 
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "r3k2r/8/8/8/8/8/8/R4RK1 b - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "r3k2r/8/8/8/8/8/8/R4RK1 b - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1538,12 +1535,11 @@ mod test {
         board.assert_move_is_valid("e8c8".parse().unwrap());
 
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "r3k2N/8/8/8/8/8/8/4K3 b q - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "r3k2N/8/8/8/8/8/8/4K3 b q - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1576,12 +1572,11 @@ mod test {
         let mut board: Board = board.board.try_into().unwrap();
         board.move_assert("g7g8q".parse().unwrap());
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "4k1Q1/8/8/8/8/8/8/4K3 b - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "4k1Q1/8/8/8/8/8/8/4K3 b - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1591,12 +1586,11 @@ mod test {
         board.move_assert("e2e4".parse().unwrap());
         board.move_assert("f4e3".parse().unwrap());
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "4k3/8/8/8/8/4p3/8/4K3 w - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "4k3/8/8/8/8/4p3/8/4K3 w - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1608,12 +1602,11 @@ mod test {
         board.move_assert("e1d1".parse().unwrap());
         board.assert_move_is_invalid("f4e3".parse().unwrap());
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "3k4/8/8/8/4Pp2/8/8/3K4 b - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "3k4/8/8/8/4Pp2/8/8/3K4 b - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1623,12 +1616,11 @@ mod test {
         board.move_assert("e2e4".parse().unwrap());
         board.assert_move_is_invalid("f4e3".parse().unwrap());
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "8/8/8/8/k3Pp1R/8/8/4K3 b - e3 0 1".parse().unwrap()
+            board.as_hashable(),
+            "8/8/8/8/k3Pp1R/8/8/4K3 b - e3 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1638,12 +1630,11 @@ mod test {
         board.move_assert("e2e4".parse().unwrap());
         board.move_assert("f4e3".parse().unwrap());
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "4k3/8/8/8/8/4p3/8/4R1K1 w - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "4k3/8/8/8/8/4p3/8/4R1K1 w - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1664,12 +1655,11 @@ mod test {
         let mut board: Board = board.board.try_into().unwrap();
         board.move_assert("e2e7".parse().unwrap());
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "4k3/4R3/8/8/8/8/8/4K3 b - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "4k3/4R3/8/8/8/8/8/4K3 b - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1678,12 +1668,11 @@ mod test {
         let mut board: Board = board.board.try_into().unwrap();
         board.move_assert("e2e6".parse().unwrap());
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "4k3/4r3/4R3/8/8/8/8/4K3 b - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "4k3/4r3/4R3/8/8/8/8/4K3 b - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1698,12 +1687,11 @@ mod test {
         let mut board: Board = board.board.try_into().unwrap();
         board.move_assert("f6e7".parse().unwrap());
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "4k3/4B3/8/8/8/8/8/4K3 b - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "4k3/4B3/8/8/8/8/8/4K3 b - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
     #[test]
@@ -1712,12 +1700,11 @@ mod test {
         let mut board: Board = board.board.try_into().unwrap();
         board.move_assert("f6e5".parse().unwrap());
         assert_eq!(
-            Fen {
-                board: board.as_hashable(),
-                half_move: 0,
-                full_move: 1,
-            },
-            "4k3/4r3/8/4B3/8/8/8/4K3 b - - 0 1".parse().unwrap()
+            board.as_hashable(),
+            "4k3/4r3/8/4B3/8/8/8/4K3 b - - 0 1"
+                .parse::<Fen>()
+                .unwrap()
+                .board
         );
     }
 }
