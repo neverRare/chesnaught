@@ -181,11 +181,27 @@ impl GameTree {
         }
     }
     fn estimate(&self) -> (Option<Lan>, Advantage) {
-        if let GameTreeData::Board(board) = &self.data {
-            (None, Advantage::Estimated(estimate(board)))
+        let estimated = if let GameTreeData::Board(board) = &self.data {
+            estimate(board)
+        } else if let Some(advantage) = self.advantage {
+            return advantage;
+        } else if cfg!(debug_assertions) {
+            panic!(concat!(
+                "this node only contains board data meant for hashing alone. ",
+                "the original board data is discarded to save memory space. ",
+                "while it is possible to convert it back, we shouldn't resort ",
+                "to this"
+            ));
         } else {
-            panic!("cannot evaluate non-leaf node as board data are discarded");
-        }
+            estimate(
+                &self
+                    .board()
+                    .expect("can't estimate score on board with ended state")
+                    .try_into()
+                    .unwrap(),
+            )
+        };
+        (None, Advantage::Estimated(estimated))
     }
     pub fn best(&mut self, depth: u32) -> (Option<Lan>, Advantage) {
         self.alpha_beta(
