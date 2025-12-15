@@ -673,8 +673,8 @@ impl Board {
             .any(|valid_direction| direction.is_aligned(valid_direction))
         {
             let direction = direction.as_unit();
-            if pinned_position
-                .line_ex_ex(king, -direction)
+            if king
+                .line_ex_ex(pinned_position, direction)
                 .any(checker.clone())
             {
                 None
@@ -689,11 +689,10 @@ impl Board {
                         if direction.is_aligned(pinning_piece.position - king)
                             && pinned_position.is_inside_of(pinning_piece.position, king)
                         {
-                            (!pinning_piece
-                                .position
-                                .line_ex_ex(pinned_position, -direction)
+                            (!pinned_position
+                                .line_ex_ex(pinning_piece.position, direction)
                                 .any(checker.clone()))
-                            .then(|| pinning_piece.position.line_in_ex(king, -direction))
+                            .then(|| king.line_ex_in(pinning_piece.position, direction))
                         } else {
                             None
                         }
