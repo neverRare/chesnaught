@@ -815,8 +815,13 @@ impl Board {
                 ]
                 .into_iter()
                 .all(|(origin, destination, other_position, piece)| {
+                    let direction = (destination - origin).as_unit();
+                    assert_ne!(
+                        direction.y, 0,
+                        "{origin} and {destination} are not in the same rank",
+                    );
                     origin
-                        .line_exclusive_inclusive(destination, (destination - origin).as_unit())
+                        .line_exclusive_inclusive(destination, direction)
                         .all(|position| {
                             (position == other_position || self[position].is_none())
                                 && (piece != PieceKind::King
