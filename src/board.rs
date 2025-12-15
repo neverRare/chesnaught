@@ -779,6 +779,10 @@ impl Board {
                         PieceKind::Rook,
                     )
                     .unwrap();
+                debug_assert!(
+                    Coord::HOME_RANKS.contains(&rook.position.y()),
+                    "rook not in home rank"
+                );
                 let (king_destination, rook_destination) =
                     match Ord::cmp(&king.position.x(), &rook.position.x()) {
                         Ordering::Less => (
