@@ -1056,6 +1056,9 @@ impl HashableBoard {
             en_passant_target: None,
         }
     }
+    pub fn fix_castling_rights(&mut self) {
+        // TODO
+    }
 }
 impl TryFrom<HashableBoard> for Board {
     type Error = InvalidBoard;

@@ -219,13 +219,15 @@ impl FromStr for Fen {
                 section.chars().next().unwrap_or(' '),
             ));
         }
+        let mut board = HashableBoard {
+            board,
+            current_player,
+            castling_right,
+            en_passant_target,
+        };
+        board.fix_castling_rights();
         Ok(Fen {
-            board: HashableBoard {
-                board,
-                current_player,
-                castling_right,
-                en_passant_target,
-            },
+            board,
             half_move,
             full_move,
         })
