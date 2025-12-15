@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    board::{Board, Move},
+    board::{Board, Lan},
     color::Color,
     end_state::EndState,
     heuristics::{Advantage, Estimated, estimate},
@@ -21,7 +21,7 @@ enum GameTreeData {
     Board(Box<Board>),
     Children {
         current_player: Color,
-        children: Vec<(Move, GameTree)>,
+        children: Vec<(Lan, Option<Lan>, GameTree)>,
     },
     End(EndState),
 }
@@ -29,7 +29,7 @@ enum GameTreeData {
 #[derive(Debug, Clone)]
 pub struct GameTree {
     data: GameTreeData,
-    advantage: Option<(Option<Move>, Advantage)>,
+    advantage: Option<(Option<Lan>, Advantage)>,
 }
 impl GameTree {
     pub fn new(board: Board) -> Self {
@@ -43,7 +43,7 @@ impl GameTree {
             advantage: None,
         }
     }
-    pub fn move_piece(&mut self, movement: Move) {
+    pub fn move_piece(&mut self, movement: Lan) {
         static DROPPER: LazyLock<Sender<GameTree>> = LazyLock::new(|| {
             let (sender, receiver) = channel();
             spawn(|| {
@@ -57,15 +57,20 @@ impl GameTree {
             GameTreeData::Board(board) => GameTree::new(board.clone_and_move(&movement)),
             GameTreeData::Children { children, .. } => {
                 children
-                    .remove(children.iter().position(|(b, _)| movement == *b).unwrap())
-                    .1
+                    .remove(
+                        children
+                            .iter()
+                            .position(|(b, c, _)| movement == *b || Some(movement) == *c)
+                            .unwrap(),
+                    )
+                    .2
             }
             GameTreeData::End(_) => panic!("cannot move on end state"),
         };
         let game_tree = replace(self, new);
         DROPPER.send(game_tree).unwrap();
     }
-    fn children(&mut self) -> Option<&mut Vec<(Move, GameTree)>> {
+    fn children(&mut self) -> Option<&mut Vec<(Lan, Option<Lan>, GameTree)>> {
         match &mut self.data {
             GameTreeData::Board(board) => {
                 let board = Board::clone(board);
@@ -74,7 +79,14 @@ impl GameTree {
                     children: board
                         .valid_moves()
                         .unwrap()
-                        .map(|movement| (movement, GameTree::new(board.clone_and_move(&movement))))
+                        .map(|movement| {
+                            let (first, second) = movement.as_lan_pair(&board);
+                            (
+                                first,
+                                second,
+                                GameTree::new(board.clone_and_move(&movement)),
+                            )
+                        })
                         .collect(),
                 };
             }
@@ -96,7 +108,7 @@ impl GameTree {
     fn alpha_beta(
         &mut self,
         depth: u32,
-        scorer: fn(&mut Self) -> (Option<Move>, Advantage),
+        scorer: fn(&mut Self) -> (Option<Lan>, Advantage),
         alpha: Advantage,
         beta: Advantage,
     ) {
@@ -119,7 +131,7 @@ impl GameTree {
                 Color::White => Advantage::BLACK_WINS,
                 Color::Black => Advantage::WHITE_WINS,
             };
-            for (movement, game_tree) in children.iter_mut() {
+            for (movement, _, game_tree) in children.iter_mut() {
                 game_tree.alpha_beta(depth - 1, scorer, alpha, beta);
                 let score = game_tree.advantage.unwrap().1;
                 match current_player {
@@ -145,7 +157,7 @@ impl GameTree {
                     }
                 }
             }
-            children.sort_unstable_by(|a, b| match (a.1.advantage, b.1.advantage) {
+            children.sort_unstable_by(|a, b| match (a.2.advantage, b.2.advantage) {
                 (None, None) => Ordering::Equal,
                 (None, Some(_)) => Ordering::Less,
                 (Some(_), None) => Ordering::Greater,
@@ -157,14 +169,14 @@ impl GameTree {
             (best_movement, best_score)
         });
     }
-    fn estimate(&self) -> (Option<Move>, Advantage) {
+    fn estimate(&self) -> (Option<Lan>, Advantage) {
         if let GameTreeData::Board(board) = &self.data {
             (None, Advantage::Estimated(estimate(board)))
         } else {
             panic!("cannot evaluate non-leaf node as board data are discarded");
         }
     }
-    pub fn best(&mut self, depth: u32) -> (Option<Move>, Advantage) {
+    pub fn best(&mut self, depth: u32) -> (Option<Lan>, Advantage) {
         self.alpha_beta(
             depth,
             |game_tree| GameTree::estimate(game_tree),
@@ -173,14 +185,14 @@ impl GameTree {
         );
         self.advantage.unwrap()
     }
-    pub fn line(&self) -> impl Iterator<Item = Move> {
+    pub fn line(&self) -> impl Iterator<Item = Lan> {
         let mut game_tree = self;
         from_fn(move || {
             game_tree.advantage.unwrap().0.map(|movement| {
                 if let GameTreeData::Children { children, .. } = &game_tree.data {
                     game_tree = children
                         .iter()
-                        .find_map(|(b, game_tree)| (movement == *b).then_some(game_tree))
+                        .find_map(|(b, _, game_tree)| (movement == *b).then_some(game_tree))
                         .unwrap();
                     movement
                 } else {

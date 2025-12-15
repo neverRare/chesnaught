@@ -1179,9 +1179,9 @@ impl Move {
             }),
         )
     }
-    pub fn as_lan_iter(self, board: &Board) -> impl Iterator<Item = Lan> {
+    pub fn as_lan_pair(self, board: &Board) -> (Lan, Option<Lan>) {
         let (regular, chess960) = self.as_ambiguous_lan_pair(board);
-        let (first, second) = if let Some(chess960) = chess960 {
+        if let Some(chess960) = chess960 {
             if regular.origin.x() == Coord::KING_ORIGIN
                 && Coord::ROOK_ORIGINS.contains(&chess960.destination.x())
             {
@@ -1193,7 +1193,10 @@ impl Move {
             }
         } else {
             (regular, None)
-        };
+        }
+    }
+    pub fn as_lan_iter(self, board: &Board) -> impl Iterator<Item = Lan> {
+        let (first, second) = self.as_lan_pair(board);
         once(first).chain(second)
     }
     pub fn as_lan(self, board: &Board) -> Lan {
