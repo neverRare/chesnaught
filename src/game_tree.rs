@@ -114,14 +114,14 @@ impl GameTree {
         beta: Advantage,
         transposition_table: &mut HashMap<HashableBoard, Advantage>,
     ) {
-        self.advantage = Some(if let GameTreeData::End(state) = self.data {
+        if let GameTreeData::End(state) = self.data {
             let advantage = match state {
                 EndState::Win(color) => Advantage::Win(color),
                 EndState::Draw => Advantage::Estimated(Estimated::default()),
             };
-            (None, advantage)
+            self.advantage = Some((None, advantage));
         } else if depth == 0 {
-            scorer(self)
+            self.advantage = Some(scorer(self));
         } else {
             let current_player = self.current_player().unwrap();
             let children = self.children().unwrap();
@@ -168,8 +168,8 @@ impl GameTree {
                     Color::Black => Ord::cmp(&a, &b),
                 },
             });
-            (best_movement, best_score)
-        });
+            self.advantage = Some((best_movement, best_score));
+        }
     }
     fn estimate(&self) -> (Option<Lan>, Advantage) {
         if let GameTreeData::Board(board) = &self.data {
