@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    board::HashableBoard,
+    board::{AmbiguousRook, HashableBoard},
     board_display::IndexableBoard,
     castling_right::InvalidCastlingCharacter,
     color::{Color, ParseColorError},
@@ -28,6 +28,7 @@ pub enum ParseFenError {
     InvalidCastlingCharacter(InvalidCastlingCharacter),
     ParseCoordError(ParseCoordError),
     ParseIntError(ParseIntError),
+    AmbiguousRook(AmbiguousRook),
     Unexpected(char),
     UnexpectedEol,
 }
@@ -54,6 +55,7 @@ impl Display for ParseFenError {
             ParseFenError::InvalidCastlingCharacter(err) => write!(f, "{err}")?,
             ParseFenError::ParseCoordError(err) => write!(f, "{err}")?,
             ParseFenError::ParseIntError(err) => write!(f, "{err}")?,
+            ParseFenError::AmbiguousRook(err) => write!(f, "{err}")?,
             ParseFenError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
             ParseFenError::UnexpectedEol => write!(f, "unexpected end of line")?,
         }
@@ -68,6 +70,7 @@ impl Error for ParseFenError {
             ParseFenError::InvalidCastlingCharacter(err) => Some(err),
             ParseFenError::ParseCoordError(err) => Some(err),
             ParseFenError::ParseIntError(err) => Some(err),
+            ParseFenError::AmbiguousRook(err) => Some(err),
             _ => None,
         }
     }
@@ -95,6 +98,11 @@ impl From<ParseCoordError> for ParseFenError {
 impl From<ParseIntError> for ParseFenError {
     fn from(value: ParseIntError) -> Self {
         ParseFenError::ParseIntError(value)
+    }
+}
+impl From<AmbiguousRook> for ParseFenError {
+    fn from(value: AmbiguousRook) -> Self {
+        ParseFenError::AmbiguousRook(value)
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -225,7 +233,7 @@ impl FromStr for Fen {
             castling_right,
             en_passant_target,
         };
-        board.fix_castling_rights();
+        board.fix_castling_rights()?;
         Ok(Fen {
             board,
             half_move,
