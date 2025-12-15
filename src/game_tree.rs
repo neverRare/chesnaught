@@ -17,12 +17,14 @@ use crate::{
     heuristics::{Advantage, Estimated, estimate},
 };
 
+type MoveTreePair = (Lan, Option<Lan>, GameTree);
+
 #[derive(Debug, Clone)]
 enum GameTreeData {
     Board(Box<Board>),
     Children {
-        current_player: Color,
-        children: Vec<(Lan, Option<Lan>, GameTree)>,
+        board: Box<HashableBoard>,
+        children: Vec<MoveTreePair>,
     },
     End(EndState),
 }
@@ -71,17 +73,13 @@ impl GameTree {
         let game_tree = replace(self, new);
         DROPPER.send(game_tree).unwrap();
     }
-    fn board_and_children(
-        &mut self,
-    ) -> Option<(
-        Option<HashableBoard>,
-        &mut Vec<(Lan, Option<Lan>, GameTree)>,
-    )> {
+    fn board_and_children(&mut self) -> Option<(HashableBoard, &mut Vec<MoveTreePair>)> {
         let board = match &mut self.data {
             GameTreeData::Board(board) => {
                 let board = Board::clone(board);
+                let hashable = board.as_hashable();
                 self.data = GameTreeData::Children {
-                    current_player: board.current_player(),
+                    board: Box::new(hashable),
                     children: board
                         .valid_moves()
                         .unwrap()
@@ -95,9 +93,9 @@ impl GameTree {
                         })
                         .collect(),
                 };
-                Some(board.as_hashable())
+                hashable
             }
-            GameTreeData::Children { .. } => None,
+            GameTreeData::Children { board, .. } => **board,
             GameTreeData::End(_) => return None,
         };
         let GameTreeData::Children { children, .. } = &mut self.data else {
@@ -108,7 +106,7 @@ impl GameTree {
     fn current_player(&self) -> Option<Color> {
         match &self.data {
             GameTreeData::Board(board) => Some(board.current_player()),
-            GameTreeData::Children { current_player, .. } => Some(*current_player),
+            GameTreeData::Children { board, .. } => Some(board.current_player),
             GameTreeData::End(_) => None,
         }
     }
@@ -179,9 +177,7 @@ impl GameTree {
                 },
             });
             let advantage = (best_movement, best_score);
-            if let Some(board) = board {
-                transposition_table.insert(board, advantage);
-            }
+            transposition_table.insert(board, advantage);
             self.advantage = Some(advantage);
         }
     }
