@@ -1647,9 +1647,43 @@ mod test {
         );
     }
     #[test]
+    fn cant_move_to_check() {
+        let board: Fen = "4kr2/8/8/8/8/8/8/4K3 w - - 0 1".parse().unwrap();
+        let board: Board = board.board.try_into().unwrap();
+        board.assert_move_is_invalid("e1f1".parse().unwrap());
+    }
+    #[test]
     fn pin() {
         let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
         let board: Board = board.board.try_into().unwrap();
         board.assert_piece_cant_move(coord!("e2"));
+    }
+    #[test]
+    fn can_capture_pinning_piece() {
+        let board: Fen = "4k3/4r3/8/8/8/8/4R3/4K3 w - - 0 1".parse().unwrap();
+        let mut board: Board = board.board.try_into().unwrap();
+        board.move_assert("e2e7".parse().unwrap());
+        assert_eq!(
+            Fen {
+                board: board.as_hashable(),
+                half_move: 0,
+                full_move: 1,
+            },
+            "4k3/4R3/8/8/8/8/8/4K3 b - - 0 1".parse().unwrap()
+        );
+    }
+    #[test]
+    fn can_move_along_line_when_pinned() {
+        let board: Fen = "4k3/4r3/8/8/8/8/4R3/4K3 w - - 0 1".parse().unwrap();
+        let mut board: Board = board.board.try_into().unwrap();
+        board.move_assert("e2e6".parse().unwrap());
+        assert_eq!(
+            Fen {
+                board: board.as_hashable(),
+                half_move: 0,
+                full_move: 1,
+            },
+            "4k3/4r3/4R3/8/8/8/8/4K3 b - - 0 1".parse().unwrap()
+        );
     }
 }
