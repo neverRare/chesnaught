@@ -153,7 +153,7 @@ impl GameTree {
                 let mut alpha_beta = AlphaBetaState::new(current_player, alpha, beta);
 
                 repetition_table.insert(board);
-                for (movement, _, game_tree) in children.iter_mut() {
+                for (_, _, game_tree) in children.iter_mut() {
                     game_tree.alpha_beta(
                         depth - 1,
                         alpha,
@@ -162,7 +162,7 @@ impl GameTree {
                         repetition_table,
                     );
                     if let Some(score) = game_tree.score
-                        && alpha_beta.set(*movement, score)
+                        && alpha_beta.set(score)
                     {
                         break;
                     }
@@ -238,7 +238,6 @@ struct AlphaBetaState {
     current_player: Color,
     alpha: Score,
     beta: Score,
-    best_move: Option<Lan>,
     best_score: Score,
 }
 impl AlphaBetaState {
@@ -247,19 +246,17 @@ impl AlphaBetaState {
             current_player,
             alpha,
             beta,
-            best_move: None,
             best_score: match current_player {
                 Color::White => Score::BLACK_WINS,
                 Color::Black => Score::WHITE_WINS,
             },
         }
     }
-    fn set(&mut self, movement: Lan, score: Score) -> bool {
+    fn set(&mut self, score: Score) -> bool {
         match self.current_player {
             Color::White => {
                 if score > self.best_score {
                     self.best_score = score;
-                    self.best_move = Some(movement);
                 }
                 if self.best_score >= self.beta {
                     return true;
@@ -270,7 +267,6 @@ impl AlphaBetaState {
             Color::Black => {
                 if score < self.best_score {
                     self.best_score = score;
-                    self.best_move = Some(movement);
                 }
                 if self.best_score <= self.alpha {
                     return true;
