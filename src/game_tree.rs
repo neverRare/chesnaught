@@ -32,7 +32,7 @@ enum GameTreeData {
 #[derive(Debug, Clone)]
 pub struct GameTree {
     data: GameTreeData,
-    score: Option<(Option<Lan>, Score)>,
+    score: Option<Score>,
 }
 impl GameTree {
     pub fn new(board: Board) -> Self {
@@ -78,7 +78,14 @@ impl GameTree {
             GameTreeData::End(_) => None,
         }
     }
-    fn children(&mut self) -> Option<&mut Vec<MoveTreePair>> {
+    fn children(&self) -> Option<&Vec<MoveTreePair>> {
+        if let GameTreeData::Children { children, .. } = &self.data {
+            Some(children)
+        } else {
+            None
+        }
+    }
+    fn children_or_init(&mut self) -> Option<&mut Vec<MoveTreePair>> {
         match &mut self.data {
             GameTreeData::Board(board) => {
                 let board = Board::clone(board);
@@ -119,7 +126,7 @@ impl GameTree {
         depth: u32,
         alpha: Score,
         beta: Score,
-        transposition_table: &mut HashMap<HashableBoard, (Option<Lan>, Score)>,
+        transposition_table: &mut HashMap<HashableBoard, Score>,
         repetition_table: &mut HashSet<HashableBoard>,
     ) {
         if let GameTreeData::End(state) = self.data {
@@ -127,7 +134,7 @@ impl GameTree {
                 EndState::Win(color) => Score::Win(color),
                 EndState::Draw => Score::Estimated(Estimated::default()),
             };
-            self.score = Some((None, score));
+            self.score = Some(score);
         } else {
             let board = self.board().unwrap();
 
@@ -142,7 +149,7 @@ impl GameTree {
                 self.score = Some(self.estimate());
             } else {
                 let current_player = self.current_player().unwrap();
-                let children = self.children().unwrap();
+                let children = self.children_or_init().unwrap();
                 let mut alpha_beta = AlphaBetaState::new(current_player, alpha, beta);
 
                 repetition_table.insert(board);
@@ -154,7 +161,7 @@ impl GameTree {
                         transposition_table,
                         repetition_table,
                     );
-                    if let Some((_, score)) = game_tree.score
+                    if let Some(score) = game_tree.score
                         && alpha_beta.set(*movement, score)
                     {
                         break;
@@ -165,17 +172,17 @@ impl GameTree {
                     (None, None) => Ordering::Equal,
                     (None, Some(_)) => Ordering::Less,
                     (Some(_), None) => Ordering::Greater,
-                    (Some((_, a)), Some((_, b))) => match current_player {
+                    (Some(a), Some(b)) => match current_player {
                         Color::White => Ord::cmp(&b, &a),
                         Color::Black => Ord::cmp(&a, &b),
                     },
                 });
-                self.score = Some((alpha_beta.best_move, alpha_beta.best_score));
+                self.score = Some(alpha_beta.best_score);
             }
             transposition_table.insert(board, self.score.unwrap());
         }
     }
-    fn estimate(&self) -> (Option<Lan>, Score) {
+    fn estimate(&self) -> Score {
         let estimated = if let GameTreeData::Board(board) = &self.data {
             estimate(board)
         } else if let Some(score) = self.score {
@@ -196,9 +203,9 @@ impl GameTree {
                     .unwrap(),
             )
         };
-        (None, Score::Estimated(estimated))
+        Score::Estimated(estimated)
     }
-    pub fn best(&mut self, depth: u32) -> (Option<Lan>, Score) {
+    pub fn calculate_best(&mut self, depth: u32) {
         self.alpha_beta(
             depth,
             Score::BLACK_WINS,
@@ -206,18 +213,24 @@ impl GameTree {
             &mut HashMap::new(),
             &mut HashSet::new(),
         );
-        self.score.unwrap()
+    }
+    pub fn best_move_tree_pair(&self) -> Option<&MoveTreePair> {
+        self.children().and_then(|children| children.first())
+    }
+    pub fn best_move(&self) -> Option<Lan> {
+        self.best_move_tree_pair().map(|(movement, _, _)| *movement)
+    }
+    pub fn score(&self) -> Option<Score> {
+        self.score
     }
     pub fn best_line(&self) -> impl Iterator<Item = Lan> {
         let mut game_tree = self;
         from_fn(move || {
-            if let GameTreeData::Children { children, .. } = &game_tree.data {
-                let (movement, _, new_game_tree) = children.first()?;
-                game_tree = new_game_tree;
-                Some(*movement)
-            } else {
-                None
-            }
+            self.best_move_tree_pair()
+                .map(|(movement, _, new_game_tree)| {
+                    game_tree = new_game_tree;
+                    *movement
+                })
         })
     }
 }
