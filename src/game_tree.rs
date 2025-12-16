@@ -208,7 +208,7 @@ impl GameTree {
         );
         self.score.unwrap()
     }
-    pub fn line(&self) -> impl Iterator<Item = Lan> {
+    pub fn best_line(&self) -> impl Iterator<Item = Lan> {
         let mut game_tree = self;
         from_fn(move || {
             game_tree.score.and_then(|(movement, _)| {
