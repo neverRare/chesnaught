@@ -7,7 +7,7 @@ use std::{
         LazyLock,
         mpsc::{Sender, channel},
     },
-    thread::spawn,
+    thread::{Builder, spawn},
 };
 
 use crate::{
@@ -44,16 +44,20 @@ impl GameTree {
         GameTree { data, score: None }
     }
     pub fn drop(self) {
-        static DROPPER: LazyLock<Sender<GameTree>> = LazyLock::new(|| {
+        static DROPPER: LazyLock<Option<Sender<GameTree>>> = LazyLock::new(|| {
             let (sender, receiver) = channel();
-            spawn(|| {
+
+            let result = Builder::new().spawn(|| {
                 for game_tree in receiver {
                     drop(game_tree);
                 }
             });
-            sender
+            result.ok().map(|_| sender)
         });
-        DROPPER.send(self).unwrap();
+        match DROPPER.as_ref() {
+            Some(sender) => sender.send(self).unwrap(),
+            None => drop(self),
+        }
     }
     pub fn move_piece(&mut self, movement: Lan) {
         let new = match &mut self.data {
