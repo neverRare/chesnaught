@@ -80,7 +80,7 @@ impl Engine {
         &mut self,
         duration: Option<Duration>,
         depth: Option<u32>,
-        callback: impl Fn(Lan) + Send + 'static,
+        callback: impl FnOnce(Lan) + Send + 'static,
     ) {
         let stop_signal = Arc::new(AtomicBool::new(false));
         if let Some(duration) = duration {
