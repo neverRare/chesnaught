@@ -112,6 +112,7 @@ impl Engine {
 }
 impl Drop for Engine {
     fn drop(&mut self) {
+        self.stop();
         if let Some(sender) = self.input.take() {
             drop(sender);
         }
