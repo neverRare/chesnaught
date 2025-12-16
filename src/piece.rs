@@ -60,11 +60,9 @@ impl PieceKind {
                 }
             }
         }
-
         assert!(id < 960, "{id} must be < 960");
 
         let mut state = id;
-
         let bishop_1 = state % 4;
         state /= 4;
 
@@ -77,11 +75,8 @@ impl PieceKind {
         let knights = state;
 
         let mut configuration = [PieceKind::Pawn; 8];
-
         configuration[bishop_1 as usize * 2] = PieceKind::Bishop;
-
         configuration[bishop_2 as usize * 2 + 1] = PieceKind::Bishop;
-
         insert(&mut configuration, queen as usize, PieceKind::Queen);
 
         let (a, b) = match knights as usize {
