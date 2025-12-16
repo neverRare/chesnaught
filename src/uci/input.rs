@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    board::Lan,
+    board::{Board, InvalidBoard, Lan},
     fen::{Fen, ParseFenError},
     misc::{extract_prefix_token, split_by_token, starts_with_token, strip_prefix_token},
 };
@@ -215,6 +215,16 @@ impl Display for Input<'_> {
 pub enum Position {
     StartPos,
     Fen(Fen),
+}
+impl TryFrom<Position> for Board {
+    type Error = InvalidBoard;
+
+    fn try_from(value: Position) -> Result<Self, Self::Error> {
+        match value {
+            Position::StartPos => Ok(Board::starting_position()),
+            Position::Fen(fen) => fen.board.try_into(),
+        }
+    }
 }
 impl Display for Position {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

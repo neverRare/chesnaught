@@ -1,6 +1,11 @@
-use std::io::{self, BufRead, Write, stderr};
+use std::{
+    cell::LazyCell,
+    io::{self, BufRead, Write, stderr},
+};
 
 use crate::{
+    board::Board,
+    engine::Engine,
     repl::repl,
     uci::{
         input::Input,
@@ -29,6 +34,8 @@ const CONFIG: [Output; 3] = [
 pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result<()> {
     let mut uci = false;
     let mut debug = false;
+    let engine = LazyCell::new(Engine::new);
+    let mut start = false;
     loop {
         let mut text = String::new();
         input.read_line(&mut text)?;
@@ -68,29 +75,64 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             }
             Input::IsReady => {
                 if uci {
+                    engine.ready();
                     writeln!(output, "{}", Output::ReadyOk)?;
                 }
             }
-            Input::SetOption { name, value } => match name {
-                CHESS960 => {
-                    if debug && !matches!(value, Some("true" | "false")) {
-                        debug_print(output, format!("set {CHESS960} to invalid value; ignoring"))?;
+            Input::SetOption { name, value } => {
+                if uci {
+                    match name {
+                        CHESS960 => {
+                            if debug && !matches!(value, Some("true" | "false")) {
+                                debug_print(
+                                    output,
+                                    format!("set {CHESS960} to invalid value; ignoring"),
+                                )?;
+                            }
+                            // The engine can already work on chess960 without telling it to use chess960
+                        }
+                        name => {
+                            if debug {
+                                debug_print(output, format!("unknown option `{name}`; ignoring"))?;
+                            }
+                        }
                     }
-                    // The engine can already work on chess960 without telling it to use chess960
                 }
-                name => {
-                    if debug {
-                        debug_print(output, format!("unknown option `{name}`; ignoring"))?;
-                    }
-                }
-            },
+            }
             Input::Register(_) => {
-                if debug {
+                if uci && debug {
                     debug_print(output, "registration is ignored".to_string())?;
                 }
             }
-            Input::UciNewGame => todo!(),
-            Input::Position { position, moves } => todo!(),
+            Input::UciNewGame => {
+                if uci {
+                    start = true;
+                    engine.set_board(Board::starting_position());
+                }
+            }
+            Input::Position { position, moves } => {
+                if uci {
+                    if start {
+                        let board: Board = match position.try_into() {
+                            Ok(board) => board,
+                            Err(err) => {
+                                if debug {
+                                    debug_print(output, "error setting up board".to_string())?;
+                                    debug_print(output, format!("error: {err}"))?;
+                                }
+                                Board::starting_position()
+                            }
+                        };
+                        engine.set_board(board);
+                        engine.move_multiple(moves);
+                        start = false;
+                    } else if let Some(movement) = moves.last() {
+                        engine.move_piece(*movement);
+                    } else if debug {
+                        debug_print(output, "no moves found".to_string())?;
+                    }
+                }
+            }
             Input::Go {
                 search_moves,
                 ponder,
@@ -104,9 +146,22 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                 mate,
                 move_time,
                 infinite,
-            } => todo!(),
-            Input::Stop => todo!(),
-            Input::PonderHit => todo!(),
+            } => {
+                if uci {
+                    start = false;
+                    todo!()
+                }
+            }
+            Input::Stop => {
+                if uci {
+                    engine.stop();
+                }
+            }
+            Input::PonderHit => {
+                if uci && debug {
+                    debug_print(output, "pondering is unsupported; ignoring".to_string())?;
+                }
+            }
             Input::Quit => {
                 if uci {
                     return Ok(());

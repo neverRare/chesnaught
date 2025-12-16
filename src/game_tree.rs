@@ -5,6 +5,7 @@ use std::{
     mem::replace,
     sync::{
         LazyLock,
+        atomic::{self, AtomicBool},
         mpsc::{Sender, channel},
     },
     thread::{Builder, panicking},
@@ -116,8 +117,11 @@ impl GameTreeInner {
         beta: Score,
         transposition_table: &mut HashMap<HashableBoard, Score>,
         repetition_table: &mut HashSet<HashableBoard>,
+        stop_signal: Option<&AtomicBool>,
     ) {
-        if let Data::End(state) = self.data {
+        if stop_signal.is_some_and(|signal| signal.load(atomic::Ordering::Relaxed)) {
+            // Do nothing
+        } else if let Data::End(state) = self.data {
             let score = match state {
                 EndState::Win(color) => Score::Win(color),
                 EndState::Draw => Score::Estimated(Estimated::default()),
@@ -148,6 +152,7 @@ impl GameTreeInner {
                         beta,
                         transposition_table,
                         repetition_table,
+                        stop_signal,
                     );
                     if let Some(score) = game_tree.score
                         && alpha_beta.set(score)
@@ -224,6 +229,17 @@ impl GameTree {
             Score::WHITE_WINS,
             &mut HashMap::new(),
             &mut HashSet::new(),
+            None,
+        );
+    }
+    pub fn calculate_with_stop_signal(&mut self, depth: u32, stop_signal: &AtomicBool) {
+        self.0.alpha_beta(
+            depth,
+            Score::BLACK_WINS,
+            Score::WHITE_WINS,
+            &mut HashMap::new(),
+            &mut HashSet::new(),
+            Some(stop_signal),
         );
     }
     fn best_move_tree_pair(&self) -> Option<&MoveTreePair> {

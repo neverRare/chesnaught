@@ -1,0 +1,125 @@
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+        mpsc::{Receiver, Sender, channel},
+    },
+    thread::{JoinHandle, panicking, sleep, spawn},
+    time::Duration,
+};
+
+use crate::{
+    board::{Board, Lan},
+    game_tree::GameTree,
+};
+
+enum Input {
+    Ready,
+    SetBoard(Board),
+    Move(Lan),
+    MoveMultiple(Vec<Lan>),
+    Calculate {
+        depth: Option<u32>,
+        callback: Box<dyn FnOnce(Lan) + Send>,
+    },
+}
+pub struct Engine {
+    stop: Arc<AtomicBool>,
+    input: Option<Sender<Input>>,
+    ready: Receiver<()>,
+    handle: Option<JoinHandle<()>>,
+}
+impl Engine {
+    pub fn new() -> Self {
+        let stop = Arc::new(AtomicBool::new(false));
+        let (input, input_receiver) = channel();
+        let (ready_sender, ready) = channel();
+        let stop_signal = stop.clone();
+        let handle = spawn(move || {
+            let mut game_tree = GameTree::new(Board::starting_position());
+            for input in input_receiver {
+                match input {
+                    Input::Ready => ready_sender.send(()).unwrap(),
+                    Input::SetBoard(board) => game_tree = GameTree::new(board),
+                    Input::Move(movement) => game_tree.move_piece(movement),
+                    Input::MoveMultiple(moves) => {
+                        // FIXME: this sends a lot of data to the garbage collector
+                        for movement in moves {
+                            game_tree.move_piece(movement);
+                        }
+                    }
+                    Input::Calculate { depth, callback } => {
+                        stop_signal.store(false, Ordering::Relaxed);
+                        for i in 1.. {
+                            game_tree.calculate_with_stop_signal(i, &stop_signal);
+                            if depth.is_some_and(|depth| i >= depth) {
+                                break;
+                            }
+                        }
+                        if let Some(movement) = game_tree.best_move() {
+                            callback(movement);
+                        }
+                    }
+                }
+            }
+        });
+        Engine {
+            stop,
+            input: Some(input),
+            ready,
+            handle: Some(handle),
+        }
+    }
+    fn input(&self) -> &Sender<Input> {
+        self.input.as_ref().unwrap()
+    }
+    pub fn ready(&self) {
+        self.input().send(Input::Ready).unwrap();
+        self.ready.recv().unwrap();
+    }
+    pub fn set_board(&self, board: Board) {
+        self.input().send(Input::SetBoard(board)).unwrap();
+    }
+    pub fn move_piece(&self, movement: Lan) {
+        self.input().send(Input::Move(movement)).unwrap();
+    }
+    pub fn move_multiple(&self, moves: Vec<Lan>) {
+        self.input().send(Input::MoveMultiple(moves)).unwrap();
+    }
+    pub fn calculate(
+        &self,
+        duration: Option<Duration>,
+        depth: Option<u32>,
+        callback: impl Fn(Lan) + Send + 'static,
+    ) {
+        if let Some(duration) = duration {
+            let stop_signal = self.stop.clone();
+            spawn(move || {
+                sleep(duration);
+                stop_signal.store(true, Ordering::Relaxed);
+            });
+        }
+        self.input()
+            .send(Input::Calculate {
+                depth,
+                callback: Box::new(callback),
+            })
+            .unwrap();
+    }
+    pub fn stop(&self) {
+        self.stop.store(true, Ordering::Relaxed);
+    }
+}
+impl Drop for Engine {
+    fn drop(&mut self) {
+        if let Some(sender) = self.input.take() {
+            drop(sender);
+        }
+        if let Some(handle) = self.handle.take() {
+            let result = handle.join();
+            if !panicking() {
+                result.unwrap();
+            }
+        }
+    }
+}
