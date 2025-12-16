@@ -20,7 +20,7 @@ use crate::{
 type MoveTreePair = (Lan, Option<Lan>, GameTreeInner);
 
 #[derive(Debug, Clone)]
-enum GameTreeData {
+enum Data {
     Board(Box<Board>),
     Children {
         board: Box<HashableBoard>,
@@ -31,15 +31,15 @@ enum GameTreeData {
 
 #[derive(Debug, Clone)]
 struct GameTreeInner {
-    data: GameTreeData,
+    data: Data,
     score: Option<Score>,
 }
 impl GameTreeInner {
     fn new(board: Board) -> Self {
         let data = if let Err(state) = board.valid_moves() {
-            GameTreeData::End(state)
+            Data::End(state)
         } else {
-            GameTreeData::Board(Box::new(board))
+            Data::Board(Box::new(board))
         };
         GameTreeInner { data, score: None }
     }
@@ -61,13 +61,13 @@ impl GameTreeInner {
     }
     fn board(&self) -> Option<HashableBoard> {
         match &self.data {
-            GameTreeData::Board(board) => Some(board.as_hashable()),
-            GameTreeData::Children { board, .. } => Some(**board),
-            GameTreeData::End(_) => None,
+            Data::Board(board) => Some(board.as_hashable()),
+            Data::Children { board, .. } => Some(**board),
+            Data::End(_) => None,
         }
     }
     fn children(&self) -> Option<&Vec<MoveTreePair>> {
-        if let GameTreeData::Children { children, .. } = &self.data {
+        if let Data::Children { children, .. } = &self.data {
             Some(children)
         } else {
             None
@@ -75,10 +75,10 @@ impl GameTreeInner {
     }
     fn children_or_init(&mut self) -> Option<&mut Vec<MoveTreePair>> {
         match &mut self.data {
-            GameTreeData::Board(board) => {
+            Data::Board(board) => {
                 let board = Board::clone(board);
                 let hashable = board.as_hashable();
-                self.data = GameTreeData::Children {
+                self.data = Data::Children {
                     board: Box::new(hashable),
                     children: board
                         .valid_moves()
@@ -94,19 +94,19 @@ impl GameTreeInner {
                         .collect(),
                 };
             }
-            GameTreeData::Children { .. } => (),
-            GameTreeData::End(_) => return None,
+            Data::Children { .. } => (),
+            Data::End(_) => return None,
         }
-        let GameTreeData::Children { children, .. } = &mut self.data else {
+        let Data::Children { children, .. } = &mut self.data else {
             unreachable!()
         };
         Some(children)
     }
     fn current_player(&self) -> Option<Color> {
         match &self.data {
-            GameTreeData::Board(board) => Some(board.current_player()),
-            GameTreeData::Children { board, .. } => Some(board.current_player),
-            GameTreeData::End(_) => None,
+            Data::Board(board) => Some(board.current_player()),
+            Data::Children { board, .. } => Some(board.current_player),
+            Data::End(_) => None,
         }
     }
     fn alpha_beta(
@@ -117,7 +117,7 @@ impl GameTreeInner {
         transposition_table: &mut HashMap<HashableBoard, Score>,
         repetition_table: &mut HashSet<HashableBoard>,
     ) {
-        if let GameTreeData::End(state) = self.data {
+        if let Data::End(state) = self.data {
             let score = match state {
                 EndState::Win(color) => Score::Win(color),
                 EndState::Draw => Score::Estimated(Estimated::default()),
@@ -171,7 +171,7 @@ impl GameTreeInner {
         }
     }
     fn estimate(&self) -> Score {
-        let estimated = if let GameTreeData::Board(board) = &self.data {
+        let estimated = if let Data::Board(board) = &self.data {
             estimate(board)
         } else if let Some(score) = self.score {
             return score;
@@ -203,8 +203,8 @@ impl GameTree {
     }
     pub fn move_piece(&mut self, movement: Lan) {
         let new = match &mut self.0.data {
-            GameTreeData::Board(board) => GameTreeInner::new(board.clone_and_move(&movement)),
-            GameTreeData::Children { children, .. } => {
+            Data::Board(board) => GameTreeInner::new(board.clone_and_move(&movement)),
+            Data::Children { children, .. } => {
                 let (_, _, children) = children.remove(
                     children
                         .iter()
@@ -213,7 +213,7 @@ impl GameTree {
                 );
                 children
             }
-            GameTreeData::End(_) => panic!("cannot move on end state"),
+            Data::End(_) => panic!("cannot move on end state"),
         };
         replace(&mut self.0, new).drop();
     }
@@ -249,7 +249,7 @@ impl GameTree {
 impl Drop for GameTree {
     fn drop(&mut self) {
         let dummy = GameTreeInner {
-            data: GameTreeData::End(EndState::Draw),
+            data: Data::End(EndState::Draw),
             score: None,
         };
         replace(&mut self.0, dummy).drop();
