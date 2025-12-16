@@ -54,7 +54,7 @@ impl GameTreeInner {
             });
             result.ok().map(|_| sender)
         });
-        match DROPPER.as_ref() {
+        match &*DROPPER {
             Some(sender) => sender.send(self).unwrap(),
             None => drop(self),
         }
