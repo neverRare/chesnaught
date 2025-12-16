@@ -18,7 +18,16 @@ pub struct Estimated {
 impl Display for Estimated {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if self.king_constriction != 0 {
-            write!(f, "unavailable space for king: {}", self.king_constriction)?;
+            let color = match self.king_constriction.signum() {
+                1 => Color::Black,
+                -1 => Color::White,
+                _ => unreachable!(),
+            };
+            write!(
+                f,
+                "available space for {color}'s king: {}",
+                64 - self.king_constriction.abs()
+            )?;
         } else if self.king_safety != 0 {
             write!(f, "king safety: {}", self.king_safety)?;
         } else if self.end_game_pawn_advancement != [CompoundI8::default(); 4] {
