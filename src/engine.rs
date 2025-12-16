@@ -58,6 +58,9 @@ impl Engine {
                         }
                         if let Some(movement) = game_tree.best_move() {
                             callback(movement);
+                        } else {
+                            game_tree.calculate(1);
+                            callback(game_tree.best_move().unwrap());
                         }
                     }
                 }
