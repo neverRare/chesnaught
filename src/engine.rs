@@ -20,19 +20,18 @@ enum Input {
     Calculate {
         depth: Option<u32>,
         callback: Box<dyn FnOnce(Lan) + Send>,
+        stop_signal: Arc<AtomicBool>,
     },
 }
 pub struct Engine {
-    stop: Arc<AtomicBool>,
+    stop_signal: Option<Arc<AtomicBool>>,
     input: Sender<Input>,
     ready: Receiver<()>,
 }
 impl Engine {
     pub fn new() -> Self {
-        let stop = Arc::new(AtomicBool::new(false));
         let (input, input_receiver) = channel();
         let (ready_sender, ready) = channel();
-        let stop_signal = stop.clone();
         spawn(move || {
             let mut game_tree = GameTree::new(Board::starting_position());
             for input in input_receiver {
@@ -40,8 +39,11 @@ impl Engine {
                     Input::Ready => ready_sender.send(()).unwrap(),
                     Input::SetBoard(board) => game_tree = GameTree::new(board),
                     Input::Move(movement) => game_tree.move_piece(movement),
-                    Input::Calculate { depth, callback } => {
-                        stop_signal.store(false, Ordering::Relaxed);
+                    Input::Calculate {
+                        depth,
+                        callback,
+                        stop_signal,
+                    } => {
                         for i in 1.. {
                             game_tree.calculate_with_stop_signal(i, &stop_signal);
                             if depth.is_some_and(|depth| i >= depth) {
@@ -58,7 +60,11 @@ impl Engine {
                 }
             }
         });
-        Engine { stop, input, ready }
+        Engine {
+            stop_signal: None,
+            input,
+            ready,
+        }
     }
     pub fn ready(&self) {
         self.input.send(Input::Ready).unwrap();
@@ -71,13 +77,14 @@ impl Engine {
         self.input.send(Input::Move(movement)).unwrap();
     }
     pub fn calculate(
-        &self,
+        &mut self,
         duration: Option<Duration>,
         depth: Option<u32>,
         callback: impl Fn(Lan) + Send + 'static,
     ) {
+        let stop_signal = Arc::new(AtomicBool::new(false));
         if let Some(duration) = duration {
-            let stop_signal = self.stop.clone();
+            let stop_signal = stop_signal.clone();
             spawn(move || {
                 sleep(duration);
                 stop_signal.store(true, Ordering::Relaxed);
@@ -87,10 +94,14 @@ impl Engine {
             .send(Input::Calculate {
                 depth,
                 callback: Box::new(callback),
+                stop_signal: stop_signal.clone(),
             })
             .unwrap();
+        self.stop_signal = Some(stop_signal);
     }
     pub fn stop(&self) {
-        self.stop.store(true, Ordering::Relaxed);
+        if let Some(stop_signal) = &self.stop_signal {
+            stop_signal.store(true, Ordering::Relaxed);
+        }
     }
 }
