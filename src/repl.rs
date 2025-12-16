@@ -6,6 +6,7 @@ use crate::{
     color::Color,
     coord::Coord,
     fen::{Fen, ParseFenError},
+    game_tree::GameTree,
     misc::strip_prefix_token,
 };
 use std::{
@@ -13,6 +14,7 @@ use std::{
     error::Error,
     fmt::{self, Display, Formatter, Write as _},
     io::{self, BufRead, Write},
+    num::ParseIntError,
     str::FromStr,
 };
 
@@ -27,6 +29,7 @@ enum Input {
     ExportFen,
     Coord(Coord),
     Move(Lan),
+    Bot(u32),
 }
 impl Display for Input {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -40,6 +43,7 @@ impl Display for Input {
             Input::ExportFen => write!(f, "fen")?,
             Input::Coord(position) => write!(f, "{position}")?,
             Input::Move(movement) => write!(f, "{movement}")?,
+            Input::Bot(depth) => write!(f, "bot {depth}")?,
         }
         Ok(())
     }
@@ -58,6 +62,8 @@ impl FromStr for Input {
             s => {
                 if let Some(s) = strip_prefix_token(s, "import") {
                     Ok(Input::Import(s.parse()?))
+                } else if let Some(s) = strip_prefix_token(s, "bot") {
+                    Ok(Input::Bot(s.parse()?))
                 } else if let Ok(position) = s.parse() {
                     Ok(Input::Coord(position))
                 } else {
@@ -83,6 +89,7 @@ pub fn repl(
     let mut update = true;
     let mut view = Color::White;
     let mut first_time = true;
+    let mut game_tree = GameTree::new(board.clone());
     loop {
         if update {
             valid_moves.clear();
@@ -138,6 +145,7 @@ pub fn repl(
                     writeln!(output, "e2e4           - play the move")?;
                     writeln!(output, "e7e8q          - move and promote")?;
                     writeln!(output, "e1g1 (or e1h1) - perform castling")?;
+                    writeln!(output, "bot <depth>    - let a bot play")?;
                 }
                 Input::Flip => {
                     view = !view;
@@ -200,9 +208,17 @@ pub fn repl(
                         continue;
                     };
                     board.move_piece(movement);
+                    game_tree.move_piece(*movement);
                     highlighted.clear();
                     highlighted.push(lan.origin);
                     highlighted.push(lan.destination);
+                    update = true;
+                }
+                Input::Bot(depth) => {
+                    game_tree.calculate(depth);
+                    let movement = game_tree.best_move().unwrap();
+                    board.move_piece(&movement);
+                    game_tree.move_piece(movement);
                     update = true;
                 }
             }
@@ -213,24 +229,31 @@ pub fn repl(
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum ParseInputError {
-    ParseFenError(ParseFenError),
-    ParseMoveError(ParseLanError),
+    Fen(ParseFenError),
+    Move(ParseLanError),
+    Int(ParseIntError),
 }
 impl From<ParseFenError> for ParseInputError {
     fn from(value: ParseFenError) -> Self {
-        ParseInputError::ParseFenError(value)
+        ParseInputError::Fen(value)
     }
 }
 impl From<ParseLanError> for ParseInputError {
     fn from(value: ParseLanError) -> Self {
-        ParseInputError::ParseMoveError(value)
+        ParseInputError::Move(value)
+    }
+}
+impl From<ParseIntError> for ParseInputError {
+    fn from(value: ParseIntError) -> Self {
+        ParseInputError::Int(value)
     }
 }
 impl Display for ParseInputError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ParseInputError::ParseFenError(err) => write!(f, "{err}")?,
-            ParseInputError::ParseMoveError(err) => write!(f, "{err}")?,
+            ParseInputError::Fen(err) => write!(f, "{err}")?,
+            ParseInputError::Move(err) => write!(f, "{err}")?,
+            ParseInputError::Int(err) => write!(f, "{err}")?,
         }
         Ok(())
     }
@@ -238,8 +261,9 @@ impl Display for ParseInputError {
 impl Error for ParseInputError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            ParseInputError::ParseFenError(err) => Some(err),
-            ParseInputError::ParseMoveError(err) => Some(err),
+            ParseInputError::Fen(err) => Some(err),
+            ParseInputError::Move(err) => Some(err),
+            ParseInputError::Int(err) => Some(err),
         }
     }
 }
