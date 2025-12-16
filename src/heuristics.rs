@@ -1,10 +1,9 @@
 use std::{
     cmp::Ordering,
     fmt::{self, Display, Formatter},
-    ops::{Add, AddAssign, Neg, Sub, SubAssign},
 };
 
-use crate::{board::Board, color::Color};
+use crate::{board::Board, color::Color, misc::CompoundI8};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Estimated {
@@ -47,69 +46,6 @@ impl Display for Estimated {
             )?;
         }
         Ok(())
-    }
-}
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CompoundI8(i8);
-impl CompoundI8 {
-    fn new(left: i8, right: i8) -> Self {
-        debug_assert!(left < 8);
-        debug_assert!(left >= -8);
-        debug_assert!(right < 8);
-        debug_assert!(right >= -8);
-        CompoundI8((left << 4) | (right & 0b_1111))
-    }
-    fn left(self) -> i8 {
-        self.0 >> 4
-    }
-    fn right(self) -> i8 {
-        (self.0 << 4) >> 4
-    }
-}
-impl Default for CompoundI8 {
-    fn default() -> Self {
-        CompoundI8::new(0, 0)
-    }
-}
-impl PartialOrd for CompoundI8 {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for CompoundI8 {
-    fn cmp(&self, other: &Self) -> Ordering {
-        Ord::cmp(&(self.left(), self.right()), &(other.left(), other.right()))
-    }
-}
-impl Neg for CompoundI8 {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        CompoundI8::new(-self.left(), -self.right())
-    }
-}
-impl Add<CompoundI8> for CompoundI8 {
-    type Output = Self;
-
-    fn add(self, rhs: CompoundI8) -> Self::Output {
-        CompoundI8::new(self.left() + rhs.left(), self.right() + rhs.right())
-    }
-}
-impl AddAssign<CompoundI8> for CompoundI8 {
-    fn add_assign(&mut self, rhs: CompoundI8) {
-        *self = CompoundI8::new(self.left() + rhs.left(), self.right() + rhs.right());
-    }
-}
-impl Sub<CompoundI8> for CompoundI8 {
-    type Output = Self;
-
-    fn sub(self, rhs: CompoundI8) -> Self::Output {
-        CompoundI8::new(self.left() - rhs.left(), self.right() - rhs.right())
-    }
-}
-impl SubAssign<CompoundI8> for CompoundI8 {
-    fn sub_assign(&mut self, rhs: CompoundI8) {
-        *self = CompoundI8::new(self.left() - rhs.left(), self.right() - rhs.right());
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
