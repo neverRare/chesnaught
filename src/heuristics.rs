@@ -8,12 +8,12 @@ use crate::{board::Board, color::Color};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Estimated {
-    king_constriction: i8,
-    king_safety: i8,
-    end_game_pawn_advancement: [CompoundI8; 4],
-    square_control: i16,
-    material: i8,
-    pawn_advancement: i8,
+    pub king_constriction: i8,
+    pub king_safety: i8,
+    pub end_game_pawn_advancement: [CompoundI8; 4],
+    pub square_control: i16,
+    pub material: i8,
+    pub pawn_advancement: i8,
 }
 impl Display for Estimated {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
