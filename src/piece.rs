@@ -49,16 +49,16 @@ impl PieceKind {
         PieceKind::Rook,
     ];
     pub fn chess960(id: u16) -> [Self; 8] {
-        fn insert(configuration: &mut [PieceKind], mut index: usize, piece: PieceKind) {
-            for cell in configuration {
+        fn get_position(configuration: &[PieceKind], mut index: u16) -> usize {
+            for (i, cell) in configuration.iter().enumerate() {
                 if *cell == PieceKind::Pawn {
                     if index == 0 {
-                        *cell = piece;
-                        break;
+                        return i;
                     }
                     index -= 1;
                 }
             }
+            unreachable!()
         }
         assert!(id < 960, "{id} must be < 960");
 
@@ -77,17 +77,19 @@ impl PieceKind {
         let mut configuration = [PieceKind::Pawn; 8];
         configuration[bishop_1 as usize * 2] = PieceKind::Bishop;
         configuration[bishop_2 as usize * 2 + 1] = PieceKind::Bishop;
-        insert(&mut configuration, queen as usize, PieceKind::Queen);
+        configuration[get_position(&configuration, queen)] = PieceKind::Queen;
 
-        let (a, b) = match knights as usize {
+        let (a, b) = match knights {
             n @ 0..4 => (n, 4),
             n @ 4..7 => (n - 4, 3),
             n @ 7..9 => (n - 7, 2),
             9 => (0, 1),
             _ => unreachable!(),
         };
-        insert(&mut configuration, a, PieceKind::Knight);
-        insert(&mut configuration, b, PieceKind::Knight);
+        let a = get_position(&configuration, a);
+        let b = get_position(&configuration, b);
+        configuration[a] = PieceKind::Knight;
+        configuration[b] = PieceKind::Knight;
 
         let mut piece = PieceKind::Rook;
         for cell in &mut configuration {
