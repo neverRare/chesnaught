@@ -11,7 +11,7 @@ pub struct Estimated {
     king_constriction: i8,
     king_safety: i8,
     end_game_pawn_advancement: [CompoundI8; 4],
-    square_control: i32,
+    square_control: i16,
     material: i8,
     pawn_advancement: [CompoundI8; 4],
 }
