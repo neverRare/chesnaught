@@ -211,17 +211,13 @@ impl GameTree {
     pub fn best_line(&self) -> impl Iterator<Item = Lan> {
         let mut game_tree = self;
         from_fn(move || {
-            game_tree.score.and_then(|(movement, _)| {
-                movement.map(|movement| {
-                    if let GameTreeData::Children { children, .. } = &game_tree.data {
-                        let (_, _, new_game_tree) = &children[0];
-                        game_tree = new_game_tree;
-                        movement
-                    } else {
-                        unreachable!()
-                    }
-                })
-            })
+            if let GameTreeData::Children { children, .. } = &game_tree.data {
+                let (movement, _, new_game_tree) = children.first()?;
+                game_tree = new_game_tree;
+                Some(*movement)
+            } else {
+                None
+            }
         })
     }
 }
