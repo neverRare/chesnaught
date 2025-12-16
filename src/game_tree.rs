@@ -165,7 +165,7 @@ impl GameTreeInner {
                         Color::Black => Ord::cmp(&a, &b),
                     },
                 });
-                self.score = Some(alpha_beta.best_score);
+                self.score = Some(alpha_beta.score);
             }
             transposition_table.insert(board, self.score.unwrap());
         }
@@ -259,7 +259,7 @@ struct AlphaBetaState {
     current_player: Color,
     alpha: Score,
     beta: Score,
-    best_score: Score,
+    score: Score,
 }
 impl AlphaBetaState {
     fn new(current_player: Color, alpha: Score, beta: Score) -> Self {
@@ -267,7 +267,7 @@ impl AlphaBetaState {
             current_player,
             alpha,
             beta,
-            best_score: match current_player {
+            score: match current_player {
                 Color::White => Score::BLACK_WINS,
                 Color::Black => Score::WHITE_WINS,
             },
@@ -276,23 +276,23 @@ impl AlphaBetaState {
     fn set(&mut self, score: Score) -> bool {
         match self.current_player {
             Color::White => {
-                if score > self.best_score {
-                    self.best_score = score;
+                if score > self.score {
+                    self.score = score;
                 }
-                if self.best_score >= self.beta {
+                if self.score >= self.beta {
                     return true;
                 }
-                self.alpha = Ord::max(self.alpha, self.best_score);
+                self.alpha = Ord::max(self.alpha, self.score);
                 false
             }
             Color::Black => {
-                if score < self.best_score {
-                    self.best_score = score;
+                if score < self.score {
+                    self.score = score;
                 }
-                if self.best_score <= self.alpha {
+                if self.score <= self.alpha {
                     return true;
                 }
-                self.beta = Ord::min(self.beta, self.best_score);
+                self.beta = Ord::min(self.beta, self.score);
                 false
             }
         }
