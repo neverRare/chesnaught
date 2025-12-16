@@ -19,8 +19,10 @@ use crate::{
     coord::{Coord, ParseCoordError, Vector},
     end_state::EndState,
     misc::InvalidByte,
-    piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
+    piece::{ColoredPieceKind, InvalidFenPiece, PieceKind, STARTING_VALUE},
 };
+
+pub const ESTIMATED_TOTAL_MOVES: u8 = 40;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Piece {
@@ -893,6 +895,13 @@ impl Board {
         let mut new = self.clone();
         new.move_piece(movement);
         new
+    }
+    pub fn estimate_moves_left(&self) -> f32 {
+        let pieces: u8 = self
+            .all_pieces()
+            .map(|piece| piece.piece().value().map_or(0, NonZero::get))
+            .sum();
+        <f32>::from(pieces) * <f32>::from(ESTIMATED_TOTAL_MOVES) / <f32>::from(STARTING_VALUE)
     }
     pub fn move_assert(&mut self, lan: Lan) {
         let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();

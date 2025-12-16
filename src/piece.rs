@@ -6,6 +6,9 @@ use std::{
 
 use crate::{color::Color, misc::InvalidByte};
 
+#[allow(clippy::identity_op)]
+pub const STARTING_VALUE: u8 = (1 * 8) + (2 * 3) + (2 * 3) + (2 * 5) + (1 * 9);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum PieceKind {
@@ -89,6 +92,15 @@ impl PieceKind {
             }
         }
         configuration
+    }
+    pub fn value(self) -> Option<NonZero<u8>> {
+        match self {
+            PieceKind::Pawn => Some(NonZero::new(1).unwrap()),
+            PieceKind::Knight | PieceKind::Bishop => Some(NonZero::new(3).unwrap()),
+            PieceKind::Rook => Some(NonZero::new(5).unwrap()),
+            PieceKind::Queen => Some(NonZero::new(9).unwrap()),
+            PieceKind::King => None,
+        }
     }
     pub fn uppercase(self) -> char {
         match self {
