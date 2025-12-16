@@ -13,7 +13,7 @@ pub struct Estimated {
     end_game_pawn_advancement: [CompoundI8; 4],
     square_control: i16,
     material: i8,
-    pawn_advancement: [CompoundI8; 4],
+    pawn_advancement: i8,
 }
 impl Display for Estimated {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -33,8 +33,8 @@ impl Display for Estimated {
         } else {
             write!(
                 f,
-                "square control: {}; material: {}",
-                self.square_control, self.material
+                "square control: {}; material: {}; pawn advancement: {}",
+                self.square_control, self.material, self.pawn_advancement
             )?;
         }
         Ok(())
