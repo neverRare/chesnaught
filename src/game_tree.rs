@@ -283,7 +283,6 @@ impl AlphaBetaState {
                     return true;
                 }
                 self.alpha = Ord::max(self.alpha, self.score);
-                false
             }
             Color::Black => {
                 if score < self.score {
@@ -293,8 +292,8 @@ impl AlphaBetaState {
                     return true;
                 }
                 self.beta = Ord::min(self.beta, self.score);
-                false
             }
         }
+        false
     }
 }
