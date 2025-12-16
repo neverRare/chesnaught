@@ -7,7 +7,7 @@ use std::{
         LazyLock,
         mpsc::{Sender, channel},
     },
-    thread::{Builder, spawn},
+    thread::Builder,
 };
 
 use crate::{
