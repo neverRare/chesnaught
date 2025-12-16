@@ -4,7 +4,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         mpsc::{Receiver, Sender, channel},
     },
-    thread::{JoinHandle, panicking, sleep, spawn},
+    thread::{sleep, spawn},
     time::Duration,
 };
 
@@ -24,9 +24,8 @@ enum Input {
 }
 pub struct Engine {
     stop: Arc<AtomicBool>,
-    input: Option<Sender<Input>>,
+    input: Sender<Input>,
     ready: Receiver<()>,
-    handle: Option<JoinHandle<()>>,
 }
 impl Engine {
     pub fn new() -> Self {
@@ -34,7 +33,7 @@ impl Engine {
         let (input, input_receiver) = channel();
         let (ready_sender, ready) = channel();
         let stop_signal = stop.clone();
-        let handle = spawn(move || {
+        spawn(move || {
             let mut game_tree = GameTree::new(Board::starting_position());
             for input in input_receiver {
                 match input {
@@ -59,25 +58,17 @@ impl Engine {
                 }
             }
         });
-        Engine {
-            stop,
-            input: Some(input),
-            ready,
-            handle: Some(handle),
-        }
-    }
-    fn input(&self) -> &Sender<Input> {
-        self.input.as_ref().unwrap()
+        Engine { stop, input, ready }
     }
     pub fn ready(&self) {
-        self.input().send(Input::Ready).unwrap();
+        self.input.send(Input::Ready).unwrap();
         self.ready.recv().unwrap();
     }
     pub fn set_board(&self, board: Board) {
-        self.input().send(Input::SetBoard(board)).unwrap();
+        self.input.send(Input::SetBoard(board)).unwrap();
     }
     pub fn move_piece(&self, movement: Lan) {
-        self.input().send(Input::Move(movement)).unwrap();
+        self.input.send(Input::Move(movement)).unwrap();
     }
     pub fn calculate(
         &self,
@@ -92,7 +83,7 @@ impl Engine {
                 stop_signal.store(true, Ordering::Relaxed);
             });
         }
-        self.input()
+        self.input
             .send(Input::Calculate {
                 depth,
                 callback: Box::new(callback),
@@ -101,19 +92,5 @@ impl Engine {
     }
     pub fn stop(&self) {
         self.stop.store(true, Ordering::Relaxed);
-    }
-}
-impl Drop for Engine {
-    fn drop(&mut self) {
-        self.stop();
-        if let Some(sender) = self.input.take() {
-            drop(sender);
-        }
-        if let Some(handle) = self.handle.take() {
-            let result = handle.join();
-            if !panicking() {
-                result.unwrap();
-            }
-        }
     }
 }
