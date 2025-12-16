@@ -214,13 +214,10 @@ impl GameTree {
             let (movement, _) = game_tree.score.unwrap();
             movement.map(|movement| {
                 if let GameTreeData::Children { children, .. } = &game_tree.data {
-                    game_tree = children
-                        .iter()
-                        .find_map(|(b, _, game_tree)| (movement == *b).then_some(game_tree))
-                        .unwrap();
+                    game_tree = &children[0].2;
                     movement
                 } else {
-                    panic!()
+                    unreachable!()
                 }
             })
         })
