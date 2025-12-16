@@ -31,20 +31,7 @@ pub enum Input<'a> {
         position: Position,
         moves: Vec<Lan>,
     },
-    Go {
-        search_moves: Option<Vec<Lan>>,
-        ponder: bool,
-        w_time: Option<Duration>,
-        b_time: Option<Duration>,
-        w_inc: Option<Duration>,
-        b_inc: Option<Duration>,
-        moves_to_go: Option<NonZero<u32>>,
-        depth: Option<NonZero<u32>>,
-        nodes: Option<NonZero<u32>>,
-        mate: Option<NonZero<u32>>,
-        move_time: Option<Duration>,
-        infinite: bool,
-    },
+    Go(Go),
     Stop,
     PonderHit,
     Quit,
@@ -148,58 +135,45 @@ impl Display for Input<'_> {
                     write!(f, " {movement}")?;
                 }
             }
-            Input::Go {
-                search_moves,
-                ponder,
-                w_time,
-                b_time,
-                w_inc,
-                b_inc,
-                moves_to_go,
-                depth,
-                nodes,
-                mate,
-                move_time,
-                infinite,
-            } => {
+            Input::Go(go) => {
                 write!(f, "go")?;
-                if let Some(search_moves) = search_moves {
+                if let Some(search_moves) = &go.search_moves {
                     write!(f, " search_moves")?;
                     for movement in search_moves {
                         write!(f, " {movement}")?;
                     }
                 }
-                if *ponder {
+                if go.ponder {
                     write!(f, " ponder")?;
                 }
-                if let Some(w_time) = w_time {
+                if let Some(w_time) = go.w_time {
                     write!(f, " wtime {}", w_time.as_millis())?;
                 }
-                if let Some(b_time) = b_time {
+                if let Some(b_time) = go.b_time {
                     write!(f, " btime {}", b_time.as_millis())?;
                 }
-                if let Some(w_inc) = w_inc {
+                if let Some(w_inc) = go.w_inc {
                     write!(f, " winc {}", w_inc.as_millis())?;
                 }
-                if let Some(b_inc) = b_inc {
+                if let Some(b_inc) = go.b_inc {
                     write!(f, " binc {}", b_inc.as_millis())?;
                 }
-                if let Some(moves_to_go) = moves_to_go {
+                if let Some(moves_to_go) = go.moves_to_go {
                     write!(f, " movestogo {moves_to_go}",)?;
                 }
-                if let Some(depth) = depth {
+                if let Some(depth) = go.depth {
                     write!(f, " depth {depth}",)?;
                 }
-                if let Some(nodes) = nodes {
+                if let Some(nodes) = go.nodes {
                     write!(f, " nodes {nodes}",)?;
                 }
-                if let Some(mate) = mate {
+                if let Some(mate) = go.mate {
                     write!(f, " mate {mate}",)?;
                 }
-                if let Some(move_time) = move_time {
+                if let Some(move_time) = go.move_time {
                     write!(f, " movetime {}", move_time.as_millis())?;
                 }
-                if *infinite {
+                if go.infinite {
                     write!(f, " infinite")?;
                 }
             }
@@ -255,7 +229,23 @@ impl FromStr for Position {
         }
     }
 }
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Go {
+    search_moves: Option<Vec<Lan>>,
+    ponder: bool,
+    w_time: Option<Duration>,
+    b_time: Option<Duration>,
+    w_inc: Option<Duration>,
+    b_inc: Option<Duration>,
 
+    #[allow(clippy::struct_field_names)]
+    moves_to_go: Option<NonZero<u32>>,
+    depth: Option<NonZero<u32>>,
+    nodes: Option<NonZero<u32>>,
+    mate: Option<NonZero<u32>>,
+    move_time: Option<Duration>,
+    infinite: bool,
+}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseInputError {
     ParsePositionError(ParsePositionError),

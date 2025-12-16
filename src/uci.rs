@@ -138,20 +138,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                     }
                 }
             }
-            Input::Go {
-                search_moves,
-                ponder,
-                w_time,
-                b_time,
-                w_inc,
-                b_inc,
-                moves_to_go,
-                depth,
-                nodes,
-                mate,
-                move_time,
-                infinite,
-            } => {
+            Input::Go(go) => {
                 if uci {
                     start = false;
                     todo!()
