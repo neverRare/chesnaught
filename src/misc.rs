@@ -5,17 +5,6 @@ use std::{
     ops::{Add, AddAssign, Neg, Sub, SubAssign},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct InvalidByte;
-
-impl Display for InvalidByte {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "invalid byte")?;
-        Ok(())
-    }
-}
-impl Error for InvalidByte {}
-
 fn strip_prefix_token_untrimmed<'a>(src: &'a str, search: &str) -> Option<&'a str> {
     src.strip_prefix(search)
         .filter(|src| src.chars().next().is_none_or(<char>::is_whitespace))
@@ -111,3 +100,13 @@ impl SubAssign<CompoundI8> for CompoundI8 {
         *self = CompoundI8::new(self.left() - rhs.left(), self.right() - rhs.right());
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct InvalidByte;
+
+impl Display for InvalidByte {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid byte")?;
+        Ok(())
+    }
+}
+impl Error for InvalidByte {}

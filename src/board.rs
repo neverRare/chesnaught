@@ -23,72 +23,6 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum InvalidBoard {
-    ExceededPieces(ExceededPieces),
-    NoKing,
-    NonPlayerInCheck,
-    MoreThanTwoCheckers,
-    RookNotFound,
-    InvalidEnPassantRank,
-    EnPassantPawnNotFound,
-    PawnOnHomeRank,
-}
-impl From<ExceededPieces> for InvalidBoard {
-    fn from(value: ExceededPieces) -> Self {
-        InvalidBoard::ExceededPieces(value)
-    }
-}
-impl Display for InvalidBoard {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            InvalidBoard::ExceededPieces(err) => write!(f, "{err}")?,
-            InvalidBoard::NoKing => write!(f, "no kings found")?,
-            InvalidBoard::NonPlayerInCheck => write!(f, "non-player in check")?,
-            InvalidBoard::MoreThanTwoCheckers => {
-                write!(f, "found more than 2 pieces delivering check")?;
-            }
-            InvalidBoard::RookNotFound => write!(f, "rook not found for castling right")?,
-            InvalidBoard::InvalidEnPassantRank => {
-                write!(f, "en passant target may only be on ranks 3 or 6")?;
-            }
-            InvalidBoard::EnPassantPawnNotFound => {
-                write!(f, "pawn in front of en passant target is not found")?;
-            }
-            InvalidBoard::PawnOnHomeRank => write!(f, "pawns cannot be on ranks 1 or 8")?,
-        }
-        Ok(())
-    }
-}
-impl Error for InvalidBoard {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            InvalidBoard::ExceededPieces(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ExceededPieces {
-    PromotedPiece,
-    Pawn,
-    King,
-}
-impl Display for ExceededPieces {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ExceededPieces::PromotedPiece => {
-                write!(f, "exceeded allowable number of promoted pieces")?;
-            }
-            ExceededPieces::Pawn => write!(f, "found more than 8 pawns")?,
-            ExceededPieces::King => write!(f, "found more than 1 kings")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ExceededPieces {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Piece {
     pub piece: ColoredPieceKind,
     pub position: Coord,
@@ -1261,44 +1195,6 @@ impl Moveable for Move {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ParseLanError {
-    InvalidChar,
-    ParseCoordError(ParseCoordError),
-    InvalidFenPiece(InvalidFenPiece),
-    Unexpected(char),
-}
-impl From<ParseCoordError> for ParseLanError {
-    fn from(value: ParseCoordError) -> Self {
-        ParseLanError::ParseCoordError(value)
-    }
-}
-impl From<InvalidFenPiece> for ParseLanError {
-    fn from(value: InvalidFenPiece) -> Self {
-        ParseLanError::InvalidFenPiece(value)
-    }
-}
-impl Display for ParseLanError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseLanError::InvalidChar => write!(f, "provided string contains invalid character")?,
-            ParseLanError::ParseCoordError(err) => write!(f, "{err}")?,
-            ParseLanError::InvalidFenPiece(err) => write!(f, "{err}")?,
-            ParseLanError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ParseLanError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            ParseLanError::ParseCoordError(err) => Some(err),
-            ParseLanError::InvalidFenPiece(err) => Some(err),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Lan {
     pub origin: Coord,
     pub destination: Coord,
@@ -1475,6 +1371,109 @@ impl Moveable for Lan {
         Lan::as_move(*self, board)
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum InvalidBoard {
+    ExceededPieces(ExceededPieces),
+    NoKing,
+    NonPlayerInCheck,
+    MoreThanTwoCheckers,
+    RookNotFound,
+    InvalidEnPassantRank,
+    EnPassantPawnNotFound,
+    PawnOnHomeRank,
+}
+impl From<ExceededPieces> for InvalidBoard {
+    fn from(value: ExceededPieces) -> Self {
+        InvalidBoard::ExceededPieces(value)
+    }
+}
+impl Display for InvalidBoard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            InvalidBoard::ExceededPieces(err) => write!(f, "{err}")?,
+            InvalidBoard::NoKing => write!(f, "no kings found")?,
+            InvalidBoard::NonPlayerInCheck => write!(f, "non-player in check")?,
+            InvalidBoard::MoreThanTwoCheckers => {
+                write!(f, "found more than 2 pieces delivering check")?;
+            }
+            InvalidBoard::RookNotFound => write!(f, "rook not found for castling right")?,
+            InvalidBoard::InvalidEnPassantRank => {
+                write!(f, "en passant target may only be on ranks 3 or 6")?;
+            }
+            InvalidBoard::EnPassantPawnNotFound => {
+                write!(f, "pawn in front of en passant target is not found")?;
+            }
+            InvalidBoard::PawnOnHomeRank => write!(f, "pawns cannot be on ranks 1 or 8")?,
+        }
+        Ok(())
+    }
+}
+impl Error for InvalidBoard {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            InvalidBoard::ExceededPieces(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ExceededPieces {
+    PromotedPiece,
+    Pawn,
+    King,
+}
+impl Display for ExceededPieces {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ExceededPieces::PromotedPiece => {
+                write!(f, "exceeded allowable number of promoted pieces")?;
+            }
+            ExceededPieces::Pawn => write!(f, "found more than 8 pawns")?,
+            ExceededPieces::King => write!(f, "found more than 1 kings")?,
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ParseLanError {
+    InvalidChar,
+    ParseCoordError(ParseCoordError),
+    InvalidFenPiece(InvalidFenPiece),
+    Unexpected(char),
+}
+impl From<ParseCoordError> for ParseLanError {
+    fn from(value: ParseCoordError) -> Self {
+        ParseLanError::ParseCoordError(value)
+    }
+}
+impl From<InvalidFenPiece> for ParseLanError {
+    fn from(value: InvalidFenPiece) -> Self {
+        ParseLanError::InvalidFenPiece(value)
+    }
+}
+impl Display for ParseLanError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseLanError::InvalidChar => write!(f, "provided string contains invalid character")?,
+            ParseLanError::ParseCoordError(err) => write!(f, "{err}")?,
+            ParseLanError::InvalidFenPiece(err) => write!(f, "{err}")?,
+            ParseLanError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParseLanError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParseLanError::ParseCoordError(err) => Some(err),
+            ParseLanError::InvalidFenPiece(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+impl Error for ExceededPieces {}
+
 #[cfg(test)]
 mod test {
     use crate::{board::Board, color::Color, coord, end_state::EndState, fen::Fen};

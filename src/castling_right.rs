@@ -7,21 +7,6 @@ use std::{
 use crate::{board::Piece, color::Color, coord::Coord, piece::PieceKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct InvalidCastlingCharacter(pub char);
-
-impl Display for InvalidCastlingCharacter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "found {}, expected one of `k`, `q`, letters from `a` to `h`, or uppercase forms of these letters",
-            self.0
-        )?;
-        Ok(())
-    }
-}
-impl Error for InvalidCastlingCharacter {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CastlingRight {
     white: u8,
     black: u8,
@@ -189,3 +174,17 @@ impl FromStr for StandardCastlingRight {
         s.parse().map(StandardCastlingRight)
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct InvalidCastlingCharacter(pub char);
+
+impl Display for InvalidCastlingCharacter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "found {}, expected one of `k`, `q`, letters from `a` to `h`, or uppercase forms of these letters",
+            self.0
+        )?;
+        Ok(())
+    }
+}
+impl Error for InvalidCastlingCharacter {}

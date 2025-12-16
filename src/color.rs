@@ -8,19 +8,6 @@ use std::{
 use crate::misc::InvalidByte;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ParseColorError;
-impl Display for ParseColorError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "provided string was not `w`, `b`, `W`, `B`, `white`, or `black`"
-        )?;
-        Ok(())
-    }
-}
-impl Error for ParseColorError {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum Color {
     White = 1,
@@ -85,3 +72,16 @@ impl Not for Color {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ParseColorError;
+impl Display for ParseColorError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "provided string was not `w`, `b`, `W`, `B`, `white`, or `black`"
+        )?;
+        Ok(())
+    }
+}
+impl Error for ParseColorError {}

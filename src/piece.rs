@@ -7,20 +7,6 @@ use std::{
 use crate::{color::Color, misc::InvalidByte};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct InvalidFenPiece(pub char);
-impl Display for InvalidFenPiece {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "found `{}`, expected one of `p`, `n`, `b`, `r`, `k`, `q`, or uppercase forms of these letters",
-            self.0
-        )?;
-        Ok(())
-    }
-}
-impl Error for InvalidFenPiece {}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
 pub enum PieceKind {
     // other types relies on `PieceKind` being non-zero
@@ -235,3 +221,16 @@ impl Display for ColoredPieceKind {
         Ok(())
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct InvalidFenPiece(pub char);
+impl Display for InvalidFenPiece {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "found `{}`, expected one of `p`, `n`, `b`, `r`, `k`, `q`, or uppercase forms of these letters",
+            self.0
+        )?;
+        Ok(())
+    }
+}
+impl Error for InvalidFenPiece {}

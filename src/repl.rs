@@ -16,38 +16,6 @@ use std::{
     str::FromStr,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum ParseInputError {
-    ParseFenError(ParseFenError),
-    ParseMoveError(ParseLanError),
-}
-impl From<ParseFenError> for ParseInputError {
-    fn from(value: ParseFenError) -> Self {
-        ParseInputError::ParseFenError(value)
-    }
-}
-impl From<ParseLanError> for ParseInputError {
-    fn from(value: ParseLanError) -> Self {
-        ParseInputError::ParseMoveError(value)
-    }
-}
-impl Display for ParseInputError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseInputError::ParseFenError(err) => write!(f, "{err}")?,
-            ParseInputError::ParseMoveError(err) => write!(f, "{err}")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ParseInputError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            ParseInputError::ParseFenError(err) => Some(err),
-            ParseInputError::ParseMoveError(err) => Some(err),
-        }
-    }
-}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum Input {
     Help,
@@ -239,6 +207,39 @@ pub fn repl(
                 }
             }
             break;
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ParseInputError {
+    ParseFenError(ParseFenError),
+    ParseMoveError(ParseLanError),
+}
+impl From<ParseFenError> for ParseInputError {
+    fn from(value: ParseFenError) -> Self {
+        ParseInputError::ParseFenError(value)
+    }
+}
+impl From<ParseLanError> for ParseInputError {
+    fn from(value: ParseLanError) -> Self {
+        ParseInputError::ParseMoveError(value)
+    }
+}
+impl Display for ParseInputError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseInputError::ParseFenError(err) => write!(f, "{err}")?,
+            ParseInputError::ParseMoveError(err) => write!(f, "{err}")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParseInputError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParseInputError::ParseFenError(err) => Some(err),
+            ParseInputError::ParseMoveError(err) => Some(err),
         }
     }
 }

@@ -13,37 +13,6 @@ use crate::{
     misc::{extract_prefix_token, split_by_token, starts_with_token, strip_prefix_token},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParseInputError {
-    ParsePositionError(ParsePositionError),
-    UnknownCommand(Box<str>),
-    NotOnOrOff,
-    NoName,
-}
-impl From<ParsePositionError> for ParseInputError {
-    fn from(value: ParsePositionError) -> Self {
-        ParseInputError::ParsePositionError(value)
-    }
-}
-impl Display for ParseInputError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseInputError::ParsePositionError(err) => write!(f, "{err}")?,
-            ParseInputError::UnknownCommand(command) => write!(f, "unknown command `{command}`")?,
-            ParseInputError::NotOnOrOff => write!(f, "provided string was not `on` or `off`")?,
-            ParseInputError::NoName => write!(f, "token `name` was not found")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ParseInputError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            ParseInputError::ParsePositionError(err) => Some(err),
-            _ => None,
-        }
-    }
-}
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Input<'a> {
     Uci,
@@ -242,38 +211,6 @@ impl Display for Input<'_> {
         Ok(())
     }
 }
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParsePositionError {
-    UnknownCommand(Box<str>),
-    Unexpected(char),
-    ParseFenError(ParseFenError),
-}
-impl From<ParseFenError> for ParsePositionError {
-    fn from(value: ParseFenError) -> Self {
-        ParsePositionError::ParseFenError(value)
-    }
-}
-impl Display for ParsePositionError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ParsePositionError::UnknownCommand(command) => write!(
-                f,
-                "found `{command}`, `startpos` or `fen` were expected instead"
-            )?,
-            ParsePositionError::Unexpected(c) => write!(f, "unexpected {c}")?,
-            ParsePositionError::ParseFenError(parse_fen_error) => write!(f, "{parse_fen_error}")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ParsePositionError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            ParsePositionError::ParseFenError(err) => Some(err),
-            _ => None,
-        }
-    }
-}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Position {
     StartPos,
@@ -305,6 +242,71 @@ impl FromStr for Position {
             Err(ParsePositionError::UnknownCommand(
                 extract_prefix_token(s).into(),
             ))
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParseInputError {
+    ParsePositionError(ParsePositionError),
+    UnknownCommand(Box<str>),
+    NotOnOrOff,
+    NoName,
+}
+impl From<ParsePositionError> for ParseInputError {
+    fn from(value: ParsePositionError) -> Self {
+        ParseInputError::ParsePositionError(value)
+    }
+}
+impl Display for ParseInputError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseInputError::ParsePositionError(err) => write!(f, "{err}")?,
+            ParseInputError::UnknownCommand(command) => write!(f, "unknown command `{command}`")?,
+            ParseInputError::NotOnOrOff => write!(f, "provided string was not `on` or `off`")?,
+            ParseInputError::NoName => write!(f, "token `name` was not found")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParseInputError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParseInputError::ParsePositionError(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParsePositionError {
+    UnknownCommand(Box<str>),
+    Unexpected(char),
+    ParseFenError(ParseFenError),
+}
+impl From<ParseFenError> for ParsePositionError {
+    fn from(value: ParseFenError) -> Self {
+        ParsePositionError::ParseFenError(value)
+    }
+}
+impl Display for ParsePositionError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParsePositionError::UnknownCommand(command) => write!(
+                f,
+                "found `{command}`, `startpos` or `fen` were expected instead"
+            )?,
+            ParsePositionError::Unexpected(c) => write!(f, "unexpected {c}")?,
+            ParsePositionError::ParseFenError(parse_fen_error) => write!(f, "{parse_fen_error}")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParsePositionError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParsePositionError::ParseFenError(err) => Some(err),
+            _ => None,
         }
     }
 }

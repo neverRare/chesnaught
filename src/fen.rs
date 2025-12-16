@@ -16,62 +16,6 @@ use crate::{
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ParseFenError {
-    ExceededRowCount,
-    ExceededSquareCount,
-    InvalidRowCount(usize),
-    InvalidSquareCount(usize),
-    InvalidSpaceCharacter(char),
-    InvalidFenPiece(InvalidFenPiece),
-    ParseColorError(ParseColorError),
-    InvalidCastlingCharacter(InvalidCastlingCharacter),
-    ParseCoordError(ParseCoordError),
-    ParseIntError(ParseIntError),
-    Unexpected(char),
-    UnexpectedEol,
-}
-impl Display for ParseFenError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseFenError::ExceededRowCount => {
-                write!(f, "exceeded number of rows, 8 were expected")?;
-            }
-            ParseFenError::ExceededSquareCount => {
-                write!(f, "exceeded number of squares, 8 were expected")?;
-            }
-            ParseFenError::InvalidRowCount(rows) => {
-                write!(f, "found {rows} rows, 8 were expected instead")?;
-            }
-            ParseFenError::InvalidSquareCount(squares) => {
-                write!(f, "found {squares} squares, 8 were expected instead")?;
-            }
-            ParseFenError::InvalidSpaceCharacter(c) => {
-                write!(f, "found {c}, numbers from 1 to 8 were expected instead")?;
-            }
-            ParseFenError::InvalidFenPiece(err) => write!(f, "{err}")?,
-            ParseFenError::ParseColorError(err) => write!(f, "{err}")?,
-            ParseFenError::InvalidCastlingCharacter(err) => write!(f, "{err}")?,
-            ParseFenError::ParseCoordError(err) => write!(f, "{err}")?,
-            ParseFenError::ParseIntError(err) => write!(f, "{err}")?,
-            ParseFenError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
-            ParseFenError::UnexpectedEol => write!(f, "unexpected end of line")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ParseFenError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            ParseFenError::InvalidFenPiece(err) => Some(err),
-            ParseFenError::ParseColorError(err) => Some(err),
-            ParseFenError::InvalidCastlingCharacter(err) => Some(err),
-            ParseFenError::ParseCoordError(err) => Some(err),
-            ParseFenError::ParseIntError(err) => Some(err),
-            _ => None,
-        }
-    }
-}
 impl From<InvalidFenPiece> for ParseFenError {
     fn from(value: InvalidFenPiece) -> Self {
         ParseFenError::InvalidFenPiece(value)
@@ -277,4 +221,61 @@ fn parse_board(src: &str) -> Result<[[Option<ColoredPieceKind>; 8]; 8], ParseFen
         return Err(ParseFenError::InvalidRowCount(last_y));
     }
     Ok(board)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParseFenError {
+    ExceededRowCount,
+    ExceededSquareCount,
+    InvalidRowCount(usize),
+    InvalidSquareCount(usize),
+    InvalidSpaceCharacter(char),
+    InvalidFenPiece(InvalidFenPiece),
+    ParseColorError(ParseColorError),
+    InvalidCastlingCharacter(InvalidCastlingCharacter),
+    ParseCoordError(ParseCoordError),
+    ParseIntError(ParseIntError),
+    Unexpected(char),
+    UnexpectedEol,
+}
+impl Display for ParseFenError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseFenError::ExceededRowCount => {
+                write!(f, "exceeded number of rows, 8 were expected")?;
+            }
+            ParseFenError::ExceededSquareCount => {
+                write!(f, "exceeded number of squares, 8 were expected")?;
+            }
+            ParseFenError::InvalidRowCount(rows) => {
+                write!(f, "found {rows} rows, 8 were expected instead")?;
+            }
+            ParseFenError::InvalidSquareCount(squares) => {
+                write!(f, "found {squares} squares, 8 were expected instead")?;
+            }
+            ParseFenError::InvalidSpaceCharacter(c) => {
+                write!(f, "found {c}, numbers from 1 to 8 were expected instead")?;
+            }
+            ParseFenError::InvalidFenPiece(err) => write!(f, "{err}")?,
+            ParseFenError::ParseColorError(err) => write!(f, "{err}")?,
+            ParseFenError::InvalidCastlingCharacter(err) => write!(f, "{err}")?,
+            ParseFenError::ParseCoordError(err) => write!(f, "{err}")?,
+            ParseFenError::ParseIntError(err) => write!(f, "{err}")?,
+            ParseFenError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
+            ParseFenError::UnexpectedEol => write!(f, "unexpected end of line")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParseFenError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParseFenError::InvalidFenPiece(err) => Some(err),
+            ParseFenError::ParseColorError(err) => Some(err),
+            ParseFenError::InvalidCastlingCharacter(err) => Some(err),
+            ParseFenError::ParseCoordError(err) => Some(err),
+            ParseFenError::ParseIntError(err) => Some(err),
+            _ => None,
+        }
+    }
 }

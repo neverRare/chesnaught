@@ -8,35 +8,6 @@ use std::{
 
 use crate::{color::Color, coord_x, coord_y, misc::InvalidByte};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ParseCoordError {
-    InvalidX(char),
-    InvalidY(char),
-    NotEnoughCharacter(u8),
-    Unexpected(char),
-}
-impl Display for ParseCoordError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            ParseCoordError::InvalidX(x) => write!(
-                f,
-                "found `{x}`, characters from `a` to `h` were expected instead"
-            )?,
-            ParseCoordError::InvalidY(y) => write!(
-                f,
-                "found `{y}`, characters from `1` to `8` were expected instead"
-            )?,
-            ParseCoordError::NotEnoughCharacter(len) => write!(
-                f,
-                "provided string have length of {len} characters, 2 were expected"
-            )?,
-            ParseCoordError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
-        }
-        Ok(())
-    }
-}
-impl Error for ParseCoordError {}
-
 // Bit structure: 10XXXYYY
 // first two bits is always `10` for `NonZero` size optimizations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -420,6 +391,34 @@ impl MulAssign<i8> for Vector {
         self.y *= rhs;
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ParseCoordError {
+    InvalidX(char),
+    InvalidY(char),
+    NotEnoughCharacter(u8),
+    Unexpected(char),
+}
+impl Display for ParseCoordError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseCoordError::InvalidX(x) => write!(
+                f,
+                "found `{x}`, characters from `a` to `h` were expected instead"
+            )?,
+            ParseCoordError::InvalidY(y) => write!(
+                f,
+                "found `{y}`, characters from `1` to `8` were expected instead"
+            )?,
+            ParseCoordError::NotEnoughCharacter(len) => write!(
+                f,
+                "provided string have length of {len} characters, 2 were expected"
+            )?,
+            ParseCoordError::Unexpected(c) => write!(f, "unexpected `{c}`")?,
+        }
+        Ok(())
+    }
+}
+impl Error for ParseCoordError {}
 #[cfg(test)]
 mod test {
     use crate::{coord, coord::Vector};
