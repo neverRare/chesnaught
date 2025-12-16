@@ -17,7 +17,7 @@ use crate::{
     heuristics::{Estimated, Score, estimate},
 };
 
-type MoveTreePair = (Lan, Option<Lan>, GameTree);
+type MoveTreePair = (Lan, Option<Lan>, GameTreeInner);
 
 #[derive(Debug, Clone)]
 enum GameTreeData {
@@ -30,21 +30,21 @@ enum GameTreeData {
 }
 
 #[derive(Debug, Clone)]
-pub struct GameTree {
+struct GameTreeInner {
     data: GameTreeData,
     score: Option<Score>,
 }
-impl GameTree {
-    pub fn new(board: Board) -> Self {
+impl GameTreeInner {
+    fn new(board: Board) -> Self {
         let data = if let Err(state) = board.valid_moves() {
             GameTreeData::End(state)
         } else {
             GameTreeData::Board(Box::new(board))
         };
-        GameTree { data, score: None }
+        GameTreeInner { data, score: None }
     }
-    pub fn drop(self) {
-        static DROPPER: LazyLock<Option<Sender<GameTree>>> = LazyLock::new(|| {
+    fn drop(self) {
+        static DROPPER: LazyLock<Option<Sender<GameTreeInner>>> = LazyLock::new(|| {
             let (sender, receiver) = channel();
 
             let result = Builder::new().spawn(|| {
@@ -58,22 +58,6 @@ impl GameTree {
             Some(sender) => sender.send(self).unwrap(),
             None => drop(self),
         }
-    }
-    pub fn move_piece(&mut self, movement: Lan) {
-        let new = match &mut self.data {
-            GameTreeData::Board(board) => GameTree::new(board.clone_and_move(&movement)),
-            GameTreeData::Children { children, .. } => {
-                let (_, _, children) = children.remove(
-                    children
-                        .iter()
-                        .position(|(b, c, _)| movement == *b || Some(movement) == *c)
-                        .unwrap(),
-                );
-                children
-            }
-            GameTreeData::End(_) => panic!("cannot move on end state"),
-        };
-        replace(self, new).drop();
     }
     fn board(&self) -> Option<HashableBoard> {
         match &self.data {
@@ -104,7 +88,7 @@ impl GameTree {
                             (
                                 first,
                                 second,
-                                GameTree::new(board.clone_and_move(&movement)),
+                                GameTreeInner::new(board.clone_and_move(&movement)),
                             )
                         })
                         .collect(),
@@ -209,8 +193,32 @@ impl GameTree {
         };
         Score::Estimated(estimated)
     }
+}
+#[derive(Debug, Clone)]
+pub struct GameTree(GameTreeInner);
+
+impl GameTree {
+    pub fn new(board: Board) -> Self {
+        GameTree(GameTreeInner::new(board))
+    }
+    pub fn move_piece(&mut self, movement: Lan) {
+        let new = match &mut self.0.data {
+            GameTreeData::Board(board) => GameTreeInner::new(board.clone_and_move(&movement)),
+            GameTreeData::Children { children, .. } => {
+                let (_, _, children) = children.remove(
+                    children
+                        .iter()
+                        .position(|(b, c, _)| movement == *b || Some(movement) == *c)
+                        .unwrap(),
+                );
+                children
+            }
+            GameTreeData::End(_) => panic!("cannot move on end state"),
+        };
+        replace(&mut self.0, new).drop();
+    }
     pub fn calculate_best(&mut self, depth: u32) {
-        self.alpha_beta(
+        self.0.alpha_beta(
             depth,
             Score::BLACK_WINS,
             Score::WHITE_WINS,
@@ -218,17 +226,17 @@ impl GameTree {
             &mut HashSet::new(),
         );
     }
-    pub fn best_move_tree_pair(&self) -> Option<&MoveTreePair> {
-        self.children().and_then(|children| children.first())
+    fn best_move_tree_pair(&self) -> Option<&MoveTreePair> {
+        self.0.children().and_then(|children| children.first())
     }
     pub fn best_move(&self) -> Option<Lan> {
         self.best_move_tree_pair().map(|(movement, _, _)| *movement)
     }
     pub fn score(&self) -> Option<Score> {
-        self.score
+        self.0.score
     }
     pub fn best_line(&self) -> impl Iterator<Item = Lan> {
-        let mut game_tree = self;
+        let mut game_tree = &self.0;
         from_fn(move || {
             self.best_move_tree_pair()
                 .map(|(movement, _, new_game_tree)| {
@@ -236,6 +244,15 @@ impl GameTree {
                     *movement
                 })
         })
+    }
+}
+impl Drop for GameTree {
+    fn drop(&mut self) {
+        let dummy = GameTreeInner {
+            data: GameTreeData::End(EndState::Draw),
+            score: None,
+        };
+        replace(&mut self.0, dummy).drop();
     }
 }
 struct AlphaBetaState {
