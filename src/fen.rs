@@ -16,31 +16,6 @@ use crate::{
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
 };
 
-impl From<InvalidFenPiece> for ParseFenError {
-    fn from(value: InvalidFenPiece) -> Self {
-        ParseFenError::InvalidFenPiece(value)
-    }
-}
-impl From<ParseColorError> for ParseFenError {
-    fn from(value: ParseColorError) -> Self {
-        ParseFenError::ParseColorError(value)
-    }
-}
-impl From<InvalidCastlingCharacter> for ParseFenError {
-    fn from(value: InvalidCastlingCharacter) -> Self {
-        ParseFenError::InvalidCastlingCharacter(value)
-    }
-}
-impl From<ParseCoordError> for ParseFenError {
-    fn from(value: ParseCoordError) -> Self {
-        ParseFenError::ParseCoordError(value)
-    }
-}
-impl From<ParseIntError> for ParseFenError {
-    fn from(value: ParseIntError) -> Self {
-        ParseFenError::ParseIntError(value)
-    }
-}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Fen {
     pub board: HashableBoard,
@@ -277,5 +252,30 @@ impl Error for ParseFenError {
             ParseFenError::ParseIntError(err) => Some(err),
             _ => None,
         }
+    }
+}
+impl From<InvalidFenPiece> for ParseFenError {
+    fn from(value: InvalidFenPiece) -> Self {
+        ParseFenError::InvalidFenPiece(value)
+    }
+}
+impl From<ParseColorError> for ParseFenError {
+    fn from(value: ParseColorError) -> Self {
+        ParseFenError::ParseColorError(value)
+    }
+}
+impl From<InvalidCastlingCharacter> for ParseFenError {
+    fn from(value: InvalidCastlingCharacter) -> Self {
+        ParseFenError::InvalidCastlingCharacter(value)
+    }
+}
+impl From<ParseCoordError> for ParseFenError {
+    fn from(value: ParseCoordError) -> Self {
+        ParseFenError::ParseCoordError(value)
+    }
+}
+impl From<ParseIntError> for ParseFenError {
+    fn from(value: ParseIntError) -> Self {
+        ParseFenError::ParseIntError(value)
     }
 }
