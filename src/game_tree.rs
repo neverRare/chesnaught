@@ -217,7 +217,7 @@ impl GameTree {
         };
         replace(&mut self.0, new).drop();
     }
-    pub fn calculate_best(&mut self, depth: u32) {
+    pub fn calculate(&mut self, depth: u32) {
         self.0.alpha_beta(
             depth,
             Score::BLACK_WINS,
