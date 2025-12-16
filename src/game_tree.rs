@@ -214,7 +214,8 @@ impl GameTree {
             let (movement, _) = game_tree.score.unwrap();
             movement.map(|movement| {
                 if let GameTreeData::Children { children, .. } = &game_tree.data {
-                    game_tree = &children[0].2;
+                    let (_, _, new_game_tree) = &children[0];
+                    game_tree = new_game_tree;
                     movement
                 } else {
                     unreachable!()
