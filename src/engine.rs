@@ -17,7 +17,6 @@ enum Input {
     Ready,
     SetBoard(Board),
     Move(Lan),
-    MoveMultiple(Vec<Lan>),
     Calculate {
         depth: Option<u32>,
         callback: Box<dyn FnOnce(Lan) + Send>,
@@ -42,12 +41,6 @@ impl Engine {
                     Input::Ready => ready_sender.send(()).unwrap(),
                     Input::SetBoard(board) => game_tree = GameTree::new(board),
                     Input::Move(movement) => game_tree.move_piece(movement),
-                    Input::MoveMultiple(moves) => {
-                        // FIXME: this sends a lot of data to the garbage collector
-                        for movement in moves {
-                            game_tree.move_piece(movement);
-                        }
-                    }
                     Input::Calculate { depth, callback } => {
                         stop_signal.store(false, Ordering::Relaxed);
                         for i in 1.. {
@@ -85,9 +78,6 @@ impl Engine {
     }
     pub fn move_piece(&self, movement: Lan) {
         self.input().send(Input::Move(movement)).unwrap();
-    }
-    pub fn move_multiple(&self, moves: Vec<Lan>) {
-        self.input().send(Input::MoveMultiple(moves)).unwrap();
     }
     pub fn calculate(
         &self,

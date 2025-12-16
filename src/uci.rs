@@ -35,7 +35,8 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
     let mut uci = false;
     let mut debug = false;
     let engine = LazyCell::new(Engine::new);
-    let mut start = false;
+    let mut board = Board::starting_position();
+    let mut start = true;
     loop {
         let mut text = String::new();
         input.read_line(&mut text)?;
@@ -108,12 +109,13 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                 if uci {
                     start = true;
                     engine.set_board(Board::starting_position());
+                    board = Board::starting_position();
                 }
             }
             Input::Position { position, moves } => {
                 if uci {
                     if start {
-                        let board: Board = match position.try_into() {
+                        board = match position.try_into() {
                             Ok(board) => board,
                             Err(err) => {
                                 if debug {
@@ -123,10 +125,13 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                                 Board::starting_position()
                             }
                         };
-                        engine.set_board(board);
-                        engine.move_multiple(moves);
+                        for movement in moves {
+                            board.move_piece(&movement);
+                        }
+                        engine.set_board(board.clone());
                         start = false;
                     } else if let Some(movement) = moves.last() {
+                        board.move_piece(movement);
                         engine.move_piece(*movement);
                     } else if debug {
                         debug_print(output, "no moves found".to_string())?;
