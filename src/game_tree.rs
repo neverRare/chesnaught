@@ -14,7 +14,7 @@ use crate::{
     board::{Board, HashableBoard, Lan},
     color::Color,
     end_state::EndState,
-    heuristics::{Advantage, Estimated, estimate},
+    heuristics::{Estimated, Score, estimate},
 };
 
 type MoveTreePair = (Lan, Option<Lan>, GameTree);
@@ -32,7 +32,7 @@ enum GameTreeData {
 #[derive(Debug, Clone)]
 pub struct GameTree {
     data: GameTreeData,
-    advantage: Option<(Option<Lan>, Advantage)>,
+    score: Option<(Option<Lan>, Score)>,
 }
 impl GameTree {
     pub fn new(board: Board) -> Self {
@@ -41,10 +41,7 @@ impl GameTree {
         } else {
             GameTreeData::Board(Box::new(board))
         };
-        GameTree {
-            data,
-            advantage: None,
-        }
+        GameTree { data, score: None }
     }
     pub fn drop(self) {
         static DROPPER: LazyLock<Sender<GameTree>> = LazyLock::new(|| {
@@ -120,29 +117,29 @@ impl GameTree {
     fn alpha_beta(
         &mut self,
         depth: u32,
-        alpha: Advantage,
-        beta: Advantage,
-        transposition_table: &mut HashMap<HashableBoard, (Option<Lan>, Advantage)>,
+        alpha: Score,
+        beta: Score,
+        transposition_table: &mut HashMap<HashableBoard, (Option<Lan>, Score)>,
         repetition_table: &mut HashSet<HashableBoard>,
     ) {
         if let GameTreeData::End(state) = self.data {
-            let advantage = match state {
-                EndState::Win(color) => Advantage::Win(color),
-                EndState::Draw => Advantage::Estimated(Estimated::default()),
+            let score = match state {
+                EndState::Win(color) => Score::Win(color),
+                EndState::Draw => Score::Estimated(Estimated::default()),
             };
-            self.advantage = Some((None, advantage));
+            self.score = Some((None, score));
         } else {
             let board = self.board().unwrap();
 
-            if let Some(advantage) = transposition_table.get(&board) {
-                self.advantage = Some(*advantage);
+            if let Some(score) = transposition_table.get(&board) {
+                self.score = Some(*score);
                 return;
             }
             if repetition_table.contains(&board) {
                 return;
             }
             if depth == 0 {
-                self.advantage = Some(self.estimate());
+                self.score = Some(self.estimate());
             } else {
                 let current_player = self.current_player().unwrap();
                 let children = self.children().unwrap();
@@ -157,34 +154,32 @@ impl GameTree {
                         transposition_table,
                         repetition_table,
                     );
-                    if let Some((_, score)) = game_tree.advantage
+                    if let Some((_, score)) = game_tree.score
                         && alpha_beta.set(*movement, score)
                     {
                         break;
                     }
                 }
                 repetition_table.remove(&board);
-                children.sort_unstable_by(|(_, _, a), (_, _, b)| {
-                    match (a.advantage, b.advantage) {
-                        (None, None) => Ordering::Equal,
-                        (None, Some(_)) => Ordering::Less,
-                        (Some(_), None) => Ordering::Greater,
-                        (Some((_, a)), Some((_, b))) => match current_player {
-                            Color::White => Ord::cmp(&b, &a),
-                            Color::Black => Ord::cmp(&a, &b),
-                        },
-                    }
+                children.sort_unstable_by(|(_, _, a), (_, _, b)| match (a.score, b.score) {
+                    (None, None) => Ordering::Equal,
+                    (None, Some(_)) => Ordering::Less,
+                    (Some(_), None) => Ordering::Greater,
+                    (Some((_, a)), Some((_, b))) => match current_player {
+                        Color::White => Ord::cmp(&b, &a),
+                        Color::Black => Ord::cmp(&a, &b),
+                    },
                 });
-                self.advantage = Some((alpha_beta.best_move, alpha_beta.best_score));
+                self.score = Some((alpha_beta.best_move, alpha_beta.best_score));
             }
-            transposition_table.insert(board, self.advantage.unwrap());
+            transposition_table.insert(board, self.score.unwrap());
         }
     }
-    fn estimate(&self) -> (Option<Lan>, Advantage) {
+    fn estimate(&self) -> (Option<Lan>, Score) {
         let estimated = if let GameTreeData::Board(board) = &self.data {
             estimate(board)
-        } else if let Some(advantage) = self.advantage {
-            return advantage;
+        } else if let Some(score) = self.score {
+            return score;
         } else if cfg!(debug_assertions) {
             panic!(concat!(
                 "this node only contains board data meant for hashing alone. ",
@@ -201,22 +196,22 @@ impl GameTree {
                     .unwrap(),
             )
         };
-        (None, Advantage::Estimated(estimated))
+        (None, Score::Estimated(estimated))
     }
-    pub fn best(&mut self, depth: u32) -> (Option<Lan>, Advantage) {
+    pub fn best(&mut self, depth: u32) -> (Option<Lan>, Score) {
         self.alpha_beta(
             depth,
-            Advantage::BLACK_WINS,
-            Advantage::WHITE_WINS,
+            Score::BLACK_WINS,
+            Score::WHITE_WINS,
             &mut HashMap::new(),
             &mut HashSet::new(),
         );
-        self.advantage.unwrap()
+        self.score.unwrap()
     }
     pub fn line(&self) -> impl Iterator<Item = Lan> {
         let mut game_tree = self;
         from_fn(move || {
-            let (movement, _) = game_tree.advantage.unwrap();
+            let (movement, _) = game_tree.score.unwrap();
             movement.map(|movement| {
                 if let GameTreeData::Children { children, .. } = &game_tree.data {
                     game_tree = children
@@ -233,25 +228,25 @@ impl GameTree {
 }
 struct AlphaBetaState {
     current_player: Color,
-    alpha: Advantage,
-    beta: Advantage,
+    alpha: Score,
+    beta: Score,
     best_move: Option<Lan>,
-    best_score: Advantage,
+    best_score: Score,
 }
 impl AlphaBetaState {
-    fn new(current_player: Color, alpha: Advantage, beta: Advantage) -> Self {
+    fn new(current_player: Color, alpha: Score, beta: Score) -> Self {
         AlphaBetaState {
             current_player,
             alpha,
             beta,
             best_move: None,
             best_score: match current_player {
-                Color::White => Advantage::BLACK_WINS,
-                Color::Black => Advantage::WHITE_WINS,
+                Color::White => Score::BLACK_WINS,
+                Color::Black => Score::WHITE_WINS,
             },
         }
     }
-    fn set(&mut self, movement: Lan, score: Advantage) -> bool {
+    fn set(&mut self, movement: Lan, score: Score) -> bool {
         match self.current_player {
             Color::White => {
                 if score > self.best_score {

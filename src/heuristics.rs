@@ -21,44 +21,45 @@ impl Display for Estimated {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Advantage {
+pub enum Score {
     Win(Color),
     Estimated(Estimated),
 }
-impl Advantage {
-    pub const WHITE_WINS: Self = Advantage::Win(Color::White);
-    pub const BLACK_WINS: Self = Advantage::Win(Color::Black);
+impl Score {
+    pub const WHITE_WINS: Self = Score::Win(Color::White);
+    pub const BLACK_WINS: Self = Score::Win(Color::Black);
 }
-impl Display for Advantage {
+impl Display for Score {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Advantage::Win(color) => write!(f, "{color} will win")?,
-            Advantage::Estimated(estimated) => write!(f, "{estimated}")?,
+            Score::Win(color) => write!(f, "{color} will win")?,
+            Score::Estimated(estimated) => write!(f, "{estimated}")?,
         }
         Ok(())
     }
 }
-impl Default for Advantage {
+impl Default for Score {
     fn default() -> Self {
-        Advantage::Estimated(Estimated::default())
+        Score::Estimated(Estimated::default())
     }
 }
-impl PartialOrd for Advantage {
+impl PartialOrd for Score {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
-impl Ord for Advantage {
+impl Ord for Score {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
-            (Advantage::Estimated(a), Advantage::Estimated(b)) => Ord::cmp(a, b),
+            (Score::Estimated(a), Score::Estimated(b)) => Ord::cmp(a, b),
 
-            (&Advantage::BLACK_WINS, &Advantage::BLACK_WINS)
-            | (&Advantage::WHITE_WINS, &Advantage::WHITE_WINS) => Ordering::Equal,
+            (&Score::BLACK_WINS, &Score::BLACK_WINS) | (&Score::WHITE_WINS, &Score::WHITE_WINS) => {
+                Ordering::Equal
+            }
 
-            (_, &Advantage::BLACK_WINS) | (&Advantage::WHITE_WINS, _) => Ordering::Greater,
+            (_, &Score::BLACK_WINS) | (&Score::WHITE_WINS, _) => Ordering::Greater,
 
-            (&Advantage::BLACK_WINS, _) | (_, &Advantage::WHITE_WINS) => Ordering::Less,
+            (&Score::BLACK_WINS, _) | (_, &Score::WHITE_WINS) => Ordering::Less,
         }
     }
 }
