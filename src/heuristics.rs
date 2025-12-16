@@ -1,26 +1,110 @@
 use std::{
     cmp::Ordering,
     fmt::{self, Display, Formatter},
+    ops::{Add, AddAssign, Neg, Sub, SubAssign},
 };
 
 use crate::{board::Board, color::Color};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Estimated {
-    king_safety: i32,
+    king_constriction: i8,
+    king_safety: i8,
+    end_game_pawn_advancement: [CompoundI8; 4],
     square_control: i32,
+    material: i8,
+    pawn_advancement: [CompoundI8; 4],
 }
 impl Display for Estimated {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if self.king_safety == 0 {
-            write!(f, "positional advantage: {}", self.square_control)?;
-        } else {
+        if self.king_constriction != 0 {
+            write!(f, "unavailable space for king: {}", self.king_constriction)?;
+        } else if self.king_safety != 0 {
             write!(f, "king safety: {}", self.king_safety)?;
+        } else if self.end_game_pawn_advancement != [CompoundI8::default(); 4] {
+            write!(f, "pawn advancement:")?;
+            for score in self
+                .end_game_pawn_advancement
+                .into_iter()
+                .flat_map(|compound| [compound.left(), compound.right()])
+            {
+                write!(f, " {score}")?;
+            }
+        } else {
+            write!(
+                f,
+                "square control: {}; material: {}",
+                self.square_control, self.material
+            )?;
         }
         Ok(())
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct CompoundI8(i8);
+impl CompoundI8 {
+    fn new(left: i8, right: i8) -> Self {
+        debug_assert!(left < 8);
+        debug_assert!(left >= -8);
+        debug_assert!(right < 8);
+        debug_assert!(right >= -8);
+        CompoundI8((left << 4) | (right & 0b_1111))
+    }
+    fn left(self) -> i8 {
+        self.0 >> 4
+    }
+    fn right(self) -> i8 {
+        (self.0 << 4) >> 4
+    }
+}
+impl Default for CompoundI8 {
+    fn default() -> Self {
+        CompoundI8::new(0, 0)
+    }
+}
+impl PartialOrd for CompoundI8 {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for CompoundI8 {
+    fn cmp(&self, other: &Self) -> Ordering {
+        Ord::cmp(&(self.left(), self.right()), &(other.left(), other.right()))
+    }
+}
+impl Neg for CompoundI8 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        CompoundI8::new(-self.left(), -self.right())
+    }
+}
+impl Add<CompoundI8> for CompoundI8 {
+    type Output = Self;
+
+    fn add(self, rhs: CompoundI8) -> Self::Output {
+        CompoundI8::new(self.left() + rhs.left(), self.right() + rhs.right())
+    }
+}
+impl AddAssign<CompoundI8> for CompoundI8 {
+    fn add_assign(&mut self, rhs: CompoundI8) {
+        *self = CompoundI8::new(self.left() + rhs.left(), self.right() + rhs.right());
+    }
+}
+impl Sub<CompoundI8> for CompoundI8 {
+    type Output = Self;
+
+    fn sub(self, rhs: CompoundI8) -> Self::Output {
+        CompoundI8::new(self.left() - rhs.left(), self.right() - rhs.right())
+    }
+}
+impl SubAssign<CompoundI8> for CompoundI8 {
+    fn sub_assign(&mut self, rhs: CompoundI8) {
+        *self = CompoundI8::new(self.left() - rhs.left(), self.right() - rhs.right());
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+
 pub enum Score {
     Win(Color),
     Estimated(Estimated),
