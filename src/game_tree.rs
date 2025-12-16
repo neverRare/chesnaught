@@ -7,7 +7,7 @@ use std::{
         LazyLock,
         mpsc::{Sender, channel},
     },
-    thread::Builder,
+    thread::{Builder, panicking},
 };
 
 use crate::{
@@ -248,11 +248,13 @@ impl GameTree {
 }
 impl Drop for GameTree {
     fn drop(&mut self) {
-        let dummy = GameTreeInner {
-            data: Data::End(EndState::Draw),
-            score: None,
-        };
-        replace(&mut self.0, dummy).drop();
+        if !panicking() {
+            let dummy = GameTreeInner {
+                data: Data::End(EndState::Draw),
+                score: None,
+            };
+            replace(&mut self.0, dummy).drop();
+        }
     }
 }
 struct AlphaBetaState {
