@@ -25,7 +25,7 @@ impl Display for Estimated {
             };
             write!(
                 f,
-                "available space for {color}'s king: {}",
+                "available space for {color} king: {}",
                 64 - self.king_constriction.abs()
             )?;
         } else if self.king_safety != 0 {
