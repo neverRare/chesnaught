@@ -36,7 +36,8 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
     let mut debug = false;
     let engine = LazyCell::new(Engine::new);
     let mut board = Board::starting_position();
-    let mut start = true;
+    let mut new_game = true;
+    let mut uci_new_game_available = false;
     loop {
         let mut text = String::new();
         input.read_line(&mut text)?;
@@ -107,14 +108,15 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             }
             Input::UciNewGame => {
                 if uci {
-                    start = true;
+                    new_game = true;
+                    uci_new_game_available = true;
                     engine.set_board(Board::starting_position());
                     board = Board::starting_position();
                 }
             }
             Input::Position { position, moves } => {
                 if uci {
-                    if start {
+                    if !uci_new_game_available || new_game {
                         board = match position.try_into() {
                             Ok(board) => board,
                             Err(err) => {
@@ -129,7 +131,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                             board.move_piece(&movement);
                         }
                         engine.set_board(board.clone());
-                        start = false;
+                        new_game = false;
                     } else if let Some(movement) = moves.last() {
                         board.move_piece(movement);
                         engine.move_piece(*movement);
@@ -140,7 +142,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             }
             Input::Go(go) => {
                 if uci {
-                    start = false;
+                    new_game = false;
                     todo!()
                 }
             }
