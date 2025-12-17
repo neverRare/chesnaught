@@ -9,7 +9,7 @@ use crate::{
     repl::repl,
     uci::{
         input::Input,
-        output::{Info, OptionType, OptionValue, Output},
+        output::{Boundary, Info, OptionType, OptionValue, Output},
     },
 };
 
@@ -18,10 +18,22 @@ mod output;
 
 const CHESS960: &str = "UCI_Chess960";
 
-const CONFIG: [Output; 3] = [
+const CONFIG: [Output; 5] = [
     Output::Id {
         name: "Chesnaught",
         author: "neverRare",
+    },
+    Output::Option {
+        name: "Hash",
+        kind: OptionType::Spin,
+        default: Some(OptionValue::Int(0)),
+        boundary: Some(Boundary::Boundary { min: 0, max: 4096 }),
+    },
+    Output::Option {
+        name: "Clear Hash",
+        kind: OptionType::Button,
+        default: None,
+        boundary: None,
     },
     Output::Option {
         name: CHESS960,
@@ -96,6 +108,40 @@ pub fn uci_loop() -> io::Result<()> {
                                 )?;
                             }
                             // The engine can already work on chess960 without telling it to use chess960
+                        }
+                        "Hash" => {
+                            let Some(value) = value else {
+                                debug_print(
+                                    &mut output,
+                                    "set `Hash` without value; ignoring".to_string(),
+                                )?;
+                                continue;
+                            };
+                            let Ok(size): Result<usize, _> = value.parse() else {
+                                debug_print(
+                                    &mut output,
+                                    "set `Hash` to an invalid value; ignoring".to_string(),
+                                )?;
+                                continue;
+                            };
+                            if size <= 4096 {
+                                engine.set_hash_size(size * 1024 * 1024);
+                            } else {
+                                debug_print(
+                                    &mut output,
+                                    "set `Hash` to an invalid value; ignoring".to_string(),
+                                )?;
+                            }
+                        }
+                        "Clear Hash" => {
+                            if value.is_none() {
+                                engine.clear_hash();
+                            } else if debug {
+                                debug_print(
+                                    &mut output,
+                                    "set `Clear Hash` to invalid value; ignoring".to_string(),
+                                )?;
+                            }
                         }
                         name => {
                             if debug {

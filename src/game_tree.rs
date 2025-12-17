@@ -115,8 +115,7 @@ impl GameTreeInner {
         depth: u32,
         alpha: Score,
         beta: Score,
-        transposition_table: &mut HashMap<HashableBoard, Score>,
-        repetition_table: &mut HashSet<HashableBoard>,
+        table: &mut Table,
         stop_signal: Option<&AtomicBool>,
     ) {
         if stop_signal.is_some_and(|signal| signal.load(atomic::Ordering::Relaxed)) {
@@ -130,11 +129,11 @@ impl GameTreeInner {
         } else {
             let board = self.board().unwrap();
 
-            if let Some(score) = transposition_table.get(&board) {
+            if let Some(score) = table.get_transposition(&board) {
                 self.score = Some(*score);
                 return;
             }
-            if repetition_table.contains(&board) {
+            if table.contains_repetition(&board) {
                 return;
             }
             if depth == 0 {
@@ -144,23 +143,16 @@ impl GameTreeInner {
                 let children = self.children_or_init().unwrap();
                 let mut alpha_beta = AlphaBetaState::new(current_player, alpha, beta);
 
-                repetition_table.insert(board);
+                table.insert_repetition(board);
                 for (_, _, game_tree) in children.iter_mut() {
-                    game_tree.alpha_beta(
-                        depth - 1,
-                        alpha,
-                        beta,
-                        transposition_table,
-                        repetition_table,
-                        stop_signal,
-                    );
+                    game_tree.alpha_beta(depth - 1, alpha, beta, table, stop_signal);
                     if let Some(score) = game_tree.score
                         && alpha_beta.set(score)
                     {
                         break;
                     }
                 }
-                repetition_table.remove(&board);
+                table.remove_repetition(&board);
                 children.sort_unstable_by(|(_, _, a), (_, _, b)| match (a.score, b.score) {
                     (None, None) => Ordering::Equal,
                     (None, Some(_)) => Ordering::Less,
@@ -172,7 +164,7 @@ impl GameTreeInner {
                 });
                 self.score = Some(alpha_beta.score);
             }
-            transposition_table.insert(board, self.score.unwrap());
+            table.insert_transposition(board, self.score.unwrap());
         }
     }
     fn estimate(&self) -> Score {
@@ -222,23 +214,23 @@ impl GameTree {
         };
         replace(&mut self.0, new).drop();
     }
-    pub fn calculate(&mut self, depth: u32) {
-        self.0.alpha_beta(
-            depth,
-            Score::BLACK_WINS,
-            Score::WHITE_WINS,
-            &mut HashMap::new(),
-            &mut HashSet::new(),
-            None,
-        );
+    pub fn calculate(&mut self, depth: u32, table: &mut Table) {
+        table.clear();
+        self.0
+            .alpha_beta(depth, Score::BLACK_WINS, Score::WHITE_WINS, table, None);
     }
-    pub fn calculate_with_stop_signal(&mut self, depth: u32, stop_signal: &AtomicBool) {
+    pub fn calculate_with_stop_signal(
+        &mut self,
+        depth: u32,
+        table: &mut Table,
+        stop_signal: &AtomicBool,
+    ) {
+        table.clear();
         self.0.alpha_beta(
             depth,
             Score::BLACK_WINS,
             Score::WHITE_WINS,
-            &mut HashMap::new(),
-            &mut HashSet::new(),
+            table,
             Some(stop_signal),
         );
     }
@@ -271,6 +263,77 @@ impl Drop for GameTree {
             };
             replace(&mut self.0, dummy).drop();
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Table {
+    transposition: HashMap<HashableBoard, Score>,
+    repetition: HashSet<HashableBoard>,
+    max_size: usize,
+}
+impl Table {
+    const TRANSPOSITION_ELEMENT_SIZE: usize = size_of::<(usize, HashableBoard, Score)>();
+    const REPETITION_ELEMENT_SIZE: usize = size_of::<(usize, HashableBoard, ())>();
+
+    pub fn new(max_size: usize) -> Self {
+        Table {
+            transposition: HashMap::new(),
+            repetition: HashSet::new(),
+            max_size,
+        }
+    }
+    pub fn set_size(&mut self, max_size: usize) {
+        self.max_size = max_size;
+    }
+    fn get_transposition(&self, board: &HashableBoard) -> Option<&Score> {
+        self.transposition.get(board)
+    }
+    fn contains_repetition(&self, board: &HashableBoard) -> bool {
+        self.repetition.contains(board)
+    }
+    fn insert_transposition(&mut self, board: HashableBoard, score: Score) {
+        let max_capacity = self
+            .max_size
+            .saturating_sub(self.repetition.capacity() * Table::REPETITION_ELEMENT_SIZE)
+            / Table::TRANSPOSITION_ELEMENT_SIZE
+            / 2;
+
+        if (self.transposition.len() < self.transposition.capacity())
+            || (self.transposition.capacity() <= max_capacity)
+        {
+            self.transposition.insert(board, score);
+        }
+    }
+    fn insert_repetition(&mut self, board: HashableBoard) {
+        let max_capacity = self
+            .max_size
+            .saturating_sub(self.transposition.capacity() * Table::TRANSPOSITION_ELEMENT_SIZE)
+            / Table::REPETITION_ELEMENT_SIZE
+            / 2;
+
+        if (self.repetition.len() < self.repetition.capacity())
+            || (self.repetition.capacity() <= max_capacity)
+        {
+            self.repetition.insert(board);
+        }
+    }
+    fn clear_transposition(&mut self) {
+        self.transposition.clear();
+    }
+    fn remove_repetition(&mut self, board: &HashableBoard) -> bool {
+        self.repetition.remove(board)
+    }
+    fn clear_repetition(&mut self) {
+        self.repetition.clear();
+    }
+    fn clear(&mut self) {
+        self.clear_transposition();
+        self.clear_repetition();
+    }
+    pub fn shrink(&mut self) {
+        self.transposition.shrink_to_fit();
+        self.repetition.shrink_to_fit();
     }
 }
 struct AlphaBetaState {

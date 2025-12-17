@@ -6,7 +6,7 @@ use crate::{
     color::Color,
     coord::Coord,
     fen::{Fen, ParseFenError},
-    game_tree::GameTree,
+    game_tree::{GameTree, Table},
     misc::strip_prefix_token,
 };
 use std::{
@@ -92,6 +92,7 @@ pub fn repl() -> io::Result<()> {
     let mut view = Color::White;
     let mut first_time = true;
     let mut game_tree = GameTree::new(board.clone());
+    let mut table = Table::new(4_294_967_296);
     loop {
         if update {
             valid_moves.clear();
@@ -216,7 +217,8 @@ pub fn repl() -> io::Result<()> {
                     update = true;
                 }
                 Input::Bot(depth) => {
-                    game_tree.calculate(depth);
+                    table.shrink();
+                    game_tree.calculate(depth, &mut table);
                     let movement = game_tree.best_move().unwrap();
                     board.move_piece(&movement);
                     game_tree.move_piece(movement);

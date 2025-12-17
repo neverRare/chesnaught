@@ -11,7 +11,7 @@ use std::{
 
 use crate::{
     board::{Board, Lan},
-    game_tree::GameTree,
+    game_tree::{GameTree, Table},
 };
 
 enum Input {
@@ -23,6 +23,8 @@ enum Input {
         callback: Box<dyn FnOnce(Lan) + Send>,
         stop_signal: Arc<AtomicBool>,
     },
+    SetHashSize(usize),
+    ClearHash,
 }
 pub struct Engine {
     stop_signal: Option<Arc<AtomicBool>>,
@@ -35,6 +37,7 @@ impl Engine {
         let (ready_sender, ready) = channel();
         spawn(move || {
             let mut game_tree = GameTree::new(Board::starting_position());
+            let mut table = Table::new(0);
             for input in input_receiver {
                 match input {
                     Input::Ready => ready_sender.send(()).unwrap(),
@@ -46,7 +49,7 @@ impl Engine {
                         stop_signal,
                     } => {
                         for i in 1.. {
-                            game_tree.calculate_with_stop_signal(i, &stop_signal);
+                            game_tree.calculate_with_stop_signal(i, &mut table, &stop_signal);
                             if stop_signal.load(Ordering::Relaxed)
                                 || depth.is_some_and(|depth| i >= depth.get())
                             {
@@ -56,10 +59,12 @@ impl Engine {
                         if let Some(movement) = game_tree.best_move() {
                             callback(movement);
                         } else {
-                            game_tree.calculate(1);
+                            game_tree.calculate(1, &mut table);
                             callback(game_tree.best_move().unwrap());
                         }
                     }
+                    Input::SetHashSize(size) => table.set_size(size),
+                    Input::ClearHash => table.shrink(),
                 }
             }
         });
@@ -106,5 +111,11 @@ impl Engine {
         if let Some(stop_signal) = &self.stop_signal {
             stop_signal.store(true, Ordering::Relaxed);
         }
+    }
+    pub fn set_hash_size(&self, size: usize) {
+        self.input.send(Input::SetHashSize(size)).unwrap();
+    }
+    pub fn clear_hash(&self) {
+        self.input.send(Input::ClearHash).unwrap();
     }
 }
