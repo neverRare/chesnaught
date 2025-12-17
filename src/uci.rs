@@ -20,8 +20,8 @@ const CHESS960: &str = "UCI_Chess960";
 
 const CONFIG: [Output; 5] = [
     Output::Id {
-        name: "Chesnaught",
-        author: "neverRare",
+        name: concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
+        author: env!("CARGO_PKG_AUTHORS"),
     },
     Output::Option {
         name: "Hash",

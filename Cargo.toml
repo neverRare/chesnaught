@@ -1,6 +1,7 @@
 [package]
-name = "chesnaught"
+name = "Chesnaught"
 version = "0.1.0"
+authors = ["neverRare <neverrare@proton.me>"]
 edition = "2024"
 
 [dependencies]
