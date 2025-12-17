@@ -182,7 +182,7 @@ impl Display for OptionType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum OptionValue {
     Bool(bool),
-    Int(i32),
+    Int(i64),
     Str(&'static str),
 }
 impl Display for OptionValue {
