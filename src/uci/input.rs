@@ -226,7 +226,8 @@ impl Go {
                 } else {
                     total_moves
                 };
-                Some(time.div_f32(moves_to_go) + inc.unwrap_or_default())
+                let estimated_time = time.div_f32(moves_to_go) + inc.unwrap_or_default();
+                Some(Ord::min(estimated_time, time))
             } else {
                 None
             }
