@@ -1,6 +1,6 @@
 use std::{
     cell::LazyCell,
-    io::{self, BufRead, Write, stderr},
+    io::{self, BufRead, Write, stdin, stdout},
 };
 
 use crate::{
@@ -31,7 +31,12 @@ const CONFIG: [Output; 3] = [
     },
     Output::UciOk,
 ];
-pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result<()> {
+pub fn uci_loop() -> io::Result<()> {
+    let input = stdin().lock();
+    let mut output = stdout();
+
+    let mut lines = input.lines();
+
     let mut uci = false;
     let mut debug = false;
     let engine = LazyCell::new(Engine::new);
@@ -39,8 +44,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
     let mut new_game = true;
     let mut uci_new_game_available = false;
     loop {
-        let mut text = String::new();
-        input.read_line(&mut text)?;
+        let text = lines.next().unwrap()?;
         let text = text.trim();
         if text.is_empty() {
             continue;
@@ -51,12 +55,12 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                 if debug {
                     if err.is_empty() {
                         debug_print(
-                            output,
+                            &mut output,
                             "error parsing input but no error information found".to_string(),
                         )?;
                     } else {
                         for err in err {
-                            debug_print(output, format!("error: {err}"))?;
+                            debug_print(&mut output, format!("error: {err}"))?;
                         }
                     }
                 }
@@ -87,7 +91,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                         CHESS960 => {
                             if debug && !matches!(value, Some("true" | "false")) {
                                 debug_print(
-                                    output,
+                                    &mut output,
                                     format!("set {CHESS960} to invalid value; ignoring"),
                                 )?;
                             }
@@ -95,7 +99,10 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                         }
                         name => {
                             if debug {
-                                debug_print(output, format!("unknown option `{name}`; ignoring"))?;
+                                debug_print(
+                                    &mut output,
+                                    format!("unknown option `{name}`; ignoring"),
+                                )?;
                             }
                         }
                     }
@@ -103,7 +110,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             }
             Input::Register(_) => {
                 if uci && debug {
-                    debug_print(output, "registration is ignored".to_string())?;
+                    debug_print(&mut output, "registration is ignored".to_string())?;
                 }
             }
             Input::UciNewGame => {
@@ -121,8 +128,8 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                             Ok(board) => board,
                             Err(err) => {
                                 if debug {
-                                    debug_print(output, "error setting up board".to_string())?;
-                                    debug_print(output, format!("error: {err}"))?;
+                                    debug_print(&mut output, "error setting up board".to_string())?;
+                                    debug_print(&mut output, format!("error: {err}"))?;
                                 }
                                 Board::starting_position()
                             }
@@ -136,7 +143,7 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
                         board.move_piece(movement);
                         engine.move_piece(*movement);
                     } else if debug {
-                        debug_print(output, "no moves found".to_string())?;
+                        debug_print(&mut output, "no moves found".to_string())?;
                     }
                 }
             }
@@ -153,7 +160,10 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             }
             Input::PonderHit => {
                 if uci && debug {
-                    debug_print(output, "pondering is unsupported; ignoring".to_string())?;
+                    debug_print(
+                        &mut output,
+                        "pondering is unsupported; ignoring".to_string(),
+                    )?;
                 }
             }
             Input::Quit => {
@@ -163,7 +173,8 @@ pub fn uci_loop(input: &mut impl BufRead, output: &mut impl Write) -> io::Result
             }
             Input::Repl => {
                 if !uci {
-                    repl(input, output, &mut stderr().lock())?;
+                    drop(lines);
+                    repl()?;
                     return Ok(());
                 }
             }

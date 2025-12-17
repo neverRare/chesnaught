@@ -13,7 +13,7 @@ use std::{
     collections::HashSet,
     error::Error,
     fmt::{self, Display, Formatter, Write as _},
-    io::{self, BufRead, Write},
+    io::{self, BufRead, Write, stderr, stdin, stdout},
     num::ParseIntError,
     str::FromStr,
 };
@@ -77,11 +77,13 @@ impl FromStr for Input {
     clippy::too_many_lines,
     reason = "further decomposition could potentially hurt readability"
 )]
-pub fn repl(
-    input: &mut impl BufRead,
-    output: &mut impl Write,
-    error: &mut impl Write,
-) -> io::Result<()> {
+pub fn repl() -> io::Result<()> {
+    let input = stdin().lock();
+    let mut output = stdout().lock();
+    let mut error = stderr().lock();
+
+    let mut lines = input.lines();
+
     let mut board = Board::starting_position();
     let mut info = String::new();
     let mut highlighted = Vec::new();
@@ -123,8 +125,7 @@ pub fn repl(
         loop {
             write!(output, "> ")?;
             output.flush()?;
-            let mut text = String::new();
-            input.read_line(&mut text)?;
+            let text = lines.next().unwrap()?;
             let input = match text.trim().parse() {
                 Ok(input) => input,
                 Err(err) => {

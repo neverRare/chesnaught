@@ -3,7 +3,7 @@
 // TODO: remove this when the engine is fully implemented
 #![allow(dead_code, reason = "work in progress code")]
 
-use std::io::{self, stdin, stdout};
+use std::io::{self};
 
 use crate::uci::uci_loop;
 
@@ -23,7 +23,7 @@ mod repl;
 mod uci;
 
 fn main() -> io::Result<()> {
-    uci_loop(&mut stdin().lock(), &mut stdout().lock())?;
+    uci_loop()?;
     Ok(())
 }
 #[macro_export]
