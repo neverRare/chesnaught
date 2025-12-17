@@ -92,7 +92,7 @@ pub fn repl() -> io::Result<()> {
     let mut view = Color::White;
     let mut first_time = true;
     let mut game_tree = GameTree::new(board.clone());
-    let mut table = Table::new(4_294_967_296);
+    let mut table = Table::new(4096 * 1024 * 1024);
     loop {
         if update {
             valid_moves.clear();
