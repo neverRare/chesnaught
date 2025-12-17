@@ -421,30 +421,43 @@ impl Display for ParseCoordError {
 impl Error for ParseCoordError {}
 #[cfg(test)]
 mod test {
-    use crate::{coord, coord::Vector};
+    use crate::coord::{Coord, Vector};
 
     #[test]
     fn adjacent_exclusive_exclusive_line_is_empty() {
         assert_eq!(
-            coord!("e4")
-                .line_ex_ex(coord!("e5"), Vector { x: 0, y: -1 })
+            "e4".parse::<Coord>()
+                .unwrap()
+                .line_ex_ex("e5".parse().unwrap(), Vector { x: 0, y: -1 })
                 .next(),
             None
         );
     }
     #[test]
     fn zero_inclusive_inclusive_is_has_one_item() {
-        let mut line = coord!("e4").line_in_in(coord!("e4"), Vector { x: 0, y: 0 });
-        assert_eq!(line.next(), Some(coord!("e4")));
+        let mut line = "e4"
+            .parse::<Coord>()
+            .unwrap()
+            .line_in_in("e4".parse().unwrap(), Vector { x: 0, y: 0 });
+        assert_eq!(line.next(), Some("e4".parse().unwrap()));
         assert_eq!(line.next(), None);
     }
     #[test]
     fn zero_exclusive_has_none() {
-        let mut line = coord!("e4").line_ex_in(coord!("e4"), Vector { x: 0, y: 0 });
+        let mut line = "e4"
+            .parse::<Coord>()
+            .unwrap()
+            .line_ex_in("e4".parse().unwrap(), Vector { x: 0, y: 0 });
         assert_eq!(line.next(), None);
-        let mut line = coord!("e4").line_in_ex(coord!("e4"), Vector { x: 0, y: 0 });
+        let mut line = "e4"
+            .parse::<Coord>()
+            .unwrap()
+            .line_in_ex("e4".parse().unwrap(), Vector { x: 0, y: 0 });
         assert_eq!(line.next(), None);
-        let mut line = coord!("e4").line_ex_ex(coord!("e4"), Vector { x: 0, y: 0 });
+        let mut line = "e4"
+            .parse::<Coord>()
+            .unwrap()
+            .line_ex_ex("e4".parse().unwrap(), Vector { x: 0, y: 0 });
         assert_eq!(line.next(), None);
     }
 }

@@ -1703,7 +1703,7 @@ mod test {
     fn pin() {
         let board: Fen = "4k3/4r3/8/8/8/8/4N3/4K3 w - - 0 1".parse().unwrap();
         let board: Board = board.board.try_into().unwrap();
-        board.assert_piece_cant_move(coord!("e2"));
+        board.assert_piece_cant_move("e2".parse().unwrap());
     }
     #[test]
     fn can_capture_pinning_piece() {
