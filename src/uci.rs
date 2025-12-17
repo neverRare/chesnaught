@@ -117,12 +117,16 @@ pub fn uci_loop() -> io::Result<()> {
                                 )?;
                                 continue;
                             };
-                            let Ok(size): Result<usize, _> = value.parse() else {
-                                debug_print(
-                                    &mut output,
-                                    "set `Hash` to an invalid value; ignoring".to_string(),
-                                )?;
-                                continue;
+                            let size: usize = match value.parse() {
+                                Ok(size) => size,
+                                Err(err) => {
+                                    debug_print(
+                                        &mut output,
+                                        "set `Hash` to an invalid value; ignoring".to_string(),
+                                    )?;
+                                    debug_print(&mut output, format!("error: {err}"))?;
+                                    continue;
+                                }
                             };
                             if size <= 4096 {
                                 engine.set_hash_size(size * 1024 * 1024);
