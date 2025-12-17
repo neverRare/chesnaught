@@ -211,7 +211,7 @@ impl Go {
     pub fn estimate_move_time(&self, board: &Board) -> Option<Duration> {
         if let Some(move_time) = self.move_time {
             Some(move_time)
-        } else if self.infinite || self.depth.is_some() {
+        } else if self.infinite {
             None
         } else {
             let (time, inc) = match board.current_player() {
