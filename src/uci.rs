@@ -18,6 +18,12 @@ mod output;
 
 const CHESS960: &str = "UCI_Chess960";
 
+#[cfg(target_pointer_width = "32")]
+const MAX_HASH: u16 = 4096;
+
+#[cfg(target_pointer_width = "64")]
+const MAX_HASH: u16 = 8192;
+
 const CONFIG: [Output; 5] = [
     Output::Id {
         name: "Chesnaught",
@@ -27,7 +33,10 @@ const CONFIG: [Output; 5] = [
         name: "Hash",
         kind: OptionType::Spin,
         default: Some(OptionValue::Int(0)),
-        boundary: Some(Boundary::Boundary { min: 0, max: 4096 }),
+        boundary: Some(Boundary::Boundary {
+            min: 0,
+            max: MAX_HASH as i32,
+        }),
     },
     Output::Option {
         name: "Clear Hash",
@@ -132,7 +141,7 @@ pub fn uci_loop() -> io::Result<()> {
                                     continue;
                                 }
                             };
-                            if size <= 4096 {
+                            if size <= MAX_HASH as usize {
                                 engine.set_hash_size(size * 1024 * 1024);
                             } else if debug {
                                 debug_print(
