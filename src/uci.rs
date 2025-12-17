@@ -136,7 +136,7 @@ pub fn uci_loop() -> io::Result<()> {
                                 }
                             };
                             if let Some(size) = size.checked_mul(1024 * 1024) {
-                                engine.set_hash_size(size * 1024 * 1024);
+                                engine.set_hash_size(size);
                             } else {
                                 debug_print(
                                     &mut output,
@@ -237,6 +237,12 @@ pub fn uci_loop() -> io::Result<()> {
                             debug_print(
                                 &mut output,
                                 "`go mate` is unsupported; ignoring".to_string(),
+                            )?;
+                        }
+                        if go.nodes.is_some() {
+                            debug_print(
+                                &mut output,
+                                "`go nodes` is unsupported; ignoring".to_string(),
                             )?;
                         }
                     }
