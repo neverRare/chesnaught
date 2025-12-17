@@ -227,7 +227,11 @@ impl Go {
                     total_moves
                 };
                 let estimated_time = time.div_f32(moves_to_go) + inc.unwrap_or_default();
-                Some(Ord::min(estimated_time, time))
+                if estimated_time > time {
+                    Some(time / 2)
+                } else {
+                    Some(estimated_time)
+                }
             } else {
                 None
             }
