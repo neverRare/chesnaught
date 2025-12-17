@@ -1,7 +1,6 @@
 use std::{
     cell::OnceCell,
     cmp::Ordering,
-    collections::HashSet,
     error::Error,
     fmt::{self, Display, Formatter},
     hash::Hash,
@@ -11,6 +10,8 @@ use std::{
     rc::Rc,
     str::FromStr,
 };
+
+use rustc_hash::FxHashSet;
 
 use crate::{
     board_display::IndexableBoard,
@@ -908,7 +909,7 @@ impl Board {
         todo!()
     }
     pub fn move_assert(&mut self, lan: Lan) {
-        let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
+        let valid_moves: FxHashSet<_> = self.valid_moves().into_iter().flatten().collect();
         let movement = lan.as_move(self);
         assert!(
             valid_moves.contains(&movement),
@@ -926,7 +927,7 @@ impl Board {
         );
     }
     pub fn assert_move_is_valid(&self, lan: Lan) {
-        let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
+        let valid_moves: FxHashSet<_> = self.valid_moves().into_iter().flatten().collect();
         let movement = lan.as_move(self);
         assert!(
             valid_moves.contains(&movement),
@@ -934,7 +935,7 @@ impl Board {
         );
     }
     pub fn assert_move_is_invalid(&self, lan: Lan) {
-        let valid_moves: HashSet<_> = self
+        let valid_moves: FxHashSet<_> = self
             .valid_moves()
             .into_iter()
             .flatten()

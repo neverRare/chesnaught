@@ -11,6 +11,8 @@ use std::{
     thread::{Builder, panicking},
 };
 
+use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
+
 use crate::{
     board::{Board, HashableBoard, Lan},
     color::Color,
@@ -267,8 +269,8 @@ impl Drop for GameTree {
 
 #[derive(Debug, Clone, Default)]
 pub struct Table {
-    transposition: HashMap<HashableBoard, Score>,
-    repetition: HashSet<HashableBoard>,
+    transposition: FxHashMap<HashableBoard, Score>,
+    repetition: FxHashSet<HashableBoard>,
     max_size: u64,
 }
 impl Table {
@@ -277,8 +279,8 @@ impl Table {
 
     pub fn new(max_size: u64) -> Self {
         Table {
-            transposition: HashMap::new(),
-            repetition: HashSet::new(),
+            transposition: HashMap::with_hasher(FxBuildHasher),
+            repetition: HashSet::with_hasher(FxBuildHasher),
             max_size,
         }
     }

@@ -1,4 +1,5 @@
 use rand::random_range;
+use rustc_hash::FxBuildHasher;
 
 use crate::{
     board::{Board, Lan, ParseLanError},
@@ -87,7 +88,7 @@ pub fn repl() -> io::Result<()> {
     let mut board = Board::starting_position();
     let mut info = String::new();
     let mut highlighted = Vec::new();
-    let mut valid_moves = HashSet::new();
+    let mut valid_moves = HashSet::with_hasher(FxBuildHasher);
     let mut update = true;
     let mut view = Color::White;
     let mut first_time = true;
