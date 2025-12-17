@@ -23,7 +23,7 @@ enum Input {
         callback: Box<dyn FnOnce(Lan) + Send>,
         stop_signal: Arc<AtomicBool>,
     },
-    SetHashSize(usize),
+    SetHashSize(u64),
     ClearHash,
 }
 pub struct Engine {
@@ -112,7 +112,7 @@ impl Engine {
             stop_signal.store(true, Ordering::Relaxed);
         }
     }
-    pub fn set_hash_size(&self, size: usize) {
+    pub fn set_hash_size(&self, size: u64) {
         self.input.send(Input::SetHashSize(size)).unwrap();
     }
     pub fn clear_hash(&self) {

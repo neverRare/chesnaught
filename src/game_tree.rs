@@ -270,20 +270,20 @@ impl Drop for GameTree {
 pub struct Table {
     transposition: HashMap<HashableBoard, Score>,
     repetition: HashSet<HashableBoard>,
-    max_size: usize,
+    max_size: u64,
 }
 impl Table {
-    const TRANSPOSITION_ELEMENT_SIZE: usize = size_of::<(usize, HashableBoard, Score)>();
-    const REPETITION_ELEMENT_SIZE: usize = size_of::<(usize, HashableBoard, ())>();
+    const TRANSPOSITION_ELEMENT_SIZE: u64 = size_of::<(usize, HashableBoard, Score)>() as u64;
+    const REPETITION_ELEMENT_SIZE: u64 = size_of::<(usize, HashableBoard, ())>() as u64;
 
-    pub fn new(max_size: usize) -> Self {
+    pub fn new(max_size: u64) -> Self {
         Table {
             transposition: HashMap::new(),
             repetition: HashSet::new(),
             max_size,
         }
     }
-    pub fn set_size(&mut self, max_size: usize) {
+    pub fn set_size(&mut self, max_size: u64) {
         self.max_size = max_size;
     }
     fn get_transposition(&self, board: &HashableBoard) -> Option<&Score> {
@@ -295,25 +295,24 @@ impl Table {
     fn insert_transposition(&mut self, board: HashableBoard, score: Score) {
         let max_capacity = self
             .max_size
-            .saturating_sub(self.repetition.capacity() * Table::REPETITION_ELEMENT_SIZE)
+            .saturating_sub(self.repetition.capacity() as u64 * Table::REPETITION_ELEMENT_SIZE)
             / Table::TRANSPOSITION_ELEMENT_SIZE
             / 2;
 
         if (self.transposition.len() < self.transposition.capacity())
-            || (self.transposition.capacity() <= max_capacity)
+            || (self.transposition.capacity() as u64 <= max_capacity)
         {
             self.transposition.insert(board, score);
         }
     }
     fn insert_repetition(&mut self, board: HashableBoard) {
-        let max_capacity = self
-            .max_size
-            .saturating_sub(self.transposition.capacity() * Table::TRANSPOSITION_ELEMENT_SIZE)
-            / Table::REPETITION_ELEMENT_SIZE
+        let max_capacity = self.max_size.saturating_sub(
+            self.transposition.capacity() as u64 * Table::TRANSPOSITION_ELEMENT_SIZE,
+        ) / Table::REPETITION_ELEMENT_SIZE
             / 2;
 
         if (self.repetition.len() < self.repetition.capacity())
-            || (self.repetition.capacity() <= max_capacity)
+            || (self.repetition.capacity() as u64 <= max_capacity)
         {
             self.repetition.insert(board);
         }

@@ -18,12 +18,6 @@ mod output;
 
 const CHESS960: &str = "UCI_Chess960";
 
-#[cfg(target_pointer_width = "32")]
-const MAX_HASH: u16 = 4096;
-
-#[cfg(target_pointer_width = "64")]
-const MAX_HASH: u16 = 8192;
-
 const CONFIG: [Output; 5] = [
     Output::Id {
         name: "Chesnaught",
@@ -35,7 +29,7 @@ const CONFIG: [Output; 5] = [
         default: Some(OptionValue::Int(0)),
         boundary: Some(Boundary::Boundary {
             min: 0,
-            max: MAX_HASH as i32,
+            max: <i32>::MAX,
         }),
     },
     Output::Option {
@@ -128,7 +122,7 @@ pub fn uci_loop() -> io::Result<()> {
                                 }
                                 continue;
                             };
-                            let size: usize = match value.parse() {
+                            let size: u64 = match value.parse() {
                                 Ok(size) => size,
                                 Err(err) => {
                                     if debug {
@@ -141,9 +135,9 @@ pub fn uci_loop() -> io::Result<()> {
                                     continue;
                                 }
                             };
-                            if size <= MAX_HASH as usize {
+                            if let Some(size) = size.checked_mul(1024 * 1024) {
                                 engine.set_hash_size(size * 1024 * 1024);
-                            } else if debug {
+                            } else {
                                 debug_print(
                                     &mut output,
                                     "set `Hash` to an invalid value; ignoring".to_string(),
