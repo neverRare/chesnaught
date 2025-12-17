@@ -272,8 +272,8 @@ pub struct Table {
     max_size: u64,
 }
 impl Table {
-    const TRANSPOSITION_ELEMENT_SIZE: u64 = size_of::<(usize, HashableBoard, Score)>() as u64;
-    const REPETITION_ELEMENT_SIZE: u64 = size_of::<(usize, HashableBoard, ())>() as u64;
+    const TRANSPOSITION_ELEMENT_SIZE: u64 = size_of::<(HashableBoard, Score)>() as u64;
+    const REPETITION_ELEMENT_SIZE: u64 = size_of::<(HashableBoard, ())>() as u64;
 
     pub fn new(max_size: u64) -> Self {
         Table {
