@@ -56,12 +56,7 @@ impl Engine {
                                 break;
                             }
                         }
-                        if let Some(movement) = game_tree.best_move() {
-                            callback(movement);
-                        } else {
-                            game_tree.calculate(1, &mut table);
-                            callback(game_tree.best_move().unwrap());
-                        }
+                        callback(game_tree.best_move().unwrap());
                     }
                     Input::SetHashSize(size) => table.set_size(size),
                     Input::ClearHash => table.shrink(),
