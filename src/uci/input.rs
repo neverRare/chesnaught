@@ -1,4 +1,5 @@
 use std::{
+    convert::Infallible,
     error::Error,
     fmt::{self, Display, Formatter},
     iter::from_fn,
@@ -85,8 +86,8 @@ impl<'a> Input<'a> {
             })
             .collect();
             Ok(Input::Position { position, moves })
-        } else if starts_with_token(src, "go") {
-            todo!()
+        } else if let Some(src) = strip_prefix_token(src, "go") {
+            Ok(Input::Go(src.parse().unwrap()))
         } else if starts_with_token(src, "stop") {
             Ok(Input::Stop)
         } else if starts_with_token(src, "ponderhit") {
@@ -188,7 +189,7 @@ impl FromStr for Position {
         }
     }
 }
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Go {
     search_moves: Option<Vec<Lan>>,
     ponder: bool,
@@ -250,6 +251,10 @@ impl Display for Go {
             add_space(f)?;
             write!(f, "depth {depth}")?;
         }
+        if let Some(nodes) = self.nodes {
+            add_space(f)?;
+            write!(f, "nodes {nodes}")?;
+        }
         if let Some(mate) = self.mate {
             add_space(f)?;
             write!(f, "mate {mate}")?;
@@ -263,6 +268,62 @@ impl Display for Go {
             write!(f, "infinite")?;
         }
         Ok(())
+    }
+}
+impl FromStr for Go {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut go = Go::default();
+        let mut tokens = s
+            .split(<char>::is_whitespace)
+            .filter(|token| !token.is_empty())
+            .peekable();
+        while let Some(token) = tokens.next() {
+            match token {
+                "searchmoves" => {
+                    let moves = from_fn(|| {
+                        tokens.peek().copied().and_then(|token| {
+                            token.parse().ok().inspect(|_| {
+                                tokens.next();
+                            })
+                        })
+                    })
+                    .collect();
+                    go.search_moves = Some(moves);
+                }
+                "ponder" => go.ponder = true,
+                prefix @ ("wtime" | "btime" | "winc" | "binc" | "movetime") => {
+                    let Some(time) = tokens.next().and_then(|token| token.parse().ok()) else {
+                        continue;
+                    };
+                    let time = Duration::from_millis(time);
+                    match prefix {
+                        "wtime" => go.w_time = Some(time),
+                        "btime" => go.b_time = Some(time),
+                        "winc" => go.w_inc = Some(time),
+                        "binc" => go.b_inc = Some(time),
+                        "movetime" => go.move_time = Some(time),
+                        _ => unreachable!(),
+                    }
+                }
+                prefix @ ("movestogo" | "depth" | "nodes" | "mate") => {
+                    let Some(count) = tokens.next().and_then(|token| token.parse().ok()) else {
+                        continue;
+                    };
+                    match prefix {
+                        "movestogo" => go.moves_to_go = Some(count),
+                        "depth" => go.depth = Some(count),
+                        "nodes" => go.nodes = Some(count),
+                        "mate" => go.mate = Some(count),
+                        _ => unreachable!(),
+                    }
+                }
+                "infinite" => go.infinite = true,
+                _ => (),
+            }
+        }
+        Ok(go)
     }
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
