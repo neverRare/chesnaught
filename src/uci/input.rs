@@ -135,48 +135,7 @@ impl Display for Input<'_> {
                     write!(f, " {movement}")?;
                 }
             }
-            Input::Go(go) => {
-                write!(f, "go")?;
-                if let Some(search_moves) = &go.search_moves {
-                    write!(f, " search_moves")?;
-                    for movement in search_moves {
-                        write!(f, " {movement}")?;
-                    }
-                }
-                if go.ponder {
-                    write!(f, " ponder")?;
-                }
-                if let Some(w_time) = go.w_time {
-                    write!(f, " wtime {}", w_time.as_millis())?;
-                }
-                if let Some(b_time) = go.b_time {
-                    write!(f, " btime {}", b_time.as_millis())?;
-                }
-                if let Some(w_inc) = go.w_inc {
-                    write!(f, " winc {}", w_inc.as_millis())?;
-                }
-                if let Some(b_inc) = go.b_inc {
-                    write!(f, " binc {}", b_inc.as_millis())?;
-                }
-                if let Some(moves_to_go) = go.moves_to_go {
-                    write!(f, " movestogo {moves_to_go}",)?;
-                }
-                if let Some(depth) = go.depth {
-                    write!(f, " depth {depth}",)?;
-                }
-                if let Some(nodes) = go.nodes {
-                    write!(f, " nodes {nodes}",)?;
-                }
-                if let Some(mate) = go.mate {
-                    write!(f, " mate {mate}",)?;
-                }
-                if let Some(move_time) = go.move_time {
-                    write!(f, " movetime {}", move_time.as_millis())?;
-                }
-                if go.infinite {
-                    write!(f, " infinite")?;
-                }
-            }
+            Input::Go(go) => write!(f, "go {go}")?,
             Input::Stop => write!(f, "stop")?,
             Input::PonderHit => write!(f, "ponderhit")?,
             Input::Quit => write!(f, "quit")?,
@@ -245,6 +204,66 @@ pub struct Go {
     mate: Option<NonZero<u32>>,
     move_time: Option<Duration>,
     infinite: bool,
+}
+impl Display for Go {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let mut first = true;
+        let mut add_space = |f: &mut Formatter<'_>| -> fmt::Result {
+            if !first {
+                write!(f, " ")?;
+            }
+            first = false;
+            Ok(())
+        };
+        if let Some(search_moves) = &self.search_moves {
+            add_space(f)?;
+            write!(f, "searchmoves")?;
+            for movement in search_moves {
+                write!(f, " {movement}")?;
+            }
+        }
+        if self.ponder {
+            add_space(f)?;
+            write!(f, "ponder")?;
+        }
+        if let Some(w_time) = self.w_time {
+            add_space(f)?;
+            write!(f, "wtime {}", w_time.as_millis())?;
+        }
+        if let Some(b_time) = self.b_time {
+            add_space(f)?;
+            write!(f, "btime {}", b_time.as_millis())?;
+        }
+        if let Some(w_inc) = self.w_inc {
+            add_space(f)?;
+            write!(f, "winc {}", w_inc.as_millis())?;
+        }
+        if let Some(b_inc) = self.b_inc {
+            add_space(f)?;
+            write!(f, "binc {}", b_inc.as_millis())?;
+        }
+        if let Some(moves_to_go) = self.moves_to_go {
+            add_space(f)?;
+            write!(f, "movestogo {moves_to_go}")?;
+        }
+        if let Some(depth) = self.depth {
+            add_space(f)?;
+            write!(f, "depth {depth}")?;
+        }
+        if let Some(mate) = self.mate {
+            add_space(f)?;
+            write!(f, "mate {mate}")?;
+        }
+        if let Some(move_time) = self.move_time {
+            add_space(f)?;
+            write!(f, "movetime {}", move_time.as_millis())?;
+        }
+        if self.infinite {
+            add_space(f)?;
+            write!(f, "infinite")?;
+        }
+        Ok(())
+    }
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseInputError {
