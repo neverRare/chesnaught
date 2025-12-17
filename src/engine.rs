@@ -46,7 +46,9 @@ impl Engine {
                     } => {
                         for i in 1.. {
                             game_tree.calculate_with_stop_signal(i, &stop_signal);
-                            if depth.is_some_and(|depth| i >= depth) {
+                            if stop_signal.load(Ordering::Relaxed)
+                                || depth.is_some_and(|depth| i >= depth)
+                            {
                                 break;
                             }
                         }
