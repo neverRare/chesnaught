@@ -1,4 +1,5 @@
 use std::{
+    num::NonZero,
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
@@ -18,7 +19,7 @@ enum Input {
     SetBoard(Board),
     Move(Lan),
     Calculate {
-        depth: Option<u32>,
+        depth: Option<NonZero<u32>>,
         callback: Box<dyn FnOnce(Lan) + Send>,
         stop_signal: Arc<AtomicBool>,
     },
@@ -47,7 +48,7 @@ impl Engine {
                         for i in 1.. {
                             game_tree.calculate_with_stop_signal(i, &stop_signal);
                             if stop_signal.load(Ordering::Relaxed)
-                                || depth.is_some_and(|depth| i >= depth)
+                                || depth.is_some_and(|depth| i >= depth.get())
                             {
                                 break;
                             }
@@ -81,7 +82,7 @@ impl Engine {
     pub fn calculate(
         &mut self,
         duration: Option<Duration>,
-        depth: Option<u32>,
+        depth: Option<NonZero<u32>>,
         callback: impl FnOnce(Lan) + Send + 'static,
     ) {
         let stop_signal = Arc::new(AtomicBool::new(false));

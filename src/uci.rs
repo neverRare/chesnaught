@@ -39,7 +39,7 @@ pub fn uci_loop() -> io::Result<()> {
 
     let mut uci = false;
     let mut debug = false;
-    let engine = LazyCell::new(Engine::new);
+    let mut engine = LazyCell::new(Engine::new);
     let mut board = Board::starting_position();
     let mut new_game = true;
     let mut uci_new_game_available = false;
@@ -150,7 +150,39 @@ pub fn uci_loop() -> io::Result<()> {
             Input::Go(go) => {
                 if uci {
                     new_game = false;
-                    todo!()
+                    let mut new_output = stdout();
+                    let callback = move |movement| {
+                        writeln!(
+                            new_output,
+                            "{}",
+                            Output::BestMove {
+                                movement,
+                                ponder: None
+                            }
+                        )
+                        .unwrap();
+                    };
+                    engine.calculate(go.estimate_move_time(&board), go.depth, callback);
+                    if debug {
+                        if go.ponder {
+                            debug_print(
+                                &mut output,
+                                "`go ponder` is unsupported; ignoring".to_string(),
+                            )?;
+                        }
+                        if go.search_moves.is_some() {
+                            debug_print(
+                                &mut output,
+                                "`go searchmoves` is unsupported; ignoring".to_string(),
+                            )?;
+                        }
+                        if go.mate.is_some() {
+                            debug_print(
+                                &mut output,
+                                "`go mate` is unsupported; ignoring".to_string(),
+                            )?;
+                        }
+                    }
                 }
             }
             Input::Stop => {

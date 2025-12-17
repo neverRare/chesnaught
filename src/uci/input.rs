@@ -10,6 +10,7 @@ use std::{
 
 use crate::{
     board::{Board, InvalidBoard, Lan},
+    color::Color,
     fen::{Fen, ParseFenError},
     misc::{extract_prefix_token, split_by_token, starts_with_token, strip_prefix_token},
 };
@@ -191,20 +192,46 @@ impl FromStr for Position {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Go {
-    search_moves: Option<Vec<Lan>>,
-    ponder: bool,
-    w_time: Option<Duration>,
-    b_time: Option<Duration>,
-    w_inc: Option<Duration>,
-    b_inc: Option<Duration>,
+    pub search_moves: Option<Vec<Lan>>,
+    pub ponder: bool,
+    pub w_time: Option<Duration>,
+    pub b_time: Option<Duration>,
+    pub w_inc: Option<Duration>,
+    pub b_inc: Option<Duration>,
 
     #[allow(clippy::struct_field_names)]
-    moves_to_go: Option<NonZero<u32>>,
-    depth: Option<NonZero<u32>>,
-    nodes: Option<NonZero<u32>>,
-    mate: Option<NonZero<u32>>,
-    move_time: Option<Duration>,
-    infinite: bool,
+    pub moves_to_go: Option<NonZero<u32>>,
+    pub depth: Option<NonZero<u32>>,
+    pub nodes: Option<NonZero<u32>>,
+    pub mate: Option<NonZero<u32>>,
+    pub move_time: Option<Duration>,
+    pub infinite: bool,
+}
+impl Go {
+    pub fn estimate_move_time(&self, board: &Board) -> Option<Duration> {
+        if let Some(move_time) = self.move_time {
+            Some(move_time)
+        } else if self.infinite || self.depth.is_some() {
+            None
+        } else {
+            let (time, inc) = match board.current_player() {
+                Color::White => (self.w_time, self.w_inc),
+                Color::Black => (self.b_time, self.b_inc),
+            };
+            if let Some(time) = time {
+                let total_moves = board.estimate_moves_left();
+                let moves_to_go = if let Some(moves_to_go) = self.moves_to_go {
+                    #[allow(clippy::cast_precision_loss, reason = "we don't need the precision")]
+                    <f32>::min(moves_to_go.get() as f32, total_moves)
+                } else {
+                    total_moves
+                };
+                Some(time.div_f32(moves_to_go) + inc.unwrap_or_default())
+            } else {
+                None
+            }
+        }
+    }
 }
 impl Display for Go {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
