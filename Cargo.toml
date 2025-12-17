@@ -2,6 +2,7 @@
 name = "Chesnaught"
 version = "0.1.0"
 authors = ["neverRare <neverrare@proton.me>"]
+repository = "https://github.com/neverRare/chesnaught"
 edition = "2024"
 
 [dependencies]

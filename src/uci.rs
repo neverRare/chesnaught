@@ -17,8 +17,9 @@ mod input;
 mod output;
 
 const CHESS960: &str = "UCI_Chess960";
+const ENGINE_ABOUT: &str = "UCI_EngineAbout";
 
-const CONFIG: [Output; 5] = [
+const CONFIG: [Output; 6] = [
     Output::Id {
         name: concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
         author: env!("CARGO_PKG_AUTHORS"),
@@ -42,6 +43,12 @@ const CONFIG: [Output; 5] = [
         name: CHESS960,
         kind: OptionType::Check,
         default: Some(OptionValue::Bool(false)),
+        boundary: None,
+    },
+    Output::Option {
+        name: "UCI_EngineAbout",
+        kind: OptionType::String,
+        default: Some(OptionValue::Str(env!("CARGO_PKG_REPOSITORY"))),
         boundary: None,
     },
     Output::UciOk,
@@ -151,6 +158,14 @@ pub fn uci_loop() -> io::Result<()> {
                                 debug_print(
                                     &mut output,
                                     "set `Clear Hash` to invalid value; ignoring".to_string(),
+                                )?;
+                            }
+                        }
+                        ENGINE_ABOUT => {
+                            if debug {
+                                debug_print(
+                                    &mut output,
+                                    format!("setting the option `{ENGINE_ABOUT}` is ignored"),
                                 )?;
                             }
                         }
