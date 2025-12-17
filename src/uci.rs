@@ -269,6 +269,7 @@ pub fn uci_loop() -> io::Result<()> {
             Input::Repl => {
                 if !uci {
                     drop(lines);
+                    drop(engine);
                     repl()?;
                     return Ok(());
                 }
