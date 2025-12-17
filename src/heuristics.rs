@@ -3,7 +3,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use crate::{board::Board, color::Color, misc::CompoundI8};
+use crate::{color::Color, misc::CompoundI8};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Estimated {
@@ -91,7 +91,4 @@ impl Ord for Score {
             (&Score::BLACK_WINS, _) | (_, &Score::WHITE_WINS) => Ordering::Less,
         }
     }
-}
-pub fn estimate(board: &Board) -> Estimated {
-    todo!()
 }

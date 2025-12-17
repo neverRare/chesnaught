@@ -15,7 +15,7 @@ use crate::{
     board::{Board, HashableBoard, Lan},
     color::Color,
     end_state::EndState,
-    heuristics::{Estimated, Score, estimate},
+    heuristics::{Estimated, Score},
 };
 
 type MoveTreePair = (Lan, Option<Lan>, GameTreeInner);
@@ -169,7 +169,7 @@ impl GameTreeInner {
     }
     fn estimate(&self) -> Score {
         let estimated = if let Data::Board(board) = &self.data {
-            estimate(board)
+            board.estimate()
         } else if let Some(score) = self.score {
             return score;
         } else if cfg!(debug_assertions) {
@@ -180,13 +180,12 @@ impl GameTreeInner {
                 "to this"
             ));
         } else {
-            estimate(
-                &self
-                    .board()
-                    .expect("can't estimate score on board with ended state")
-                    .try_into()
-                    .unwrap(),
-            )
+            let board: Board = self
+                .board()
+                .expect("can't estimate score on board with ended state")
+                .try_into()
+                .unwrap();
+            board.estimate()
         };
         Score::Estimated(estimated)
     }

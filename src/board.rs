@@ -18,6 +18,7 @@ use crate::{
     color::Color,
     coord::{Coord, ParseCoordError, Vector},
     end_state::EndState,
+    heuristics::Estimated,
     misc::InvalidByte,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind, STARTING_VALUE},
 };
@@ -902,6 +903,9 @@ impl Board {
             .map(|piece| piece.piece().value().map_or(0, NonZero::get))
             .sum();
         <f32>::from(pieces) * <f32>::from(ESTIMATED_TOTAL_MOVES) / <f32>::from(STARTING_VALUE)
+    }
+    pub fn estimate(&self) -> Estimated {
+        todo!()
     }
     pub fn move_assert(&mut self, lan: Lan) {
         let valid_moves: HashSet<_> = self.valid_moves().into_iter().flatten().collect();
