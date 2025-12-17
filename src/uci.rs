@@ -110,7 +110,7 @@ pub fn uci_loop() -> io::Result<()> {
             }
             Input::Register(_) => {
                 if uci && debug {
-                    debug_print(&mut output, "registration is ignored".to_string())?;
+                    debug_print(&mut output, "`register` is ignored".to_string())?;
                 }
             }
             Input::UciNewGame => {
@@ -194,7 +194,7 @@ pub fn uci_loop() -> io::Result<()> {
                 if uci && debug {
                     debug_print(
                         &mut output,
-                        "pondering is unsupported; ignoring".to_string(),
+                        "`ponderhit` is unsupported; ignoring".to_string(),
                     )?;
                 }
             }
