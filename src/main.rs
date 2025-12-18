@@ -3,8 +3,6 @@
 // TODO: remove this when the engine is fully implemented
 #![allow(dead_code, reason = "work in progress code")]
 
-use std::io::{self};
-
 use crate::uci::uci_loop;
 
 mod board;
@@ -22,9 +20,8 @@ mod piece;
 mod repl;
 mod uci;
 
-fn main() -> io::Result<()> {
-    uci_loop()?;
-    Ok(())
+fn main() {
+    uci_loop();
 }
 #[macro_export]
 macro_rules! coord_x {

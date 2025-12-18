@@ -1,6 +1,6 @@
 use std::{
     cell::LazyCell,
-    io::{self, BufRead, Write, stdin, stdout},
+    io::{BufRead, stdin},
 };
 
 use crate::{
@@ -53,10 +53,8 @@ const CONFIG: [Output; 6] = [
     },
     Output::UciOk,
 ];
-pub fn uci_loop() -> io::Result<()> {
+pub fn uci_loop() {
     let input = stdin().lock();
-    let mut output = stdout();
-
     let mut lines = input.lines();
 
     let mut uci = false;
@@ -66,7 +64,7 @@ pub fn uci_loop() -> io::Result<()> {
     let mut new_game = true;
     let mut uci_new_game_available = false;
     loop {
-        let text = lines.next().unwrap()?;
+        let text = lines.next().unwrap().unwrap();
         let text = text.trim();
         if text.is_empty() {
             continue;
@@ -77,12 +75,11 @@ pub fn uci_loop() -> io::Result<()> {
                 if debug {
                     if err.is_empty() {
                         debug_print(
-                            &mut output,
                             "error parsing input but no error information found".to_string(),
-                        )?;
+                        );
                     } else {
                         for err in err {
-                            debug_print(&mut output, format!("error: {err}"))?;
+                            debug_print(format!("error: {err}"));
                         }
                     }
                 }
@@ -92,7 +89,7 @@ pub fn uci_loop() -> io::Result<()> {
         match parsed_input {
             Input::Uci => {
                 for config in CONFIG {
-                    writeln!(output, "{config}")?;
+                    println!("{config}");
                 }
                 uci = true;
             }
@@ -104,7 +101,7 @@ pub fn uci_loop() -> io::Result<()> {
             Input::IsReady => {
                 if uci {
                     engine.ready();
-                    writeln!(output, "{}", Output::ReadyOk)?;
+                    println!("{}", Output::ReadyOk);
                 }
             }
             Input::SetOption { name, value } => {
@@ -112,20 +109,14 @@ pub fn uci_loop() -> io::Result<()> {
                     match name {
                         CHESS960 => {
                             if debug && !matches!(value, Some("true" | "false")) {
-                                debug_print(
-                                    &mut output,
-                                    format!("set {CHESS960} to invalid value; ignoring"),
-                                )?;
+                                debug_print(format!("set {CHESS960} to invalid value; ignoring"));
                             }
                             // The engine can already work on chess960 without telling it to use chess960
                         }
                         "Hash" => {
                             let Some(value) = value else {
                                 if debug {
-                                    debug_print(
-                                        &mut output,
-                                        "set `Hash` without value; ignoring".to_string(),
-                                    )?;
+                                    debug_print("set `Hash` without value; ignoring".to_string());
                                 }
                                 continue;
                             };
@@ -134,10 +125,9 @@ pub fn uci_loop() -> io::Result<()> {
                                 Err(err) => {
                                     if debug {
                                         debug_print(
-                                            &mut output,
                                             "set `Hash` to an invalid value; ignoring".to_string(),
-                                        )?;
-                                        debug_print(&mut output, format!("error: {err}"))?;
+                                        );
+                                        debug_print(format!("error: {err}"));
                                     }
                                     continue;
                                 }
@@ -145,10 +135,7 @@ pub fn uci_loop() -> io::Result<()> {
                             if let Some(size) = size.checked_mul(1024 * 1024) {
                                 engine.set_hash_size(size);
                             } else {
-                                debug_print(
-                                    &mut output,
-                                    "set `Hash` to an invalid value; ignoring".to_string(),
-                                )?;
+                                debug_print("set `Hash` to an invalid value; ignoring".to_string());
                             }
                         }
                         "Clear Hash" => {
@@ -156,25 +143,20 @@ pub fn uci_loop() -> io::Result<()> {
                                 engine.clear_hash();
                             } else if debug {
                                 debug_print(
-                                    &mut output,
                                     "set `Clear Hash` to invalid value; ignoring".to_string(),
-                                )?;
+                                );
                             }
                         }
                         ENGINE_ABOUT => {
                             if debug {
-                                debug_print(
-                                    &mut output,
-                                    format!("setting the option `{ENGINE_ABOUT}` is ignored"),
-                                )?;
+                                debug_print(format!(
+                                    "setting the option `{ENGINE_ABOUT}` is ignored"
+                                ));
                             }
                         }
                         name => {
                             if debug {
-                                debug_print(
-                                    &mut output,
-                                    format!("unknown option `{name}`; ignoring"),
-                                )?;
+                                debug_print(format!("unknown option `{name}`; ignoring"));
                             }
                         }
                     }
@@ -182,7 +164,7 @@ pub fn uci_loop() -> io::Result<()> {
             }
             Input::Register(_) => {
                 if uci && debug {
-                    debug_print(&mut output, "`register` is ignored".to_string())?;
+                    debug_print("`register` is ignored".to_string());
                 }
             }
             Input::UciNewGame => {
@@ -200,8 +182,8 @@ pub fn uci_loop() -> io::Result<()> {
                             Ok(board) => board,
                             Err(err) => {
                                 if debug {
-                                    debug_print(&mut output, "error setting up board".to_string())?;
-                                    debug_print(&mut output, format!("error: {err}"))?;
+                                    debug_print("error setting up board".to_string());
+                                    debug_print(format!("error: {err}"));
                                 }
                                 Board::starting_position()
                             }
@@ -215,50 +197,35 @@ pub fn uci_loop() -> io::Result<()> {
                         board.move_piece(movement);
                         engine.move_piece(*movement);
                     } else if debug {
-                        debug_print(&mut output, "no moves found".to_string())?;
+                        debug_print("no moves found".to_string());
                     }
                 }
             }
             Input::Go(go) => {
                 if uci {
                     new_game = false;
-                    let mut new_output = stdout();
                     let callback = move |movement| {
-                        writeln!(
-                            new_output,
+                        println!(
                             "{}",
                             Output::BestMove {
                                 movement,
                                 ponder: None
                             }
-                        )
-                        .unwrap();
+                        );
                     };
                     engine.calculate(go.estimate_move_time(&board), go.depth, callback);
                     if debug {
                         if go.ponder {
-                            debug_print(
-                                &mut output,
-                                "`go ponder` is unsupported; ignoring".to_string(),
-                            )?;
+                            debug_print("`go ponder` is unsupported; ignoring".to_string());
                         }
                         if go.search_moves.is_some() {
-                            debug_print(
-                                &mut output,
-                                "`go searchmoves` is unsupported; ignoring".to_string(),
-                            )?;
+                            debug_print("`go searchmoves` is unsupported; ignoring".to_string());
                         }
                         if go.mate.is_some() {
-                            debug_print(
-                                &mut output,
-                                "`go mate` is unsupported; ignoring".to_string(),
-                            )?;
+                            debug_print("`go mate` is unsupported; ignoring".to_string());
                         }
                         if go.nodes.is_some() {
-                            debug_print(
-                                &mut output,
-                                "`go nodes` is unsupported; ignoring".to_string(),
-                            )?;
+                            debug_print("`go nodes` is unsupported; ignoring".to_string());
                         }
                     }
                 }
@@ -270,29 +237,25 @@ pub fn uci_loop() -> io::Result<()> {
             }
             Input::PonderHit => {
                 if uci && debug {
-                    debug_print(
-                        &mut output,
-                        "`ponderhit` is unsupported; ignoring".to_string(),
-                    )?;
+                    debug_print("`ponderhit` is unsupported; ignoring".to_string());
                 }
             }
             Input::Quit => {
                 if uci {
-                    return Ok(());
+                    return;
                 }
             }
             Input::Repl => {
                 if !uci {
                     drop(lines);
                     drop(engine);
-                    repl()?;
-                    return Ok(());
+                    repl();
+                    return;
                 }
             }
         }
     }
 }
-fn debug_print(output: &mut impl Write, message: String) -> io::Result<()> {
-    writeln!(output, "{}", Output::Info(vec![Info::String(message)]))?;
-    Ok(())
+fn debug_print(message: String) {
+    println!("{}", Output::Info(vec![Info::String(message)]));
 }

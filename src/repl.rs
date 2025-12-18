@@ -14,7 +14,7 @@ use std::{
     collections::HashSet,
     error::Error,
     fmt::{self, Display, Formatter, Write as _},
-    io::{self, BufRead, Write, stderr, stdin, stdout},
+    io::{BufRead, Write, stderr, stdin, stdout},
     num::ParseIntError,
     str::FromStr,
 };
@@ -78,7 +78,7 @@ impl FromStr for Input {
     clippy::too_many_lines,
     reason = "further decomposition could potentially hurt readability"
 )]
-pub fn repl() -> io::Result<()> {
+pub fn repl() {
     let input = stdin().lock();
     let mut output = stdout().lock();
     let mut error = stderr().lock();
@@ -123,32 +123,33 @@ pub fn repl() -> io::Result<()> {
                 highlighted: &highlighted,
                 info: &info,
             },
-        )?;
+        )
+        .unwrap();
         loop {
-            write!(output, "> ")?;
-            output.flush()?;
-            let text = lines.next().unwrap()?;
+            write!(output, "> ").unwrap();
+            output.flush().unwrap();
+            let text = lines.next().unwrap().unwrap();
             let input = match text.trim().parse() {
                 Ok(input) => input,
                 Err(err) => {
-                    writeln!(error, "Error: {err}")?;
-                    writeln!(error, "for available command, enter `help`")?;
+                    writeln!(error, "Error: {err}").unwrap();
+                    writeln!(error, "for available command, enter `help`").unwrap();
                     continue;
                 }
             };
             match input {
                 Input::Help => {
-                    writeln!(output, "flip           - flip the board")?;
-                    writeln!(output, "restart        - reset to starting position")?;
-                    writeln!(output, "start chess960 - start a new chess960 game")?;
-                    writeln!(output, "quit           - quit the game")?;
-                    writeln!(output, "import <fen>   - import a position")?;
-                    writeln!(output, "fen            - export the position as fen")?;
-                    writeln!(output, "e2             - view valid moves")?;
-                    writeln!(output, "e2e4           - play the move")?;
-                    writeln!(output, "e7e8q          - move and promote")?;
-                    writeln!(output, "e1g1 (or e1h1) - perform castling")?;
-                    writeln!(output, "bot <depth>    - let a bot play")?;
+                    writeln!(output, "flip           - flip the board").unwrap();
+                    writeln!(output, "restart        - reset to starting position").unwrap();
+                    writeln!(output, "start chess960 - start a new chess960 game").unwrap();
+                    writeln!(output, "quit           - quit the game").unwrap();
+                    writeln!(output, "import <fen>   - import a position").unwrap();
+                    writeln!(output, "fen            - export the position as fen").unwrap();
+                    writeln!(output, "e2             - view valid moves").unwrap();
+                    writeln!(output, "e2e4           - play the move").unwrap();
+                    writeln!(output, "e7e8q          - move and promote").unwrap();
+                    writeln!(output, "e1g1 (or e1h1) - perform castling").unwrap();
+                    writeln!(output, "bot <depth>    - let a bot play").unwrap();
                 }
                 Input::Flip => {
                     view = !view;
@@ -163,12 +164,12 @@ pub fn repl() -> io::Result<()> {
                     update = true;
                     highlighted.clear();
                 }
-                Input::Quit => return Ok(()),
+                Input::Quit => return,
                 Input::Import(fen) => {
                     board = match fen.board.try_into() {
                         Ok(board) => board,
                         Err(err) => {
-                            writeln!(error, "Error: {err}")?;
+                            writeln!(error, "Error: {err}").unwrap();
                             continue;
                         }
                     };
@@ -184,12 +185,14 @@ pub fn repl() -> io::Result<()> {
                             half_move: 0,
                             full_move: 1
                         }
-                    )?;
+                    )
+                    .unwrap();
                 }
                 Input::Coord(position) => {
                     if let Some(piece) = board.index(position) {
                         if piece.color() != board.current_player() {
-                            writeln!(error, "Error: It is {}'s turn", board.current_player())?;
+                            writeln!(error, "Error: It is {}'s turn", board.current_player())
+                                .unwrap();
                             continue;
                         }
                         highlighted.clear();
@@ -201,13 +204,13 @@ pub fn repl() -> io::Result<()> {
                                 .map(|movement| movement.destination),
                         );
                     } else {
-                        writeln!(error, "Error: No piece found on {position}")?;
+                        writeln!(error, "Error: No piece found on {position}").unwrap();
                         continue;
                     }
                 }
                 Input::Move(lan) => {
                     let Some(movement) = valid_moves.get(&lan) else {
-                        writeln!(error, "Error: {lan} is an invalid move")?;
+                        writeln!(error, "Error: {lan} is an invalid move").unwrap();
                         continue;
                     };
                     board.move_piece(movement);
@@ -255,9 +258,9 @@ impl From<ParseIntError> for ParseInputError {
 impl Display for ParseInputError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ParseInputError::Fen(err) => write!(f, "{err}")?,
-            ParseInputError::Move(err) => write!(f, "{err}")?,
-            ParseInputError::Int(err) => write!(f, "{err}")?,
+            ParseInputError::Fen(err) => write!(f, "{err}").unwrap(),
+            ParseInputError::Move(err) => write!(f, "{err}").unwrap(),
+            ParseInputError::Int(err) => write!(f, "{err}").unwrap(),
         }
         Ok(())
     }
