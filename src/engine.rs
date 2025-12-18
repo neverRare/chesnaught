@@ -40,7 +40,9 @@ impl Engine {
             let mut table = Table::new(0);
             for input in input_receiver {
                 match input {
-                    Input::Ready => ready_sender.send(()).unwrap(),
+                    Input::Ready => {
+                        let _ = ready_sender.send(());
+                    }
                     Input::SetBoard(board) => game_tree = GameTree::new(board),
                     Input::Move(movement) => game_tree.move_piece(movement),
                     Input::Calculate {
