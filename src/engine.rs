@@ -20,7 +20,7 @@ enum Input {
     Move(Lan),
     Calculate {
         depth: Option<NonZero<u32>>,
-        callback: Box<dyn FnOnce(Lan) + Send>,
+        callback: Box<dyn FnOnce(Option<Lan>) + Send>,
         stop_signal: Arc<AtomicBool>,
     },
     SetHashSize(u64),
@@ -56,7 +56,12 @@ impl Engine {
                                 break;
                             }
                         }
-                        callback(game_tree.best_move().unwrap());
+                        if let Some(movement) = game_tree.best_move() {
+                            callback(Some(movement));
+                        } else {
+                            game_tree.calculate(1, &mut table);
+                            callback(game_tree.best_move());
+                        }
                     }
                     Input::SetHashSize(size) => table.set_size(size),
                     Input::ClearHash => table.shrink(),
@@ -83,7 +88,7 @@ impl Engine {
         &mut self,
         duration: Option<Duration>,
         depth: Option<NonZero<u32>>,
-        callback: impl FnOnce(Lan) + Send + 'static,
+        callback: impl FnOnce(Option<Lan>) + Send + 'static,
     ) {
         let stop_signal = Arc::new(AtomicBool::new(false));
         if let Some(duration) = duration {

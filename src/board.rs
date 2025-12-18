@@ -1386,6 +1386,33 @@ impl Moveable for Lan {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NullableLan(pub Option<Lan>);
+impl Display for NullableLan {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self.0 {
+            Some(movement) => write!(f, "{movement}")?,
+            None => write!(f, "0000")?,
+        }
+        Ok(())
+    }
+}
+impl FromStr for NullableLan {
+    type Err = ParseLanError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "0000" {
+            Ok(NullableLan(None))
+        } else {
+            s.parse().map(Some).map(NullableLan)
+        }
+    }
+}
+impl From<Lan> for NullableLan {
+    fn from(value: Lan) -> Self {
+        NullableLan(Some(value))
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum InvalidBoard {
     ExceededPieces(ExceededPieces),
     NoKing,

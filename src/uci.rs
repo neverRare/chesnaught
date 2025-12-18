@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    board::Board,
+    board::{Board, NullableLan},
     engine::Engine,
     repl::repl,
     uci::{
@@ -208,7 +208,7 @@ pub fn uci_loop() {
                         println!(
                             "{}",
                             Output::BestMove {
-                                movement,
+                                movement: NullableLan(movement),
                                 ponder: None
                             }
                         );

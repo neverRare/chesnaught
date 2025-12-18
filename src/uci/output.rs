@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::board::Lan;
+use crate::board::{Lan, NullableLan};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Output {
@@ -15,7 +15,7 @@ pub enum Output {
     UciOk,
     ReadyOk,
     BestMove {
-        movement: Lan,
+        movement: NullableLan,
         ponder: Option<Lan>,
     },
     // CopyProtection,
@@ -70,13 +70,13 @@ pub enum Info {
     SelDepth(NonZero<u32>),
     Time(Duration),
     Nodes(NonZero<u32>),
-    Pv(Vec<Lan>),
+    Pv(Vec<NullableLan>),
     MultiPv(u32),
     Score {
         score: Score,
         bound: Option<ScoreBound>,
     },
-    CurrMove(Lan),
+    CurrMove(NullableLan),
     CurrMoveNumber(u8),
     HashFull(u32),
     Nps(u32),
@@ -84,8 +84,8 @@ pub enum Info {
     SbHits(u32),
     CpuLoad(u32),
     String(String),
-    Refutation(Vec<Lan>),
-    CurrLine(Vec<Lan>),
+    Refutation(Vec<NullableLan>),
+    CurrLine(Vec<NullableLan>),
 }
 impl Display for Info {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
