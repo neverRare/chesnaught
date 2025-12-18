@@ -3,7 +3,7 @@ use std::{
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
-        mpsc::{Receiver, Sender, channel},
+        mpsc::{Receiver, Sender, channel, sync_channel},
     },
     thread::{sleep, spawn},
     time::Duration,
@@ -34,7 +34,7 @@ pub struct Engine {
 impl Engine {
     pub fn new() -> Self {
         let (input, input_receiver) = channel();
-        let (ready_sender, ready) = channel();
+        let (ready_sender, ready) = sync_channel(0);
         spawn(move || {
             let mut game_tree = GameTree::new(Board::starting_position());
             let mut table = Table::new(0);
