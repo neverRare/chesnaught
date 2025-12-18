@@ -1517,7 +1517,7 @@ impl Error for ExceededPieces {}
 
 #[cfg(test)]
 mod test {
-    use crate::{board::Board, color::Color, coord, end_state::EndState, fen::Fen};
+    use crate::{board::Board, color::Color, end_state::EndState, fen::Fen};
 
     #[test]
     fn checkmate() {
