@@ -28,6 +28,7 @@ enum Input {
     SetHashCapacity(usize),
     ClearHash,
 }
+#[derive(Debug)]
 pub struct Engine {
     stop_signal: Option<Arc<AtomicBool>>,
     input: Sender<Input>,
