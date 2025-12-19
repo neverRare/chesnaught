@@ -171,10 +171,10 @@ impl GameTreeInner {
         }
     }
     fn estimate(&self) -> Score {
-        let estimated = if let Data::Board(board) = &self.data {
-            board.estimate()
-        } else if let Some(score) = self.score {
+        let estimated = if let Some(score) = self.score {
             return score;
+        } else if let Data::Board(board) = &self.data {
+            board.estimate()
         } else if cfg!(debug_assertions) {
             panic!("missing score");
         } else {
