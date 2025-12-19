@@ -233,7 +233,7 @@ impl GameTree {
         );
     }
     fn best_move_tree_pair(&self) -> Option<&MoveTreePair> {
-        self.0.children().and_then(|children| children.first())
+        self.0.children().map(|children| &children[0])
     }
     pub fn best_move(&self) -> Option<Lan> {
         self.best_move_tree_pair().map(|(movement, _, _)| *movement)
