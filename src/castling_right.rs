@@ -155,7 +155,10 @@ impl Display for StandardCastlingRight {
                     (Color::White, Coord::ROOK_ORIGIN_KINGSIDE) => 'K',
                     (Color::Black, Coord::ROOK_ORIGIN_QUEENSIDE) => 'q',
                     (Color::Black, Coord::ROOK_ORIGIN_KINGSIDE) => 'k',
-                    (_, x) => panic!("non-standard rook position: {x}"),
+                    (color, x) => panic!(
+                        "non-standard rook position: {}",
+                        Coord::new(x, Coord::home_rank(color))
+                    ),
                 };
                 written = true;
                 write!(f, "{c}")?;
