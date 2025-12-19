@@ -151,11 +151,9 @@ pub enum Position {
     StartPos,
     Fen(Fen),
 }
-impl TryFrom<Position> for Board {
-    type Error = InvalidBoard;
-
-    fn try_from(value: Position) -> Result<Self, Self::Error> {
-        match value {
+impl Position {
+    pub fn board(self) -> Result<Board, InvalidBoard> {
+        match self {
             Position::StartPos => Ok(Board::starting_position()),
             Position::Fen(fen) => fen.board.try_into(),
         }

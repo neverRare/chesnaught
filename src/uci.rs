@@ -180,7 +180,7 @@ pub fn uci_loop() {
             Input::Position { position, moves } => {
                 if uci {
                     if !uci_new_game_available || new_game {
-                        board = match position.try_into() {
+                        board = match position.board() {
                             Ok(board) => board,
                             Err(err) => {
                                 if debug {
