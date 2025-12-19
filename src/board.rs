@@ -245,6 +245,61 @@ impl Piece {
             ) && (target - self.position).is_aligned(blocker - self.position)
                 && blocker.is_inside_of(self.position, target))
     }
+    fn controlled_squares_step(self, moves: &'static [Vector]) -> impl Iterator<Item = Coord> {
+        moves
+            .iter()
+            .copied()
+            .filter_map(move |movement| self.position.move_by(movement))
+    }
+    fn controlled_squares_direction(
+        self,
+        board: &Board,
+        direction: Vector,
+    ) -> impl Iterator<Item = Coord> {
+        let mut resume = true;
+        self.position
+            .line_exclusive(direction)
+            .take_while(move |destination| {
+                if resume {
+                    if board[*destination].is_some() {
+                        resume = false;
+                    }
+                    true
+                } else {
+                    false
+                }
+            })
+    }
+    fn all_controlled_squares_direction(
+        self,
+        board: &Board,
+        directions: &[Vector],
+    ) -> impl Iterator<Item = Coord> {
+        directions
+            .iter()
+            .copied()
+            .flat_map(move |direction| self.controlled_squares_direction(board, direction))
+    }
+    fn controlled_squares(self, board: &Board) -> Box<dyn Iterator<Item = Coord> + '_> {
+        match self.piece() {
+            PieceKind::Pawn => Box::new(
+                Vector::pawn_attacks(self.color())
+                    .into_iter()
+                    .filter_map(move |movement| self.position.move_by(movement)),
+            ),
+            PieceKind::Knight => Box::new(self.controlled_squares_step(&Vector::KNIGHT_MOVES)),
+            PieceKind::Bishop => {
+                Box::new(self.all_controlled_squares_direction(board, &Vector::BISHOP_DIRECTIONS))
+            }
+            PieceKind::Rook => {
+                Box::new(self.all_controlled_squares_direction(board, &Vector::ROOK_DIRECTIONS))
+            }
+            PieceKind::Queen => {
+                Box::new(self.all_controlled_squares_direction(board, &Vector::QUEEN_DIRECTIONS))
+            }
+            PieceKind::King => Box::new(self.controlled_squares_step(&Vector::KING_MOVES)),
+        }
+    }
 }
 impl Display for Piece {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
