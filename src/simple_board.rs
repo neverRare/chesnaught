@@ -5,6 +5,17 @@ use crate::{board_display::IndexableBoard, coord::Coord, piece::ColoredPieceKind
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct SimpleBoard<T>(pub [[T; 8]; 8]);
 
+impl<T> SimpleBoard<T> {
+    pub fn copy_row(self, y: u8) -> [T; 8]
+    where
+        T: Copy,
+    {
+        self.0[y as usize]
+    }
+    pub fn into_rows(self) -> impl Iterator<Item = [T; 8]> {
+        self.0.into_iter()
+    }
+}
 impl<T> Index<Coord> for SimpleBoard<T> {
     type Output = T;
 

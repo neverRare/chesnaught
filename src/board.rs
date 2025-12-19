@@ -1008,7 +1008,7 @@ impl HashableBoard {
     }
     pub fn fix_castling_rights(&mut self) {
         for color in [Color::White, Color::Black] {
-            let row = self.board.0[Coord::home_rank(color) as usize];
+            let row = self.board.copy_row(Coord::home_rank(color));
             if let Some(king) = row
                 .into_iter()
                 .position(|x| x == Some(ColoredPieceKind::new(color, PieceKind::King)))
@@ -1053,8 +1053,8 @@ impl TryFrom<HashableBoard> for Board {
 
     fn try_from(value: HashableBoard) -> Result<Self, Self::Error> {
         let mut pieces = [None; 32];
-        for (y, row) in value.board.0.iter().enumerate() {
-            'upper: for (x, piece) in row.iter().enumerate() {
+        for (y, row) in value.board.into_rows().enumerate() {
+            'upper: for (x, piece) in row.into_iter().enumerate() {
                 if let Some(piece) = piece {
                     let range = original_piece_range(piece.color(), piece.piece());
                     let pawn_range = match piece.piece() {
@@ -1066,7 +1066,7 @@ impl TryFrom<HashableBoard> for Board {
                     for square in piece_rack.iter_mut().chain(pawn_rack.iter_mut()) {
                         if square.is_none() {
                             *square = Some(Piece {
-                                piece: *piece,
+                                piece,
                                 position: Coord::new(x.try_into().unwrap(), y.try_into().unwrap()),
                             });
                             continue 'upper;

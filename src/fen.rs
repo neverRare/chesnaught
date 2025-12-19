@@ -27,7 +27,7 @@ impl Display for Fen {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for (first, row) in once(true)
             .chain(repeat(false))
-            .zip(self.board.board.0.into_iter())
+            .zip(self.board.board.into_rows())
         {
             enum Item {
                 Piece(ColoredPieceKind),
@@ -60,7 +60,7 @@ impl Display for Fen {
         }
         write!(f, " {}", self.board.current_player.lowercase())?;
         let use_standard_castling = [Color::White, Color::Black].into_iter().all(|color| {
-            let row = self.board.board.0[Coord::home_rank(color) as usize];
+            let row = self.board.board.copy_row(Coord::home_rank(color));
             let king_in_position = row
                 .into_iter()
                 .position(|piece| piece == Some(ColoredPieceKind::new(color, PieceKind::King)))
