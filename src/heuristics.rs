@@ -10,8 +10,8 @@ pub struct Estimated {
     pub king_constriction: i8,
     pub king_safety: i8,
     pub end_game_pawn_advancement: [CompoundI8; 4],
-    pub square_control: i16,
     pub material: i8,
+    pub square_control: i16,
     pub pawn_advancement: i8,
 }
 impl Display for Estimated {
@@ -41,8 +41,8 @@ impl Display for Estimated {
         } else {
             write!(
                 f,
-                "square control: {}; material: {}; pawn advancement: {}",
-                self.square_control, self.material, self.pawn_advancement
+                " material: {}; square control: {}; pawn advancement: {}",
+                self.material, self.square_control, self.pawn_advancement
             )?;
         }
         Ok(())
