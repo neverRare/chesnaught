@@ -17,10 +17,10 @@ impl CastlingRight {
     }
     pub fn from_configuration(configuration: [PieceKind; 8]) -> Self {
         let mut castling_right = CastlingRight::none();
-        for (i, piece) in configuration.into_iter().enumerate() {
+        for (i, piece) in (0..).zip(configuration) {
             if piece == PieceKind::Rook {
-                castling_right.add(Color::White, i.try_into().unwrap());
-                castling_right.add(Color::Black, i.try_into().unwrap());
+                castling_right.add(Color::White, i);
+                castling_right.add(Color::Black, i);
             }
         }
         castling_right

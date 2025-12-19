@@ -171,7 +171,7 @@ impl IndexableBoard for Fen {
 fn parse_board(src: &str) -> Result<SimpleBoard<Option<ColoredPieceKind>>, ParseFenError> {
     let mut board = SimpleBoard::default();
     let mut last_y = 0;
-    for (y, row) in src.split('/').enumerate() {
+    for (y, row) in (0..).zip(src.split('/')) {
         if y >= 8 {
             return Err(ParseFenError::ExceededRowCount);
         }
@@ -180,11 +180,11 @@ fn parse_board(src: &str) -> Result<SimpleBoard<Option<ColoredPieceKind>>, Parse
             if matches!(c, '0' | '9') {
                 return Err(ParseFenError::InvalidSpaceCharacter(c));
             } else if matches!(c, '1'..='8') {
-                x += (c as u8 - b'0') as usize;
+                x += c as u8 - b'0';
             } else if x >= 8 {
                 return Err(ParseFenError::ExceededSquareCount);
             } else {
-                let position = Coord::new(x.try_into().unwrap(), y.try_into().unwrap());
+                let position = Coord::new(x, y);
                 board[position] = Some(ColoredPieceKind::from_fen(c)?);
                 x += 1;
             }
@@ -204,8 +204,8 @@ fn parse_board(src: &str) -> Result<SimpleBoard<Option<ColoredPieceKind>>, Parse
 pub enum ParseFenError {
     ExceededRowCount,
     ExceededSquareCount,
-    InvalidRowCount(usize),
-    InvalidSquareCount(usize),
+    InvalidRowCount(u8),
+    InvalidSquareCount(u8),
     InvalidSpaceCharacter(char),
     InvalidFenPiece(InvalidFenPiece),
     ParseColorError(ParseColorError),
