@@ -866,8 +866,7 @@ impl Board {
             .map(|(movement, _, _)| movement);
         (non_castling_moves.chain(self.castling_moves(check)), check)
     }
-    pub fn move_piece(&mut self, movement: &impl Moveable) {
-        let movement = movement.as_move(self);
+    pub fn move_piece(&mut self, movement: Move) {
         let current_player = self.current_player;
         let piece = self[movement.movement.index]
             .as_mut()
@@ -893,10 +892,16 @@ impl Board {
             self.validate().unwrap();
         }
     }
-    pub fn clone_and_move(&self, movement: &impl Moveable) -> Self {
+    pub fn move_lan(&mut self, movement: Lan) {
+        self.move_piece(movement.as_move(self));
+    }
+    pub fn clone_and_move(&self, movement: Move) -> Self {
         let mut new = self.clone();
         new.move_piece(movement);
         new
+    }
+    pub fn clone_and_move_lan(&self, movement: Lan) -> Self {
+        self.clone_and_move(movement.as_move(self))
     }
     pub fn estimate_moves_left(&self) -> f32 {
         let pieces: u8 = self
@@ -915,7 +920,7 @@ impl Board {
             valid_moves.contains(&movement),
             "`{lan}` is an invalid move"
         );
-        self.move_piece(&movement);
+        self.move_piece(movement);
     }
     pub fn assert_piece_cant_move(&self, position: Coord) {
         let valid_moves: Vec<_> = self.valid_moves().into_iter().flatten().collect();
@@ -1121,9 +1126,6 @@ impl IndexableBoard for HashableBoard {
         self[position]
     }
 }
-pub trait Moveable {
-    fn as_move(&self, board: &Board) -> Move;
-}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct SimpleMove {
     index: PieceIndex,
@@ -1201,11 +1203,6 @@ impl Move {
     pub fn as_lan_chess960(self, board: &Board) -> Lan {
         let (regular, chess960) = self.as_ambiguous_lan_pair(board);
         chess960.unwrap_or(regular)
-    }
-}
-impl Moveable for Move {
-    fn as_move(&self, _: &Board) -> Move {
-        *self
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -1378,11 +1375,6 @@ impl FromStr for Lan {
             destination,
             promotion,
         })
-    }
-}
-impl Moveable for Lan {
-    fn as_move(&self, board: &Board) -> Move {
-        Lan::as_move(*self, board)
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

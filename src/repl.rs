@@ -213,7 +213,7 @@ pub fn repl() {
                         writeln!(error, "Error: {lan} is an invalid move").unwrap();
                         continue;
                     };
-                    board.move_piece(movement);
+                    board.move_lan(*movement);
                     game_tree.move_piece(*movement);
                     highlighted.clear();
                     highlighted.push(lan.origin);
@@ -224,7 +224,7 @@ pub fn repl() {
                     table.shrink();
                     game_tree.calculate(depth, &mut table);
                     let movement = game_tree.best_move().unwrap();
-                    board.move_piece(&movement);
+                    board.move_lan(movement);
                     game_tree.move_piece(movement);
                     update = true;
                 }

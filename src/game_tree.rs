@@ -91,7 +91,7 @@ impl GameTreeInner {
                             (
                                 first,
                                 second,
-                                GameTreeInner::new(board.clone_and_move(&movement)),
+                                GameTreeInner::new(board.clone_and_move(movement)),
                             )
                         })
                         .collect(),
@@ -201,7 +201,7 @@ impl GameTree {
     }
     pub fn move_piece(&mut self, movement: Lan) {
         let new = match &mut self.0.data {
-            Data::Board(board) => GameTreeInner::new(board.clone_and_move(&movement)),
+            Data::Board(board) => GameTreeInner::new(board.clone_and_move_lan(movement)),
             Data::Children { children, .. } => {
                 let (_, _, children) = children.remove(
                     children

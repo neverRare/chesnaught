@@ -189,12 +189,12 @@ pub fn uci_loop() {
                             }
                         };
                         for movement in moves {
-                            board.move_piece(&movement);
+                            board.move_lan(movement);
                         }
                         engine.set_board(board.clone());
                         new_game = false;
                     } else if let Some(movement) = moves.last() {
-                        board.move_piece(movement);
+                        board.move_lan(*movement);
                         engine.move_piece(*movement);
                     } else if debug {
                         debug_print("no moves found".to_string());
