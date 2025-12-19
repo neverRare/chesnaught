@@ -41,7 +41,10 @@ impl Engine {
             for input in input_receiver {
                 match input {
                     Input::Ready => {
-                        let _ = ready_sender.send(());
+                        if ready_sender.send(()).is_err() {
+                            // Engine has been dropped, we don't need to process more inputs
+                            return;
+                        }
                     }
                     Input::SetBoard(board) => game_tree = GameTree::new(board),
                     Input::Move(movement) => game_tree.move_piece(movement),
