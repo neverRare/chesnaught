@@ -34,11 +34,7 @@ const CONFIG: [Output; 6] = [
         default: Some(OptionValue::Int(0)),
         boundary: Some(Boundary::Boundary {
             min: 0,
-            max: if cfg!(target_pointer_width = "64") {
-                <i32>::MAX
-            } else {
-                <i32>::MAX / MEBIBYTES as i32 * Table::ELEMENT_SIZE as i32
-            },
+            max: <i32>::MAX,
         }),
     },
     Output::Option {
