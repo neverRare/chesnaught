@@ -40,8 +40,8 @@ struct GameTreeInner {
 }
 impl GameTreeInner {
     fn new(board: Board) -> Self {
-        let data = if let Err(state) = board.valid_moves() {
-            Data::End(state)
+        let data = if let Some(end_state) = board.end_state() {
+            Data::End(end_state)
         } else {
             Data::Board(Box::new(board))
         };

@@ -696,6 +696,9 @@ impl Board {
             }
         }
     }
+    pub fn end_state(&self) -> Option<EndState> {
+        self.valid_moves().err()
+    }
     fn castling_moves(&self, check: bool) -> impl Iterator<Item = Move> {
         let (king_index, king) = self
             .king_indexed(self.current_player)
