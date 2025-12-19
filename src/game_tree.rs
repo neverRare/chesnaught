@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     iter::from_fn,
     mem::replace,
     sync::{
@@ -11,7 +11,7 @@ use std::{
     thread::{Builder, panicking},
 };
 
-use rustc_hash::{FxBuildHasher, FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use crate::{
     board::{Board, HashableBoard, Lan},
@@ -266,79 +266,73 @@ impl Drop for GameTree {
         }
     }
 }
-
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+struct TableValue {
+    transposition: Option<Score>,
+    repetition: bool,
+}
 #[derive(Debug, Clone, Default)]
 pub struct Table {
-    transposition: FxHashMap<HashableBoard, Score>,
-    repetition: FxHashSet<HashableBoard>,
+    table: FxHashMap<HashableBoard, TableValue>,
     max_size: u64,
 }
 impl Table {
-    const TRANSPOSITION_ELEMENT_SIZE: u64 = size_of::<(HashableBoard, Score)>() as u64;
-    const REPETITION_ELEMENT_SIZE: u64 = size_of::<(HashableBoard, ())>() as u64;
+    const ELEMENT_SIZE: u64 = size_of::<(HashableBoard, TableValue)>() as u64;
 
     pub fn new(max_size: u64) -> Self {
         Table {
-            transposition: HashMap::with_hasher(FxBuildHasher),
-            repetition: HashSet::with_hasher(FxBuildHasher),
+            table: HashMap::default(),
             max_size,
         }
     }
     pub fn set_size(&mut self, max_size: u64) {
         self.max_size = max_size;
-        let size = self.transposition.capacity() as u64 * Table::TRANSPOSITION_ELEMENT_SIZE
-            + self.repetition.capacity() as u64 * Table::REPETITION_ELEMENT_SIZE;
-        if size > max_size {
+        if self.table.capacity() as u64 * Table::ELEMENT_SIZE > max_size {
             self.clear_allocation();
         }
     }
     fn get_transposition(&self, board: &HashableBoard) -> Option<&Score> {
-        self.transposition.get(board)
+        self.table
+            .get(board)
+            .and_then(|value| value.transposition.as_ref())
     }
     fn contains_repetition(&self, board: &HashableBoard) -> bool {
-        self.repetition.contains(board)
+        self.table.get(board).is_some_and(|value| value.repetition)
+    }
+    fn inspect_element(&mut self, board: HashableBoard, f: impl FnOnce(&mut TableValue)) {
+        if let Some(value) = self.table.get_mut(&board) {
+            f(value);
+        } else {
+            let max_capacity = self
+                .max_size
+                .saturating_sub(self.table.capacity() as u64 * Table::ELEMENT_SIZE)
+                / Table::ELEMENT_SIZE
+                / 2;
+            if self.table.len() < self.table.capacity()
+                || self.table.capacity() as u64 <= max_capacity
+            {
+                let mut value = TableValue::default();
+                f(&mut value);
+                self.table.insert(board, value);
+            }
+        }
     }
     fn insert_transposition(&mut self, board: HashableBoard, score: Score) {
-        let max_capacity = self
-            .max_size
-            .saturating_sub(self.repetition.capacity() as u64 * Table::REPETITION_ELEMENT_SIZE)
-            / Table::TRANSPOSITION_ELEMENT_SIZE
-            / 2;
-
-        if (self.transposition.len() < self.transposition.capacity())
-            || (self.transposition.capacity() as u64 <= max_capacity)
-        {
-            self.transposition.insert(board, score);
-        }
+        self.inspect_element(board, |value| value.transposition = Some(score));
     }
     fn insert_repetition(&mut self, board: HashableBoard) {
-        let max_capacity = self.max_size.saturating_sub(
-            self.transposition.capacity() as u64 * Table::TRANSPOSITION_ELEMENT_SIZE,
-        ) / Table::REPETITION_ELEMENT_SIZE
-            / 2;
-
-        if (self.repetition.len() < self.repetition.capacity())
-            || (self.repetition.capacity() as u64 <= max_capacity)
-        {
-            self.repetition.insert(board);
+        self.inspect_element(board, |value| value.repetition = true);
+    }
+    fn remove_repetition(&mut self, board: &HashableBoard) {
+        if let Some(value) = self.table.get_mut(board) {
+            value.repetition = false;
         }
     }
-    fn clear_transposition(&mut self) {
-        self.transposition.clear();
-    }
-    fn remove_repetition(&mut self, board: &HashableBoard) -> bool {
-        self.repetition.remove(board)
-    }
-    fn clear_repetition(&mut self) {
-        self.repetition.clear();
-    }
     fn clear(&mut self) {
-        self.clear_transposition();
-        self.clear_repetition();
+        self.table.clear();
     }
     pub fn clear_allocation(&mut self) {
-        self.transposition = HashMap::with_hasher(FxBuildHasher);
-        self.repetition = HashSet::with_hasher(FxBuildHasher);
+        self.table = HashMap::default();
     }
 }
 struct AlphaBetaState {
