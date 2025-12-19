@@ -8,7 +8,7 @@ use std::{
 
 use crate::{color::Color, coord_x, coord_y, misc::InvalidByte};
 
-// Bit structure: 10XXXYYY
+// Bit structure: 10YYYXXX
 // first two bits is always `10` for `NonZero` size optimizations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Coord(NonZero<u8>);
@@ -72,7 +72,7 @@ impl Coord {
     pub fn new(x: u8, y: u8) -> Self {
         debug_assert!(x < 8, "{x} should be < 8");
         debug_assert!(y < 8, "{x} should be < 8");
-        let byte = 0b1000_0000 | (x << 3) | y;
+        let byte = 0b1000_0000 | (y << 3) | x;
         Coord(NonZero::new(byte).unwrap())
     }
     pub fn from_chars(x: char, y: char) -> Result<Self, ParseCoordError> {
@@ -94,10 +94,10 @@ impl Coord {
         }
     }
     pub fn x(self) -> u8 {
-        (self.0.get() >> 3) & 0b_111
+        self.0.get() & 0b_111
     }
     pub fn y(self) -> u8 {
-        self.0.get() & 0b_111
+        (self.0.get() >> 3) & 0b_111
     }
     pub fn move_by(self, movement: Vector) -> Option<Self> {
         Self::new_checked(
