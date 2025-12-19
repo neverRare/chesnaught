@@ -102,6 +102,10 @@ impl SubAssign<CompoundI8> for CompoundI8 {
         *self = CompoundI8::new(self.left() - rhs.left(), self.right() - rhs.right());
     }
 }
+// TODO: replace with `std::hint::cold_path` when stable
+#[cold]
+pub fn cold_path() {}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InvalidByte;
 

@@ -18,6 +18,7 @@ use crate::{
     color::Color,
     end_state::EndState,
     heuristics::{Estimated, Score},
+    misc::cold_path,
 };
 
 type MoveTreePair = (Lan, Option<Lan>, GameTreeInner);
@@ -175,13 +176,11 @@ impl GameTreeInner {
         } else if let Some(score) = self.score {
             return score;
         } else if cfg!(debug_assertions) {
-            panic!(concat!(
-                "this node only contains board data meant for hashing alone. ",
-                "the original board data is discarded to save memory space. ",
-                "while it is possible to convert it back, we shouldn't resort ",
-                "to this"
-            ));
+            panic!("missing score");
         } else {
+            // last resort
+
+            cold_path();
             let board: Board = self
                 .board()
                 .expect("can't estimate score on board with ended state")
