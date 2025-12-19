@@ -67,7 +67,7 @@ impl Engine {
                         }));
                     }
                     Input::SetHashSize(size) => table.set_size(size),
-                    Input::ClearHash => table.shrink(),
+                    Input::ClearHash => table.clear_allocation(),
                 }
             }
         });

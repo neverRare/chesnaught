@@ -289,7 +289,7 @@ impl Table {
         let size = self.transposition.capacity() as u64 * Table::TRANSPOSITION_ELEMENT_SIZE
             + self.repetition.capacity() as u64 * Table::REPETITION_ELEMENT_SIZE;
         if size > max_size {
-            self.shrink();
+            self.clear_allocation();
         }
     }
     fn get_transposition(&self, board: &HashableBoard) -> Option<&Score> {
@@ -336,10 +336,9 @@ impl Table {
         self.clear_transposition();
         self.clear_repetition();
     }
-    pub fn shrink(&mut self) {
-        self.clear();
-        self.transposition.shrink_to_fit();
-        self.repetition.shrink_to_fit();
+    pub fn clear_allocation(&mut self) {
+        self.transposition = HashMap::with_hasher(FxBuildHasher);
+        self.repetition = HashSet::with_hasher(FxBuildHasher);
     }
 }
 struct AlphaBetaState {

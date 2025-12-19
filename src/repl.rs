@@ -221,7 +221,7 @@ pub fn repl() {
                     update = true;
                 }
                 Input::Bot(depth) => {
-                    table.shrink();
+                    table.clear_allocation();
                     game_tree.calculate(depth, &mut table);
                     let movement = game_tree.best_move().unwrap();
                     board.move_lan(movement);
