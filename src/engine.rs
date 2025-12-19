@@ -12,6 +12,7 @@ use std::{
 use crate::{
     board::{Board, Lan},
     game_tree::{GameTree, Table},
+    heuristics::Score,
 };
 
 enum Input {
@@ -20,6 +21,7 @@ enum Input {
     Move(Lan),
     Calculate {
         depth: Option<NonZero<u32>>,
+        mate_in_plies: Option<NonZero<u32>>,
         callback: Box<dyn FnOnce(Option<Lan>) + Send>,
         stop_signal: Arc<AtomicBool>,
     },
@@ -50,6 +52,7 @@ impl Engine {
                     Input::Move(movement) => game_tree.move_piece(movement),
                     Input::Calculate {
                         depth,
+                        mate_in_plies,
                         callback,
                         stop_signal,
                     } => {
@@ -57,6 +60,8 @@ impl Engine {
                             game_tree.calculate_with_stop_signal(i, &mut table, &stop_signal);
                             if stop_signal.load(Ordering::Relaxed)
                                 || depth.is_some_and(|depth| i >= depth.get())
+                                || (game_tree.score().is_some_and(Score::is_win)
+                                    && mate_in_plies.is_some_and(|plies| i <= plies.get()))
                             {
                                 break;
                             }
@@ -91,6 +96,7 @@ impl Engine {
         &mut self,
         duration: Option<Duration>,
         depth: Option<NonZero<u32>>,
+        mate_in_plies: Option<NonZero<u32>>,
         callback: impl FnOnce(Option<Lan>) + Send + 'static,
     ) {
         let stop_signal = Arc::new(AtomicBool::new(false));
@@ -104,6 +110,7 @@ impl Engine {
         self.input
             .send(Input::Calculate {
                 depth,
+                mate_in_plies,
                 callback: Box::new(callback),
                 stop_signal: stop_signal.clone(),
             })

@@ -1,10 +1,12 @@
 use std::{
     cell::LazyCell,
     io::{BufRead, stdin},
+    num::NonZero,
 };
 
 use crate::{
     board::{Board, NullableLan},
+    color::Color,
     engine::Engine,
     game_tree::Table,
     misc::MEBIBYTES,
@@ -217,16 +219,21 @@ pub fn uci_loop() {
                             }
                         );
                     };
-                    engine.calculate(go.estimate_move_time(&board), go.depth, callback);
+                    let mate = go.mate.map(|moves| {
+                        let moves = moves.get();
+                        let plies = match board.current_player() {
+                            Color::White => moves * 2,
+                            Color::Black => moves * 2 - 1,
+                        };
+                        NonZero::new(plies).unwrap()
+                    });
+                    engine.calculate(go.estimate_move_time(&board), go.depth, mate, callback);
                     if debug {
                         if go.ponder {
                             debug_print("`go ponder` is unsupported; ignoring".to_string());
                         }
                         if go.search_moves.is_some() {
                             debug_print("`go searchmoves` is unsupported; ignoring".to_string());
-                        }
-                        if go.mate.is_some() {
-                            debug_print("`go mate` is unsupported; ignoring".to_string());
                         }
                         if go.nodes.is_some() {
                             debug_print("`go nodes` is unsupported; ignoring".to_string());

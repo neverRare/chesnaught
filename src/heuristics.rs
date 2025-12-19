@@ -27,6 +27,9 @@ impl Score {
             EndState::Draw => Score::Estimated(Estimated::default()),
         }
     }
+    pub fn is_win(self) -> bool {
+        matches!(self, Score::Win(_))
+    }
 }
 impl Default for Score {
     fn default() -> Self {
