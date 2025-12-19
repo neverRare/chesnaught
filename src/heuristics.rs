@@ -3,7 +3,7 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use crate::{color::Color, misc::CompoundI8};
+use crate::{color::Color, end_state::EndState, misc::CompoundI8};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Estimated {
@@ -57,6 +57,13 @@ pub enum Score {
 impl Score {
     pub const WHITE_WINS: Self = Score::Win(Color::White);
     pub const BLACK_WINS: Self = Score::Win(Color::Black);
+
+    pub fn from_end_state(end_state: EndState) -> Self {
+        match end_state {
+            EndState::Win(color) => Score::Win(color),
+            EndState::Draw => Score::Estimated(Estimated::default()),
+        }
+    }
 }
 impl Display for Score {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

@@ -17,7 +17,7 @@ use crate::{
     board::{Board, HashableBoard, Lan},
     color::Color,
     end_state::EndState,
-    heuristics::{Estimated, Score},
+    heuristics::Score,
     misc::cold_path,
 };
 
@@ -123,12 +123,8 @@ impl GameTreeInner {
     ) {
         if stop_signal.is_some_and(|signal| signal.load(atomic::Ordering::Relaxed)) {
             // Do nothing
-        } else if let Data::End(state) = self.data {
-            let score = match state {
-                EndState::Win(color) => Score::Win(color),
-                EndState::Draw => Score::Estimated(Estimated::default()),
-            };
-            self.score = Some(score);
+        } else if let Data::End(end_state) = self.data {
+            self.score = Some(Score::from_end_state(end_state));
         } else {
             let board = self.board().unwrap();
 
@@ -181,12 +177,14 @@ impl GameTreeInner {
             // last resort
 
             cold_path();
-            let board: Board = self
-                .board()
-                .expect("can't estimate score on board with ended state")
-                .try_into()
-                .unwrap();
-            board.estimate()
+            match &self.data {
+                Data::Board(_) => unreachable!(),
+                Data::Children { board, .. } => {
+                    let board: Board = (**board).try_into().unwrap();
+                    board.estimate()
+                }
+                Data::End(end_state) => return Score::from_end_state(*end_state),
+            }
         };
         Score::Estimated(estimated)
     }
