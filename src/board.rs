@@ -1111,39 +1111,33 @@ impl TryFrom<HashableBoard> for Board {
 
     fn try_from(value: HashableBoard) -> Result<Self, Self::Error> {
         let mut pieces = [None; 32];
-        for (y, row) in value.board.into_rows().enumerate() {
-            'upper: for (x, piece) in row.into_iter().enumerate() {
-                if let Some(piece) = piece {
-                    let range = original_piece_range(piece.color(), piece.piece());
-                    let pawn_range = match piece.piece() {
-                        PieceKind::King | PieceKind::Pawn => 0..0,
-                        _ => original_piece_range(piece.color(), PieceKind::Pawn),
-                    };
-                    let [piece_rack, pawn_rack] =
-                        pieces.get_disjoint_mut([range, pawn_range]).unwrap();
-                    for square in piece_rack.iter_mut().chain(pawn_rack.iter_mut()) {
-                        if square.is_none() {
-                            *square = Some(Piece {
-                                piece,
-                                position: Coord::new(x.try_into().unwrap(), y.try_into().unwrap()),
-                            });
-                            continue 'upper;
-                        }
+        'upper: for (position, piece) in value.board.into_positioned_values() {
+            if let Some(piece) = piece {
+                let range = original_piece_range(piece.color(), piece.piece());
+                let pawn_range = match piece.piece() {
+                    PieceKind::King | PieceKind::Pawn => 0..0,
+                    _ => original_piece_range(piece.color(), PieceKind::Pawn),
+                };
+                let [piece_rack, pawn_rack] = pieces.get_disjoint_mut([range, pawn_range]).unwrap();
+                for square in piece_rack.iter_mut().chain(pawn_rack.iter_mut()) {
+                    if square.is_none() {
+                        *square = Some(Piece { piece, position });
+                        continue 'upper;
                     }
-                    match piece.piece() {
-                        PieceKind::Pawn => {
-                            if pieces[original_piece_range(piece.color(), PieceKind::Pawn)]
-                                .iter()
-                                .copied()
-                                .all(|piece| piece.unwrap().piece() == PieceKind::Pawn)
-                            {
-                                return Err(ExceededPieces::Pawn.into());
-                            }
-                            return Err(ExceededPieces::PromotedPiece.into());
+                }
+                match piece.piece() {
+                    PieceKind::Pawn => {
+                        if pieces[original_piece_range(piece.color(), PieceKind::Pawn)]
+                            .iter()
+                            .copied()
+                            .all(|piece| piece.unwrap().piece() == PieceKind::Pawn)
+                        {
+                            return Err(ExceededPieces::Pawn.into());
                         }
-                        PieceKind::King => return Err(ExceededPieces::King.into()),
-                        _ => return Err(ExceededPieces::PromotedPiece.into()),
+                        return Err(ExceededPieces::PromotedPiece.into());
                     }
+                    PieceKind::King => return Err(ExceededPieces::King.into()),
+                    _ => return Err(ExceededPieces::PromotedPiece.into()),
                 }
             }
         }

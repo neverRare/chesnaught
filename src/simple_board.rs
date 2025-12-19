@@ -21,6 +21,13 @@ impl<T> SimpleBoard<T> {
     pub fn into_rows(self) -> impl Iterator<Item = [T; 8]> {
         self.0.into_iter()
     }
+    pub fn into_positioned_values(self) -> impl Iterator<Item = (Coord, T)> {
+        (0..).zip(self.into_rows()).flat_map(|(y, row)| {
+            (0..)
+                .zip(row)
+                .map(move |(x, item)| (Coord::new(x, y), item))
+        })
+    }
 }
 impl<T> Index<Coord> for SimpleBoard<T> {
     type Output = T;
