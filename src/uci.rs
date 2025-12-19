@@ -6,7 +6,8 @@ use std::{
 use crate::{
     board::{Board, NullableLan},
     engine::Engine,
-    game_tree::MEBIBYTES,
+    game_tree::Table,
+    misc::MEBIBYTES,
     repl::repl,
     uci::{
         input::Input,
@@ -31,7 +32,11 @@ const CONFIG: [Output; 6] = [
         default: Some(OptionValue::Int(0)),
         boundary: Some(Boundary::Boundary {
             min: 0,
-            max: <i32>::MAX,
+            max: if cfg!(target_pointer_width = "64") {
+                <i32>::MAX
+            } else {
+                <i32>::MAX / MEBIBYTES as i32 * Table::ELEMENT_SIZE as i32
+            },
         }),
     },
     Output::Option {
@@ -133,11 +138,9 @@ pub fn uci_loop() {
                                     continue;
                                 }
                             };
-                            if let Some(size) = size.checked_mul(MEBIBYTES) {
-                                engine.set_hash_size(size);
-                            } else {
-                                debug_print("set `Hash` to an invalid value; ignoring".to_string());
-                            }
+                            engine.set_hash_capacity(
+                                (size / Table::ELEMENT_SIZE).saturating_mul(MEBIBYTES),
+                            );
                         }
                         "Clear Hash" => {
                             if value.is_none() {

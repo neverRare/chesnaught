@@ -23,7 +23,7 @@ enum Input {
         callback: Box<dyn FnOnce(Option<Lan>) + Send>,
         stop_signal: Arc<AtomicBool>,
     },
-    SetHashSize(usize),
+    SetHashCapacity(usize),
     ClearHash,
 }
 pub struct Engine {
@@ -66,7 +66,7 @@ impl Engine {
                             game_tree.best_move()
                         }));
                     }
-                    Input::SetHashSize(size) => table.set_size(size),
+                    Input::SetHashCapacity(capacity) => table.set_capacity(capacity),
                     Input::ClearHash => table.clear_allocation(),
                 }
             }
@@ -115,8 +115,8 @@ impl Engine {
             stop_signal.store(true, Ordering::Relaxed);
         }
     }
-    pub fn set_hash_size(&self, size: usize) {
-        self.input.send(Input::SetHashSize(size)).unwrap();
+    pub fn set_hash_capacity(&self, size: usize) {
+        self.input.send(Input::SetHashCapacity(size)).unwrap();
     }
     pub fn clear_hash(&self) {
         self.input.send(Input::ClearHash).unwrap();

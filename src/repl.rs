@@ -7,8 +7,8 @@ use crate::{
     color::Color,
     coord::Coord,
     fen::{Fen, ParseFenError},
-    game_tree::{GameTree, MEBIBYTES, Table},
-    misc::strip_prefix_token,
+    game_tree::{GameTree, Table},
+    misc::{MEBIBYTES, strip_prefix_token},
 };
 use std::{
     collections::HashSet,
@@ -93,7 +93,7 @@ pub fn repl() {
     let mut view = Color::White;
     let mut first_time = true;
     let mut game_tree = GameTree::new(board.clone());
-    let mut table = Table::new(4096 * MEBIBYTES);
+    let mut table = Table::new(4096 * MEBIBYTES / Table::ELEMENT_SIZE);
     loop {
         if update {
             valid_moves.clear();

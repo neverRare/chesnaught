@@ -20,8 +20,6 @@ use crate::{
     heuristics::{Estimated, Score},
 };
 
-pub const MEBIBYTES: usize = 1024 * 1024;
-
 type MoveTreePair = (Lan, Option<Lan>, GameTreeInner);
 
 #[derive(Debug, Clone)]
@@ -276,19 +274,20 @@ struct TableValue {
 #[derive(Debug, Clone, Default)]
 pub struct Table {
     table: FxHashMap<HashableBoard, TableValue>,
-    max_size: usize,
+    capacity: usize,
 }
 impl Table {
-    const ELEMENT_SIZE: usize = size_of::<(HashableBoard, TableValue)>();
+    pub const ELEMENT_SIZE: usize = size_of::<(HashableBoard, TableValue)>();
 
-    pub fn new(max_size: usize) -> Self {
+    pub fn new(capacity: usize) -> Self {
         Table {
             table: HashMap::default(),
-            max_size,
+            capacity: Ord::min(capacity, <i32>::MAX as usize),
         }
     }
-    pub fn set_size(&mut self, max_size: usize) {
-        if self.table.capacity() * Table::ELEMENT_SIZE > max_size {
+    pub fn set_capacity(&mut self, capacity: usize) {
+        self.capacity = Ord::min(capacity, <i32>::MAX as usize);
+        if self.table.capacity() > self.capacity {
             self.clear_allocation();
         }
     }
@@ -304,11 +303,7 @@ impl Table {
         if let Some(value) = self.table.get_mut(&board) {
             f(value);
         } else {
-            let max_capacity = self
-                .max_size
-                .saturating_sub(self.table.capacity() * Table::ELEMENT_SIZE)
-                / Table::ELEMENT_SIZE
-                / 2;
+            let max_capacity = self.capacity.saturating_sub(self.table.capacity()) / 2;
             if self.table.len() < self.table.capacity() || self.table.capacity() <= max_capacity {
                 let mut value = TableValue::default();
                 f(&mut value);

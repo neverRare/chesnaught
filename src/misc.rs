@@ -5,6 +5,8 @@ use std::{
     ops::{Add, AddAssign, Neg, Sub, SubAssign},
 };
 
+pub const MEBIBYTES: usize = 1024 * 1024;
+
 fn strip_prefix_token_untrimmed<'a>(src: &'a str, search: &str) -> Option<&'a str> {
     src.strip_prefix(search)
         .filter(|src| src.chars().next().is_none_or(<char>::is_whitespace))
