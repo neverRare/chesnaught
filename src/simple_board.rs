@@ -12,6 +12,12 @@ impl<T> SimpleBoard<T> {
     {
         self.0[y as usize]
     }
+    pub fn row(&self, y: u8) -> &[T; 8] {
+        &self.0[y as usize]
+    }
+    pub fn row_mut(&mut self, y: u8) -> &mut [T; 8] {
+        &mut self.0[y as usize]
+    }
     pub fn into_rows(self) -> impl Iterator<Item = [T; 8]> {
         self.0.into_iter()
     }
@@ -20,12 +26,12 @@ impl<T> Index<Coord> for SimpleBoard<T> {
     type Output = T;
 
     fn index(&self, index: Coord) -> &Self::Output {
-        &self.0[index.y() as usize][index.x() as usize]
+        &self.row(index.y())[index.x() as usize]
     }
 }
 impl<T> IndexMut<Coord> for SimpleBoard<T> {
     fn index_mut(&mut self, index: Coord) -> &mut Self::Output {
-        &mut self.0[index.y() as usize][index.x() as usize]
+        &mut self.row_mut(index.y())[index.x() as usize]
     }
 }
 impl IndexableBoard for SimpleBoard<ColoredPieceKind> {
