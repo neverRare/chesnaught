@@ -6,6 +6,7 @@ use std::{
 use crate::{
     board::{Board, NullableLan},
     engine::Engine,
+    game_tree::MEBIBYTES,
     repl::repl,
     uci::{
         input::Input,
@@ -120,7 +121,7 @@ pub fn uci_loop() {
                                 }
                                 continue;
                             };
-                            let size: u64 = match value.parse() {
+                            let size: usize = match value.parse() {
                                 Ok(size) => size,
                                 Err(err) => {
                                     if debug {
@@ -132,7 +133,7 @@ pub fn uci_loop() {
                                     continue;
                                 }
                             };
-                            if let Some(size) = size.checked_mul(1024 * 1024) {
+                            if let Some(size) = size.checked_mul(MEBIBYTES) {
                                 engine.set_hash_size(size);
                             } else {
                                 debug_print("set `Hash` to an invalid value; ignoring".to_string());

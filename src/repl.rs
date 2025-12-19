@@ -7,7 +7,7 @@ use crate::{
     color::Color,
     coord::Coord,
     fen::{Fen, ParseFenError},
-    game_tree::{GameTree, Table},
+    game_tree::{GameTree, MEBIBYTES, Table},
     misc::strip_prefix_token,
 };
 use std::{
@@ -93,7 +93,7 @@ pub fn repl() {
     let mut view = Color::White;
     let mut first_time = true;
     let mut game_tree = GameTree::new(board.clone());
-    let mut table = Table::new(4096 * 1024 * 1024);
+    let mut table = Table::new(4096 * MEBIBYTES);
     loop {
         if update {
             valid_moves.clear();
