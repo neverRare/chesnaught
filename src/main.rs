@@ -18,6 +18,7 @@ mod heuristics;
 mod misc;
 mod piece;
 mod repl;
+mod simple_board;
 mod uci;
 
 fn main() {

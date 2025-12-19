@@ -14,6 +14,7 @@ use crate::{
     color::{Color, ParseColorError},
     coord::{Coord, ParseCoordError},
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind},
+    simple_board::SimpleBoard,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -26,7 +27,7 @@ impl Display for Fen {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for (first, row) in once(true)
             .chain(repeat(false))
-            .zip(self.board.board.into_iter())
+            .zip(self.board.board.0.into_iter())
         {
             enum Item {
                 Piece(ColoredPieceKind),
@@ -59,7 +60,7 @@ impl Display for Fen {
         }
         write!(f, " {}", self.board.current_player.lowercase())?;
         let use_standard_castling = [Color::White, Color::Black].into_iter().all(|color| {
-            let row = self.board.board[Coord::home_rank(color) as usize];
+            let row = self.board.board.0[Coord::home_rank(color) as usize];
             let king_in_position = row
                 .into_iter()
                 .position(|piece| piece == Some(ColoredPieceKind::new(color, PieceKind::King)))
@@ -167,8 +168,8 @@ impl IndexableBoard for Fen {
         self[position]
     }
 }
-fn parse_board(src: &str) -> Result<[[Option<ColoredPieceKind>; 8]; 8], ParseFenError> {
-    let mut board = [[None; 8]; 8];
+fn parse_board(src: &str) -> Result<SimpleBoard<Option<ColoredPieceKind>>, ParseFenError> {
+    let mut board = SimpleBoard::default();
     let mut last_y = 0;
     for (y, row) in src.split('/').enumerate() {
         if y >= 8 {
@@ -183,7 +184,8 @@ fn parse_board(src: &str) -> Result<[[Option<ColoredPieceKind>; 8]; 8], ParseFen
             } else if x >= 8 {
                 return Err(ParseFenError::ExceededSquareCount);
             } else {
-                board[y][x] = Some(ColoredPieceKind::from_fen(c)?);
+                let position = Coord::new(x.try_into().unwrap(), y.try_into().unwrap());
+                board[position] = Some(ColoredPieceKind::from_fen(c)?);
                 x += 1;
             }
         }

@@ -22,6 +22,7 @@ use crate::{
     heuristics::Estimated,
     misc::InvalidByte,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind, STARTING_VALUE},
+    simple_board::SimpleBoard,
 };
 
 pub const ESTIMATED_TOTAL_MOVES: u8 = 40;
@@ -272,7 +273,7 @@ impl TryFrom<usize> for PieceIndex {
 #[derive(Debug, Clone)]
 pub struct Board {
     pieces: [Option<Piece>; 32],
-    indices: OnceCell<[Option<PieceIndex>; 64]>,
+    indices: OnceCell<SimpleBoard<Option<PieceIndex>>>,
     current_player: Color,
     castling_right: CastlingRight,
     en_passant_target: Option<Coord>,
@@ -308,9 +309,9 @@ impl Board {
         self.current_player
     }
     pub fn as_hashable(&self) -> HashableBoard {
-        let mut board = [[None; 8]; 8];
+        let mut board = SimpleBoard::default();
         for piece in self.all_pieces() {
-            board[piece.position.y() as usize][piece.position.x() as usize] = Some(piece.piece);
+            board[piece.position] = Some(piece.piece);
         }
         HashableBoard {
             board,
@@ -416,8 +417,7 @@ impl Board {
         piece: PieceKind,
     ) -> Option<(PieceIndex, Piece)> {
         if let Some(indices) = self.indices.get() {
-            indices[position.y() as usize * 8 + position.x() as usize]
-                .map(|index| (index, self[index].unwrap()))
+            indices[position].map(|index| (index, self[index].unwrap()))
         } else {
             self.pieces_by_kind_indexed(color, piece)
                 .find(|(_, piece)| piece.position == position)
@@ -430,7 +430,7 @@ impl Board {
         piece: PieceKind,
     ) -> Option<PieceIndex> {
         if let Some(indices) = self.indices.get() {
-            indices[position.y() as usize * 8 + position.x() as usize]
+            indices[position]
         } else {
             self.pieces_by_kind_indexed(color, piece)
                 .find(|(_, piece)| piece.position == position)
@@ -439,7 +439,7 @@ impl Board {
     }
     fn position_has(&self, position: Coord, color: Color, piece: PieceKind) -> bool {
         if let Some(indices) = self.indices.get() {
-            indices[position.y() as usize * 8 + position.x() as usize].is_some_and(|index| {
+            indices[position].is_some_and(|index| {
                 let b = self[index].unwrap();
                 b.color() == color && b.piece() == piece
             })
@@ -461,12 +461,10 @@ impl Board {
                 .copied()
                 .filter_map(|movement| position.move_by(movement))
                 .any(|position| {
-                    indices[position.y() as usize * 8 + position.x() as usize].is_some_and(
-                        |index| {
-                            let b = self[index].unwrap();
-                            b.color() == color && b.piece() == piece
-                        },
-                    )
+                    indices[position].is_some_and(|index| {
+                        let b = self[index].unwrap();
+                        b.color() == color && b.piece() == piece
+                    })
                 })
         } else {
             self.pieces_by_kind(color, piece)
@@ -481,11 +479,11 @@ impl Board {
             PieceKind::Pawn,
         )
     }
-    fn indices(&self) -> &[Option<PieceIndex>; 64] {
+    fn indices(&self) -> &SimpleBoard<Option<PieceIndex>> {
         self.indices.get_or_init(|| {
-            let mut board = [None; 64];
+            let mut board = SimpleBoard::default();
             for (i, piece) in self.all_pieces_indexed() {
-                board[(piece.position.y() as usize * 8) + piece.position.x() as usize] = Some(i);
+                board[piece.position] = Some(i);
             }
             board
         })
@@ -953,7 +951,7 @@ impl Index<Coord> for Board {
     type Output = Option<PieceIndex>;
 
     fn index(&self, index: Coord) -> &Self::Output {
-        &self.indices()[(index.y() as usize * 8) + index.x() as usize]
+        &self.indices()[index]
     }
 }
 impl Index<PieceIndex> for Board {
@@ -977,7 +975,7 @@ impl IndexableBoard for Board {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HashableBoard {
-    pub board: [[Option<ColoredPieceKind>; 8]; 8],
+    pub board: SimpleBoard<Option<ColoredPieceKind>>,
     pub current_player: Color,
     pub castling_right: CastlingRight,
     pub en_passant_target: Option<Coord>,
@@ -991,7 +989,7 @@ impl HashableBoard {
     }
     pub fn from_configuration(configuration: [PieceKind; 8]) -> Self {
         let castling_right = CastlingRight::from_configuration(configuration);
-        let board = [
+        let board = SimpleBoard([
             configuration.map(|piece| Some(ColoredPieceKind::new(Color::Black, piece))),
             [Some(ColoredPieceKind::new(Color::Black, PieceKind::Pawn)); 8],
             [None; 8],
@@ -1000,7 +998,7 @@ impl HashableBoard {
             [None; 8],
             [Some(ColoredPieceKind::new(Color::White, PieceKind::Pawn)); 8],
             configuration.map(|piece| Some(ColoredPieceKind::new(Color::White, piece))),
-        ];
+        ]);
         HashableBoard {
             board,
             current_player: Color::White,
@@ -1010,7 +1008,7 @@ impl HashableBoard {
     }
     pub fn fix_castling_rights(&mut self) {
         for color in [Color::White, Color::Black] {
-            let row = self.board[Coord::home_rank(color) as usize];
+            let row = self.board.0[Coord::home_rank(color) as usize];
             if let Some(king) = row
                 .into_iter()
                 .position(|x| x == Some(ColoredPieceKind::new(color, PieceKind::King)))
@@ -1055,7 +1053,7 @@ impl TryFrom<HashableBoard> for Board {
 
     fn try_from(value: HashableBoard) -> Result<Self, Self::Error> {
         let mut pieces = [None; 32];
-        for (y, row) in value.board.iter().enumerate() {
+        for (y, row) in value.board.0.iter().enumerate() {
             'upper: for (x, piece) in row.iter().enumerate() {
                 if let Some(piece) = piece {
                     let range = original_piece_range(piece.color(), piece.piece());
@@ -1113,12 +1111,12 @@ impl Index<Coord> for HashableBoard {
     type Output = Option<ColoredPieceKind>;
 
     fn index(&self, index: Coord) -> &Self::Output {
-        &self.board[index.y() as usize][index.x() as usize]
+        &self.board[index]
     }
 }
 impl IndexMut<Coord> for HashableBoard {
     fn index_mut(&mut self, index: Coord) -> &mut Self::Output {
-        &mut self.board[index.y() as usize][index.x() as usize]
+        &mut self.board[index]
     }
 }
 impl IndexableBoard for HashableBoard {
