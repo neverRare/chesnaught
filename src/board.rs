@@ -1322,8 +1322,7 @@ impl Lan {
             }
         }
         let castling_right = if let Some(index) = movement.capture {
-            castling_right
-                .to_removed_for_rook_capture(board[index].expect("captured piece not found"))
+            castling_right.to_removed_for_rook_capture(board[index].unwrap())
         } else {
             castling_right
         };
