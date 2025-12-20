@@ -54,14 +54,6 @@ impl TryFrom<u8> for Color {
         Ok(color)
     }
 }
-impl From<Color> for u8 {
-    fn from(value: Color) -> Self {
-        match value {
-            Color::White => 1,
-            Color::Black => 0,
-        }
-    }
-}
 impl Not for Color {
     type Output = Self;
 

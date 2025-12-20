@@ -164,19 +164,6 @@ impl TryFrom<u8> for PieceKind {
         Ok(piece)
     }
 }
-impl From<PieceKind> for u8 {
-    fn from(value: PieceKind) -> Self {
-        match value {
-            PieceKind::Pawn => 1,
-            PieceKind::Knight => 2,
-            PieceKind::Bishop => 3,
-            PieceKind::Rook => 4,
-            PieceKind::Queen => 5,
-            PieceKind::King => 6,
-        }
-    }
-}
-
 // Bit structure: 0000CPPP
 // C - Color
 // P - Piece kind
@@ -184,9 +171,7 @@ impl From<PieceKind> for u8 {
 pub struct ColoredPieceKind(NonZero<u8>);
 impl ColoredPieceKind {
     pub fn new(color: Color, piece: PieceKind) -> Self {
-        let color: u8 = color.into();
-        let piece: u8 = piece.into();
-        let data = (color << 3) | (piece);
+        let data = ((color as u8) << 3) | (piece as u8);
         ColoredPieceKind(NonZero::new(data).unwrap())
     }
     pub fn color(self) -> Color {
