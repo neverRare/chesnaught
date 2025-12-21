@@ -412,6 +412,11 @@ impl RotatedCoord {
         }
     }
 }
+impl From<Coord> for RotatedCoord {
+    fn from(value: Coord) -> Self {
+        value.rotate()
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ParseCoordError {
     InvalidX(char),
