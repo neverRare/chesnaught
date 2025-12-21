@@ -4,7 +4,11 @@ use std::{
     time::Duration,
 };
 
-use crate::board::{Lan, NullableLan};
+use crate::{
+    board::{Lan, NullableLan},
+    color::Color,
+    heuristics::Centipawn,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Output {
@@ -86,10 +90,7 @@ pub enum Info {
     Nodes(NonZero<u32>),
     Pv(Vec<Lan>),
     MultiPv(u32),
-    Score {
-        score: Score,
-        bound: Option<ScoreBound>,
-    },
+    Score(Score),
     CurrMove(NullableLan),
     CurrMoveNumber(u8),
     HashFull(u32),
@@ -115,11 +116,8 @@ impl Display for Info {
                 }
             }
             Info::MultiPv(rank) => write!(f, "multipv {rank}")?,
-            Info::Score { score, bound } => {
+            Info::Score(score) => {
                 write!(f, "score {score}")?;
-                if let Some(bound) = bound {
-                    write!(f, " {bound}")?;
-                }
             }
             Info::CurrMove(movement) => write!(f, "currmove {movement}")?,
             Info::CurrMoveNumber(order) => write!(f, "currmovenumber {order}")?,
@@ -146,15 +144,58 @@ impl Display for Info {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Score {
-    Cp(i32),
-    Mate(u32),
+pub struct Score {
+    score: ScoreValue,
+    bound: Option<ScoreBound>,
+}
+impl Score {
+    pub fn from_centipawn(centipawn: Centipawn, current_player: Color) -> Self {
+        match centipawn {
+            Centipawn::Centipawn(centipawn) => {
+                let centipawn = match current_player {
+                    Color::White => centipawn,
+                    Color::Black => -centipawn,
+                };
+                Score {
+                    score: ScoreValue::Cp(centipawn),
+                    bound: None,
+                }
+            }
+            Centipawn::Win(color) => {
+                if color == current_player {
+                    Score {
+                        score: ScoreValue::Mate(1),
+                        bound: Some(ScoreBound::LowerBound),
+                    }
+                } else {
+                    Score {
+                        score: ScoreValue::Mate(-1),
+                        bound: Some(ScoreBound::UpperBound),
+                    }
+                }
+            }
+        }
+    }
 }
 impl Display for Score {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.score)?;
+        if let Some(bound) = self.bound {
+            write!(f, " {bound}")?;
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ScoreValue {
+    Cp(i32),
+    Mate(i32),
+}
+impl Display for ScoreValue {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Score::Cp(cp) => write!(f, "cp {cp}")?,
-            Score::Mate(moves) => write!(f, "mate {moves}")?,
+            ScoreValue::Cp(cp) => write!(f, "cp {cp}")?,
+            ScoreValue::Mate(moves) => write!(f, "mate {moves}")?,
         }
         Ok(())
     }

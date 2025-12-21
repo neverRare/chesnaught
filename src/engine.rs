@@ -34,6 +34,7 @@ pub struct Info {
     pub time: Duration,
     pub nodes: NonZero<u32>,
     pub pv: Vec<Lan>,
+    pub score: Option<Score>,
     pub hash_capacity: usize,
     pub hash_max_capacity: usize,
 }
@@ -76,6 +77,7 @@ impl Engine {
                                 time: start.elapsed(),
                                 nodes: NonZero::new(nodes).unwrap(),
                                 pv: game_tree.best_line().collect(),
+                                score: game_tree.score(),
                                 hash_capacity: table.capacity(),
                                 hash_max_capacity: table.max_capacity(),
                             });

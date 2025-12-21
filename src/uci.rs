@@ -13,7 +13,7 @@ use crate::{
     repl::repl,
     uci::{
         input::Input,
-        output::{Boundary, IdField, Info, OptionType, OptionValue, Output},
+        output::{Boundary, IdField, Info, OptionType, OptionValue, Output, Score},
     },
 };
 
@@ -219,11 +219,12 @@ pub fn uci_loop() {
                         };
                         NonZero::new(plies).unwrap()
                     });
+                    let current_player = board.current_player();
                     engine.calculate(
                         go.estimate_move_time(&board),
                         go.depth,
                         mate,
-                        |info| {
+                        move |info| {
                             // precision doesn't matter
                             #[allow(
                                 clippy::cast_possible_truncation,
@@ -246,6 +247,11 @@ pub fn uci_loop() {
                                     Info::Time(info.time),
                                     Info::Nodes(info.nodes),
                                     Info::Pv(info.pv),
+                                    Info::Score(Score::from_centipawn(
+                                        // TODO: don't unwrap
+                                        info.score.unwrap().centipawn(),
+                                        current_player,
+                                    )),
                                     Info::HashFull(hash_full),
                                     Info::Nps(nps),
                                 ])
