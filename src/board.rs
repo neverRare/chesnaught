@@ -21,7 +21,7 @@ use crate::{
     end_state::EndState,
     heuristics::Estimated,
     misc::InvalidByte,
-    piece::{ColoredPieceKind, InvalidFenPiece, PieceKind, STARTING_VALUE},
+    piece::{self, ColoredPieceKind, InvalidFenPiece, PieceKind, STARTING_VALUE},
     simple_board::SimpleBoard,
 };
 
@@ -383,11 +383,16 @@ impl Piece {
                 ]
                 .into_iter()
                 .filter(move |destination| {
-                    !self
-                        .position
-                        .line_ex_ex(*destination, (*destination - self.position).as_unit())
-                        .chain(destination.line_ex_ex(attack, (attack - *destination).as_unit()))
-                        .any(|position| board[position].is_some())
+                    board
+                        .index(*destination)
+                        .is_none_or(|piece| piece.color() == !self.color())
+                        && !self
+                            .position
+                            .line_ex_ex(*destination, (*destination - self.position).as_unit())
+                            .chain(
+                                destination.line_ex_ex(attack, (attack - *destination).as_unit()),
+                            )
+                            .any(|position| board[position].is_some())
                 }),
             )
         }
@@ -416,11 +421,16 @@ impl Piece {
                 .into_iter()
                 .filter_map(RotatedCoord::rotate_back)
                 .filter(move |destination| {
-                    !self
-                        .position
-                        .line_ex_ex(*destination, (*destination - self.position).as_unit())
-                        .chain(destination.line_ex_ex(attack, (attack - *destination).as_unit()))
-                        .any(|position| board[position].is_some())
+                    board
+                        .index(*destination)
+                        .is_none_or(|piece| piece.color() == !self.color())
+                        && !self
+                            .position
+                            .line_ex_ex(*destination, (*destination - self.position).as_unit())
+                            .chain(
+                                destination.line_ex_ex(attack, (attack - *destination).as_unit()),
+                            )
+                            .any(|position| board[position].is_some())
                 }),
             )
         }
@@ -436,7 +446,12 @@ impl Piece {
                 Vector::KNIGHT_MOVES
                     .into_iter()
                     .filter_map(move |movement| self.position.move_by(movement))
-                    .filter(move |destination| (attack - *destination).is_knight_move()),
+                    .filter(move |destination| {
+                        (attack - *destination).is_knight_move()
+                            && board
+                                .index(*destination)
+                                .is_none_or(|piece| piece.color() == !self.color())
+                    }),
             ),
             PieceKind::Bishop => self.bishop_attack_destination(attack, board),
             PieceKind::Rook => self.rook_attack_destination(attack, board),
