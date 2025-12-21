@@ -17,7 +17,7 @@ use crate::{
     board_display::IndexableBoard,
     castling_right::CastlingRight,
     color::Color,
-    coord::{Coord, ParseCoordError, Vector, pawn_direction},
+    coord::{Coord, ParseCoordError, RotatedCoord, Vector, pawn_direction},
     end_state::EndState,
     heuristics::Estimated,
     misc::InvalidByte,
@@ -392,6 +392,39 @@ impl Piece {
             )
         }
     }
+    fn bishop_attack_destination(
+        self,
+        attack: Coord,
+        board: &Board,
+    ) -> Box<dyn Iterator<Item = Coord> + '_> {
+        let position = self.position.rotate();
+        let rotated_attack = attack.rotate();
+        if position.x == rotated_attack.x || position.y == rotated_attack.y {
+            Box::new(empty())
+        } else {
+            Box::new(
+                [
+                    RotatedCoord {
+                        x: position.x,
+                        y: rotated_attack.y,
+                    },
+                    RotatedCoord {
+                        x: rotated_attack.x,
+                        y: position.y,
+                    },
+                ]
+                .into_iter()
+                .filter_map(RotatedCoord::rotate_back)
+                .filter(move |destination| {
+                    !self
+                        .position
+                        .line_ex_ex(*destination, (*destination - self.position).as_unit())
+                        .chain(destination.line_ex_ex(attack, (attack - *destination).as_unit()))
+                        .any(|position| board[position].is_some())
+                }),
+            )
+        }
+    }
     fn attack_destination(
         self,
         attack: Coord,
@@ -405,9 +438,12 @@ impl Piece {
                     .filter_map(move |movement| self.position.move_by(movement))
                     .filter(move |destination| (attack - *destination).is_knight_move()),
             ),
-            PieceKind::Bishop => todo!(),
+            PieceKind::Bishop => self.bishop_attack_destination(attack, board),
             PieceKind::Rook => self.rook_attack_destination(attack, board),
-            PieceKind::Queen => todo!(),
+            PieceKind::Queen => Box::new(
+                self.rook_attack_destination(attack, board)
+                    .chain(self.bishop_attack_destination(attack, board)),
+            ),
             PieceKind::King => todo!(),
         }
     }
