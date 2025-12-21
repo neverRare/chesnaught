@@ -419,3 +419,20 @@ impl Error for ParsePositionError {
         }
     }
 }
+#[cfg(test)]
+mod test {
+
+    use crate::uci::input::{Input, Position};
+
+    #[test]
+    fn parse_position() {
+        let input = Input::from_str("position startpos moves e2e4").unwrap();
+        assert_eq!(
+            input,
+            Input::Position {
+                position: Position::StartPos,
+                moves: vec!["e2e4".parse().unwrap()]
+            }
+        );
+    }
+}
