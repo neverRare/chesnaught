@@ -17,7 +17,7 @@ use crate::{
     board_display::IndexableBoard,
     castling_right::CastlingRight,
     color::Color,
-    coord::{Coord, ParseCoordError, RotatedCoord, Vector, pawn_direction},
+    coord::{Coord, ParseCoordError, RotatedCoord, Vector},
     end_state::EndState,
     heuristics::Estimated,
     misc::InvalidByte,
@@ -306,7 +306,7 @@ impl Piece {
         board: &Board,
     ) -> Box<dyn Iterator<Item = Coord> + '_> {
         let difference = attack - self.position;
-        if difference.y == pawn_direction(self.color()) * 3 {
+        if difference.y == Vector::pawn_direction(self.color()) * 3 {
             let destination = self
                 .position
                 .move_by(Vector::pawn_double_move(self.color()))
@@ -322,14 +322,14 @@ impl Piece {
             } else {
                 Box::new(empty())
             }
-        } else if difference.y == pawn_direction(self.color()) * 2 {
+        } else if difference.y == Vector::pawn_direction(self.color()) * 2 {
             match difference.x {
                 x @ (-2 | 2) => {
                     let destination = self
                         .position
                         .move_by(Vector {
                             x: x.signum(),
-                            y: pawn_direction(self.color()),
+                            y: Vector::pawn_direction(self.color()),
                         })
                         .unwrap();
                     if board

@@ -296,10 +296,16 @@ impl Vector {
     ];
     pub const QUEEN_DIRECTIONS: [Self; 8] = Vector::KING_MOVES;
 
+    pub fn pawn_direction(color: Color) -> i8 {
+        match color {
+            Color::White => -1,
+            Color::Black => 1,
+        }
+    }
     pub fn pawn_single_move(color: Color) -> Self {
         Vector {
             x: 0,
-            y: pawn_direction(color),
+            y: Vector::pawn_direction(color),
         }
     }
     pub fn pawn_double_move(color: Color) -> Self {
@@ -308,7 +314,7 @@ impl Vector {
     pub fn pawn_attacks(color: Color) -> [Self; 2] {
         [-1, 1].map(|x| Vector {
             x,
-            y: pawn_direction(color),
+            y: Vector::pawn_direction(color),
         })
     }
     pub fn is_aligned(self, other: Self) -> bool {
@@ -323,19 +329,13 @@ impl Vector {
         (x == 1 && y == 2) || (x == 2 && y == 1)
     }
     pub fn is_pawn_attack(self, color: Color) -> bool {
-        self.x.unsigned_abs() == 1 && self.y == pawn_direction(color)
+        self.x.unsigned_abs() == 1 && self.y == Vector::pawn_direction(color)
     }
     pub fn as_unit(self) -> Self {
         Vector {
             x: self.x.signum(),
             y: self.y.signum(),
         }
-    }
-}
-pub fn pawn_direction(color: Color) -> i8 {
-    match color {
-        Color::White => -1,
-        Color::Black => 1,
     }
 }
 impl Neg for Vector {
