@@ -108,7 +108,7 @@ impl Display for Info {
             Info::Depth(depth) => write!(f, "depth {depth}")?,
             Info::SelDepth(depth) => write!(f, "seldepth {depth}")?,
             Info::Time(time) => write!(f, "time {}", time.as_millis())?,
-            Info::Nodes(nodes) => write!(f, "node {nodes}")?,
+            Info::Nodes(nodes) => write!(f, "nodes {nodes}")?,
             Info::Pv(moves) => {
                 write!(f, "pv")?;
                 for movement in moves {
