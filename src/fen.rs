@@ -103,7 +103,9 @@ impl FromStr for Fen {
     type Err = ParseFenError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut sections = s.split(' ').filter(|token| !token.is_empty());
+        let mut sections = s
+            .split(<char>::is_whitespace)
+            .filter(|token| !token.is_empty());
 
         let board = parse_board(sections.next().ok_or(ParseFenError::UnexpectedEol)?)?;
 
@@ -133,9 +135,7 @@ impl FromStr for Fen {
             .parse()?;
 
         if let Some(section) = sections.next() {
-            return Err(ParseFenError::Unexpected(
-                section.chars().next().unwrap_or(' '),
-            ));
+            return Err(ParseFenError::Unexpected(section.chars().next().unwrap()));
         }
         let mut board = HashableBoard {
             board,
