@@ -1,3 +1,3 @@
 # Chesnaught
 
-WIP toy chess engine that speaks UCI.
+WIP toy chess and chess960 engine that speaks UCI.
