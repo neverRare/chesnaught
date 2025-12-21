@@ -13,7 +13,7 @@ use crate::{
     repl::repl,
     uci::{
         input::Input,
-        output::{Boundary, Info, OptionType, OptionValue, Output},
+        output::{Boundary, IdField, Info, OptionType, OptionValue, Output},
     },
 };
 
@@ -23,10 +23,14 @@ mod output;
 const CHESS960: &str = "UCI_Chess960";
 const ENGINE_ABOUT: &str = "UCI_EngineAbout";
 
-const CONFIG: [Output; 6] = [
+const CONFIG: [Output; 7] = [
     Output::Id {
-        name: concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
-        author: env!("CARGO_PKG_AUTHORS"),
+        field: IdField::Name,
+        value: concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
+    },
+    Output::Id {
+        field: IdField::Author,
+        value: env!("CARGO_PKG_AUTHORS"),
     },
     Output::Option {
         name: "Hash",

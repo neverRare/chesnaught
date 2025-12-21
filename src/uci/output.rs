@@ -9,8 +9,8 @@ use crate::board::{Lan, NullableLan};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Output {
     Id {
-        name: &'static str,
-        author: &'static str,
+        field: IdField,
+        value: &'static str,
     },
     UciOk,
     ReadyOk,
@@ -31,7 +31,7 @@ pub enum Output {
 impl Display for Output {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Output::Id { name, author } => write!(f, "id name {name} author {author}")?,
+            Output::Id { field, value } => write!(f, "id {field} {value}")?,
             Output::UciOk => write!(f, "uciok")?,
             Output::ReadyOk => write!(f, "readyok")?,
             Output::BestMove { movement, ponder } => {
@@ -60,6 +60,20 @@ impl Display for Output {
                     write!(f, " {boundary}")?;
                 }
             }
+        }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum IdField {
+    Name,
+    Author,
+}
+impl Display for IdField {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            IdField::Name => write!(f, "name")?,
+            IdField::Author => write!(f, "author")?,
         }
         Ok(())
     }
