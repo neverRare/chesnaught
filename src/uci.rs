@@ -69,6 +69,7 @@ pub fn uci_loop() {
     let mut debug = false;
     let mut engine = LazyCell::new(Engine::new);
     let mut board = Board::starting_position();
+    let mut move_count = 0;
     let mut new_game = true;
     let mut uci_new_game_available = false;
     loop {
@@ -184,27 +185,19 @@ pub fn uci_loop() {
             Input::Position { position, moves } => {
                 if uci {
                     if !uci_new_game_available || new_game {
-                        board = match position.board() {
-                            Ok(board) => board,
-                            Err(err) => {
-                                if debug {
-                                    debug_print("error setting up board".to_string());
-                                    debug_print(format!("error: {err}"));
-                                }
-                                Board::starting_position()
-                            }
-                        };
-                        for movement in moves {
-                            board.move_lan(movement);
+                        board = position.board().unwrap();
+                        for movement in &moves {
+                            board.move_lan(*movement);
                         }
                         engine.set_board(board.clone());
                         new_game = false;
-                    } else if let Some(movement) = moves.last() {
-                        board.move_lan(*movement);
-                        engine.move_piece(*movement);
-                    } else if debug {
-                        debug_print("no moves found".to_string());
+                    } else {
+                        for movement in &moves[(moves.len() - move_count)..] {
+                            board.move_lan(*movement);
+                            engine.move_piece(*movement);
+                        }
                     }
+                    move_count = moves.len();
                 }
             }
             Input::Go(go) => {
