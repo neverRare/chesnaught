@@ -197,6 +197,11 @@ impl Coord {
             _ => unreachable!(),
         }
     }
+    pub fn rotate(self) -> RotatedCoord {
+        let x: i8 = self.x().try_into().unwrap();
+        let y: i8 = self.y().try_into().unwrap();
+        RotatedCoord { x: x + y, y: x - y }
+    }
 }
 impl Display for Coord {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -392,6 +397,22 @@ impl MulAssign<i8> for Vector {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct RotatedCoord {
+    pub x: i8,
+    pub y: i8,
+}
+impl RotatedCoord {
+    pub fn rotate_back(self) -> Option<Coord> {
+        let x = self.x + self.y;
+        let y = self.x - self.y;
+        if x % 2 == 0 && y % 2 == 0 {
+            Coord::new_checked((x / 2).try_into().ok()?, (y / 2).try_into().ok()?)
+        } else {
+            None
+        }
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ParseCoordError {
     InvalidX(char),
     InvalidY(char),
@@ -459,5 +480,14 @@ mod test {
             .unwrap()
             .line_ex_ex("e4".parse().unwrap(), Vector { x: 0, y: 0 });
         assert_eq!(line.next(), None);
+    }
+    #[test]
+    fn double_rotate_identity() {
+        for y in 0..8 {
+            for x in 0..8 {
+                let position = Coord::new(x, y);
+                assert_eq!(position, position.rotate().rotate_back().unwrap());
+            }
+        }
     }
 }
