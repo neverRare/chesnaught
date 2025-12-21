@@ -27,6 +27,8 @@ use crate::{
 
 pub const ESTIMATED_TOTAL_MOVES: u8 = 40;
 
+const INCLUDE_PAWN_AND_KING: bool = false;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Piece {
     pub piece: ColoredPieceKind,
@@ -441,7 +443,13 @@ impl Piece {
         board: &Board,
     ) -> Box<dyn Iterator<Item = Coord> + '_> {
         match self.piece() {
-            PieceKind::Pawn => self.pawn_attack_destination(attack, board),
+            PieceKind::Pawn => {
+                if INCLUDE_PAWN_AND_KING {
+                    self.pawn_attack_destination(attack, board)
+                } else {
+                    Box::new(empty())
+                }
+            }
             PieceKind::Knight => Box::new(
                 Vector::KNIGHT_MOVES
                     .into_iter()
@@ -459,7 +467,13 @@ impl Piece {
                 self.rook_attack_destination(attack, board)
                     .chain(self.bishop_attack_destination(attack, board)),
             ),
-            PieceKind::King => todo!(),
+            PieceKind::King => {
+                if INCLUDE_PAWN_AND_KING {
+                    todo!()
+                } else {
+                    Box::new(empty())
+                }
+            }
         }
     }
 }
