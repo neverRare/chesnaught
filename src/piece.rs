@@ -21,12 +21,12 @@ pub enum PieceKind {
     King,
 }
 impl PieceKind {
-    pub const PROMOTION_CHOICES: [Self; 4] = [
-        PieceKind::Queen,
-        PieceKind::Rook,
-        PieceKind::Bishop,
-        PieceKind::Knight,
-    ];
+    // pub const PROMOTION_CHOICES: [Self; 4] = [
+    //     PieceKind::Queen,
+    //     PieceKind::Rook,
+    //     PieceKind::Bishop,
+    //     PieceKind::Knight,
+    // ];
     pub const STARTING_CONFIGURATION: [Self; 8] = [
         PieceKind::Rook,
         PieceKind::Knight,

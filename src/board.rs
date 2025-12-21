@@ -11,8 +11,6 @@ use std::{
     str::FromStr,
 };
 
-use rustc_hash::FxHashSet;
-
 use crate::{
     board_display::IndexableBoard,
     castling_right::CastlingRight,
@@ -713,12 +711,6 @@ impl Board {
             board
         })
     }
-    fn bishops_and_rooks_and_queens(&self, color: Color) -> impl Iterator<Item = Piece> {
-        self.pieces_by_kinds(
-            color,
-            &[PieceKind::Bishop, PieceKind::Rook, PieceKind::Queen],
-        )
-    }
     fn king(&self, color: Color) -> Option<Piece> {
         match color {
             Color::White => self.pieces[0],
@@ -1126,9 +1118,6 @@ impl Board {
         new.move_piece(movement);
         new
     }
-    pub fn clone_and_move_lan(&self, movement: Lan) -> Self {
-        self.clone_and_move(movement.as_move(self))
-    }
     pub fn estimate_moves_left(&self) -> f32 {
         let pieces: u8 = self
             .all_pieces()
@@ -1186,8 +1175,10 @@ impl Board {
         }
         white_score - black_score
     }
+    #[cfg(test)]
     pub fn move_assert(&mut self, lan: Lan) {
-        let valid_moves: FxHashSet<_> = self.valid_moves().into_iter().flatten().collect();
+        let valid_moves: rustc_hash::FxHashSet<_> =
+            self.valid_moves().into_iter().flatten().collect();
         let movement = lan.as_move(self);
         assert!(
             valid_moves.contains(&movement),
@@ -1195,6 +1186,7 @@ impl Board {
         );
         self.move_piece(movement);
     }
+    #[cfg(test)]
     pub fn assert_piece_cant_move(&self, position: Coord) {
         let valid_moves: Vec<_> = self.valid_moves().into_iter().flatten().collect();
         assert!(
@@ -1204,16 +1196,19 @@ impl Board {
             "found valid move for piece in position {position}",
         );
     }
+    #[cfg(test)]
     pub fn assert_move_is_valid(&self, lan: Lan) {
-        let valid_moves: FxHashSet<_> = self.valid_moves().into_iter().flatten().collect();
+        let valid_moves: rustc_hash::FxHashSet<_> =
+            self.valid_moves().into_iter().flatten().collect();
         let movement = lan.as_move(self);
         assert!(
             valid_moves.contains(&movement),
             "`{lan}` is an invalid move"
         );
     }
+    #[cfg(test)]
     pub fn assert_move_is_invalid(&self, lan: Lan) {
-        let valid_moves: FxHashSet<_> = self
+        let valid_moves: rustc_hash::FxHashSet<_> = self
             .valid_moves()
             .into_iter()
             .flatten()
@@ -1256,12 +1251,12 @@ pub struct HashableBoard {
     pub en_passant_target: Option<Coord>,
 }
 impl HashableBoard {
-    pub fn starting_position() -> Self {
-        HashableBoard::from_configuration(PieceKind::STARTING_CONFIGURATION)
-    }
-    pub fn chess960(id: u16) -> Self {
-        HashableBoard::from_configuration(PieceKind::chess960(id))
-    }
+    // pub fn starting_position() -> Self {
+    //     HashableBoard::from_configuration(PieceKind::STARTING_CONFIGURATION)
+    // }
+    // pub fn chess960(id: u16) -> Self {
+    //     HashableBoard::from_configuration(PieceKind::chess960(id))
+    // }
     pub fn from_configuration(configuration: [PieceKind; 8]) -> Self {
         let castling_right = CastlingRight::from_configuration(configuration);
         let board = SimpleBoard([
@@ -1455,21 +1450,6 @@ impl Move {
     pub fn as_lan_iter(self, board: &Board) -> impl Iterator<Item = Lan> {
         let (first, second) = self.as_lan_pair(board);
         once(first).chain(second)
-    }
-    pub fn as_lan(self, board: &Board) -> Lan {
-        let (regular, chess960) = self.as_ambiguous_lan_pair(board);
-        if let Some(chess960) = chess960
-            && regular.origin.x() == Coord::KING_ORIGIN
-            && Coord::ROOK_ORIGINS.contains(&chess960.destination.x())
-        {
-            regular
-        } else {
-            chess960.unwrap_or(regular)
-        }
-    }
-    pub fn as_lan_chess960(self, board: &Board) -> Lan {
-        let (regular, chess960) = self.as_ambiguous_lan_pair(board);
-        chess960.unwrap_or(regular)
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
