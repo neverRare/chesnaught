@@ -74,14 +74,13 @@ impl<'a> Input<'a> {
         } else if let Some(src) = strip_prefix_token(src, "position") {
             let (position, mut moves) = split_by_token(src, "moves").unwrap_or((src, ""));
             let position = position.parse()?;
-            let moves = &mut moves;
             let moves = from_fn(|| {
                 if moves.is_empty() {
                     None
                 } else {
                     let index = moves.find(<char>::is_whitespace).unwrap_or(moves.len());
                     let (movement, rest) = src.split_at(index);
-                    *moves = rest.trim_start();
+                    moves = rest.trim_start();
                     movement.parse().ok()
                 }
             })
