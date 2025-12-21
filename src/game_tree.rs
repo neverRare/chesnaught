@@ -192,6 +192,9 @@ impl GameTreeInner {
         };
         Score::Estimated(estimated)
     }
+    fn best_move_tree_pair(&self) -> Option<&MoveTreePair> {
+        self.children().map(|children| &children[0])
+    }
 }
 #[derive(Debug, Clone)]
 pub struct GameTree(GameTreeInner);
@@ -245,11 +248,10 @@ impl GameTree {
             Some(stop_signal),
         )
     }
-    fn best_move_tree_pair(&self) -> Option<&MoveTreePair> {
-        self.0.children().map(|children| &children[0])
-    }
     pub fn best_move(&self) -> Option<Lan> {
-        self.best_move_tree_pair().map(|(movement, _, _)| *movement)
+        self.0
+            .best_move_tree_pair()
+            .map(|(movement, _, _)| *movement)
     }
     pub fn score(&self) -> Option<Score> {
         self.0.score
@@ -257,7 +259,8 @@ impl GameTree {
     pub fn best_line(&self) -> impl Iterator<Item = Lan> {
         let mut game_tree = &self.0;
         from_fn(move || {
-            self.best_move_tree_pair()
+            game_tree
+                .best_move_tree_pair()
                 .map(|(movement, _, new_game_tree)| {
                     game_tree = new_game_tree;
                     *movement
