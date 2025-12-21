@@ -6,7 +6,7 @@ use std::{
         mpsc::{Receiver, Sender, channel, sync_channel},
     },
     thread::{sleep, spawn},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use crate::{
@@ -22,11 +22,20 @@ enum Input {
     Calculate {
         depth: Option<NonZero<u32>>,
         mate_in_plies: Option<NonZero<u32>>,
-        callback: Box<dyn FnOnce(Option<Lan>) + Send>,
+        info_callback: Box<dyn FnMut(Info) + Send>,
+        best_move_callback: Box<dyn FnOnce(Option<Lan>) + Send>,
         stop_signal: Arc<AtomicBool>,
     },
-    SetHashCapacity(usize),
+    SetHashMaxCapacity(usize),
     ClearHash,
+}
+pub struct Info {
+    pub depth: NonZero<u32>,
+    pub time: Duration,
+    pub nodes: NonZero<u32>,
+    pub pv: Vec<Lan>,
+    pub hash_capacity: usize,
+    pub hash_max_capacity: usize,
 }
 #[derive(Debug)]
 pub struct Engine {
@@ -54,11 +63,22 @@ impl Engine {
                     Input::Calculate {
                         depth,
                         mate_in_plies,
-                        callback,
+                        mut info_callback,
+                        best_move_callback,
                         stop_signal,
                     } => {
                         for i in 1.. {
-                            game_tree.calculate_with_stop_signal(i, &mut table, &stop_signal);
+                            let start = Instant::now();
+                            let nodes =
+                                game_tree.calculate_with_stop_signal(i, &mut table, &stop_signal);
+                            info_callback(Info {
+                                depth: NonZero::new(i).unwrap(),
+                                time: start.elapsed(),
+                                nodes: NonZero::new(nodes).unwrap(),
+                                pv: game_tree.best_line().collect(),
+                                hash_capacity: table.capacity(),
+                                hash_max_capacity: table.max_capacity(),
+                            });
                             if stop_signal.load(Ordering::Relaxed)
                                 || depth.is_some_and(|depth| i >= depth.get())
                                 || (game_tree.score().is_some_and(Score::is_win)
@@ -67,12 +87,12 @@ impl Engine {
                                 break;
                             }
                         }
-                        callback(game_tree.best_move().or_else(|| {
+                        best_move_callback(game_tree.best_move().or_else(|| {
                             game_tree.calculate(1, &mut table);
                             game_tree.best_move()
                         }));
                     }
-                    Input::SetHashCapacity(capacity) => table.set_capacity(capacity),
+                    Input::SetHashMaxCapacity(capacity) => table.set_max_capacity(capacity),
                     Input::ClearHash => table.clear_allocation(),
                 }
             }
@@ -98,7 +118,8 @@ impl Engine {
         duration: Option<Duration>,
         depth: Option<NonZero<u32>>,
         mate_in_plies: Option<NonZero<u32>>,
-        callback: impl FnOnce(Option<Lan>) + Send + 'static,
+        info_callback: impl FnMut(Info) + Send + 'static,
+        best_move_callback: impl FnOnce(Option<Lan>) + Send + 'static,
     ) {
         let stop_signal = Arc::new(AtomicBool::new(false));
         if let Some(duration) = duration {
@@ -112,7 +133,8 @@ impl Engine {
             .send(Input::Calculate {
                 depth,
                 mate_in_plies,
-                callback: Box::new(callback),
+                info_callback: Box::new(info_callback),
+                best_move_callback: Box::new(best_move_callback),
                 stop_signal: stop_signal.clone(),
             })
             .unwrap();
@@ -123,8 +145,10 @@ impl Engine {
             stop_signal.store(true, Ordering::Relaxed);
         }
     }
-    pub fn set_hash_capacity(&self, size: usize) {
-        self.input.send(Input::SetHashCapacity(size)).unwrap();
+    pub fn set_hash_max_capacity(&self, max_capacity: usize) {
+        self.input
+            .send(Input::SetHashMaxCapacity(max_capacity))
+            .unwrap();
     }
     pub fn clear_hash(&self) {
         self.input.send(Input::ClearHash).unwrap();

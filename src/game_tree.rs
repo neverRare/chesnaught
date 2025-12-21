@@ -120,21 +120,24 @@ impl GameTreeInner {
         beta: Score,
         table: &mut Table,
         stop_signal: Option<&AtomicBool>,
-    ) {
+    ) -> u32 {
         if stop_signal.is_some_and(|signal| signal.load(atomic::Ordering::Relaxed)) {
             // Do nothing
+            1
         } else if let Data::End(end_state) = self.data {
             self.score = Some(Score::from_end_state(end_state));
+            1
         } else {
             let board = self.board().unwrap();
 
             if let Some(score) = table.get_transposition(&board) {
                 self.score = Some(*score);
-                return;
+                return 1;
             }
             if table.contains_repetition(&board) {
-                return;
+                return 1;
             }
+            let mut nodes = 1;
             if depth == 0 {
                 self.score = Some(self.estimate());
             } else {
@@ -144,7 +147,7 @@ impl GameTreeInner {
 
                 table.insert_repetition(board);
                 for (_, _, game_tree) in children.iter_mut() {
-                    game_tree.alpha_beta(depth - 1, alpha, beta, table, stop_signal);
+                    nodes += game_tree.alpha_beta(depth - 1, alpha, beta, table, stop_signal);
                     if let Some(score) = game_tree.score
                         && alpha_beta.set(score)
                     {
@@ -164,6 +167,7 @@ impl GameTreeInner {
                 self.score = Some(alpha_beta.score);
             }
             table.insert_transposition(board, self.score.unwrap());
+            nodes
         }
     }
     fn estimate(&self) -> Score {
@@ -212,17 +216,17 @@ impl GameTree {
         };
         replace(&mut self.0, new).drop();
     }
-    pub fn calculate(&mut self, depth: u32, table: &mut Table) {
+    pub fn calculate(&mut self, depth: u32, table: &mut Table) -> u32 {
         table.clear();
         self.0
-            .alpha_beta(depth, Score::BLACK_WINS, Score::WHITE_WINS, table, None);
+            .alpha_beta(depth, Score::BLACK_WINS, Score::WHITE_WINS, table, None)
     }
     pub fn calculate_with_stop_signal(
         &mut self,
         depth: u32,
         table: &mut Table,
         stop_signal: &AtomicBool,
-    ) {
+    ) -> u32 {
         table.clear();
         self.0.alpha_beta(
             depth,
@@ -230,7 +234,7 @@ impl GameTree {
             Score::WHITE_WINS,
             table,
             Some(stop_signal),
-        );
+        )
     }
     fn best_move_tree_pair(&self) -> Option<&MoveTreePair> {
         self.0.children().map(|children| &children[0])
@@ -271,20 +275,26 @@ struct TableValue {
 #[derive(Debug, Clone, Default)]
 pub struct Table {
     table: FxHashMap<HashableBoard, TableValue>,
-    capacity: usize,
+    max_capacity: usize,
 }
 impl Table {
     pub const ELEMENT_SIZE: usize = size_of::<(HashableBoard, TableValue)>();
 
-    pub fn new(capacity: usize) -> Self {
+    pub fn new(max_capacity: usize) -> Self {
         Table {
             table: HashMap::default(),
-            capacity: Ord::min(capacity, <i32>::MAX as usize),
+            max_capacity: Ord::min(max_capacity, <i32>::MAX as usize),
         }
     }
-    pub fn set_capacity(&mut self, capacity: usize) {
-        self.capacity = Ord::min(capacity, <i32>::MAX as usize);
-        if self.table.capacity() > self.capacity {
+    pub fn capacity(&self) -> usize {
+        self.table.capacity()
+    }
+    pub fn max_capacity(&self) -> usize {
+        self.max_capacity
+    }
+    pub fn set_max_capacity(&mut self, max_capacity: usize) {
+        self.max_capacity = Ord::min(max_capacity, <i32>::MAX as usize);
+        if self.capacity() > self.max_capacity {
             self.clear_allocation();
         }
     }
@@ -300,8 +310,8 @@ impl Table {
         if let Some(value) = self.table.get_mut(&board) {
             f(value);
         } else {
-            let max_capacity = self.capacity.saturating_sub(self.table.capacity()) / 2;
-            if self.table.len() < self.table.capacity() || self.table.capacity() <= max_capacity {
+            let max_capacity = self.max_capacity.saturating_sub(self.capacity()) / 2;
+            if self.table.len() < self.capacity() || self.capacity() <= max_capacity {
                 let mut value = TableValue::default();
                 f(&mut value);
                 self.table.insert(board, value);

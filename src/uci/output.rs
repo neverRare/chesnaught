@@ -70,7 +70,7 @@ pub enum Info {
     SelDepth(NonZero<u32>),
     Time(Duration),
     Nodes(NonZero<u32>),
-    Pv(Vec<NullableLan>),
+    Pv(Vec<Lan>),
     MultiPv(u32),
     Score {
         score: Score,

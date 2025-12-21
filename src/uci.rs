@@ -136,7 +136,7 @@ pub fn uci_loop() {
                                     continue;
                                 }
                             };
-                            engine.set_hash_capacity(
+                            engine.set_hash_max_capacity(
                                 (size / Table::ELEMENT_SIZE).saturating_mul(MEBIBYTES),
                             );
                         }
@@ -206,15 +206,7 @@ pub fn uci_loop() {
             Input::Go(go) => {
                 if uci {
                     new_game = false;
-                    let callback = move |movement| {
-                        println!(
-                            "{}",
-                            Output::BestMove {
-                                movement: NullableLan(movement),
-                                ponder: None
-                            }
-                        );
-                    };
+
                     let mate = go.mate.map(|moves| {
                         let moves = moves.get();
                         let plies = match board.current_player() {
@@ -223,7 +215,39 @@ pub fn uci_loop() {
                         };
                         NonZero::new(plies).unwrap()
                     });
-                    engine.calculate(go.estimate_move_time(&board), go.depth, mate, callback);
+                    engine.calculate(
+                        go.estimate_move_time(&board),
+                        go.depth,
+                        mate,
+                        |info| {
+                            println!(
+                                "{}",
+                                Output::Info(vec![
+                                    Info::Depth(info.depth),
+                                    Info::Time(info.time),
+                                    Info::Nodes(info.nodes),
+                                    Info::Pv(info.pv),
+                                    Info::HashFull(
+                                        (info.hash_capacity as f32 / info.hash_max_capacity as f32
+                                            * 1_000_000_f32)
+                                            as u32
+                                    ),
+                                    Info::Nps(
+                                        (info.nodes.get() as f32 / info.time.as_secs_f32()) as u32
+                                    ),
+                                ])
+                            );
+                        },
+                        |movement| {
+                            println!(
+                                "{}",
+                                Output::BestMove {
+                                    movement: NullableLan(movement),
+                                    ponder: None
+                                }
+                            );
+                        },
+                    );
                     if debug {
                         if go.ponder {
                             debug_print("`go ponder` is unsupported; ignoring".to_string());
