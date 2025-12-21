@@ -366,18 +366,14 @@ impl AlphaBetaState {
     fn set(&mut self, score: Score) -> bool {
         match self.current_player {
             Color::White => {
-                if score > self.score {
-                    self.score = score;
-                }
+                self.score = Ord::max(self.score, score);
                 if self.score >= self.beta {
                     return true;
                 }
                 self.alpha = Ord::max(self.alpha, self.score);
             }
             Color::Black => {
-                if score < self.score {
-                    self.score = score;
-                }
+                self.score = Ord::min(self.score, score);
                 if self.score <= self.alpha {
                     return true;
                 }
