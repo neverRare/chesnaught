@@ -224,6 +224,16 @@ pub fn uci_loop() {
                         go.depth,
                         mate,
                         |info| {
+                            #[allow(clippy::cast_possible_truncation)]
+                            #[allow(clippy::cast_sign_loss)]
+                            #[allow(clippy::cast_precision_loss)]
+                            let hash_full = (info.hash_capacity as f32
+                                / info.hash_max_capacity as f32
+                                * 1_000_000_f32) as u32;
+                            #[allow(clippy::cast_possible_truncation)]
+                            #[allow(clippy::cast_sign_loss)]
+                            #[allow(clippy::cast_precision_loss)]
+                            let nps = (info.nodes.get() as f32 / info.time.as_secs_f32()) as u32;
                             println!(
                                 "{}",
                                 Output::Info(vec![
@@ -231,14 +241,8 @@ pub fn uci_loop() {
                                     Info::Time(info.time),
                                     Info::Nodes(info.nodes),
                                     Info::Pv(info.pv),
-                                    Info::HashFull(
-                                        (info.hash_capacity as f32 / info.hash_max_capacity as f32
-                                            * 1_000_000_f32)
-                                            as u32
-                                    ),
-                                    Info::Nps(
-                                        (info.nodes.get() as f32 / info.time.as_secs_f32()) as u32
-                                    ),
+                                    Info::HashFull(hash_full),
+                                    Info::Nps(nps),
                                 ])
                             );
                         },
