@@ -85,28 +85,18 @@ impl Display for IdField {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Info {
     Depth(NonZero<u32>),
-    SelDepth(NonZero<u32>),
     Time(Duration),
     Nodes(NonZero<u32>),
     Pv(Vec<Lan>),
-    MultiPv(u32),
     Score(Score),
-    CurrMove(NullableLan),
-    CurrMoveNumber(u8),
     HashFull(u32),
     Nps(u32),
-    TbHits(u32),
-    SbHits(u32),
-    CpuLoad(u32),
     String(String),
-    Refutation(Vec<NullableLan>),
-    CurrLine(Vec<NullableLan>),
 }
 impl Display for Info {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Info::Depth(depth) => write!(f, "depth {depth}")?,
-            Info::SelDepth(depth) => write!(f, "seldepth {depth}")?,
             Info::Time(time) => write!(f, "time {}", time.as_millis())?,
             Info::Nodes(nodes) => write!(f, "nodes {nodes}")?,
             Info::Pv(moves) => {
@@ -115,30 +105,12 @@ impl Display for Info {
                     write!(f, " {movement}")?;
                 }
             }
-            Info::MultiPv(rank) => write!(f, "multipv {rank}")?,
             Info::Score(score) => {
                 write!(f, "score {score}")?;
             }
-            Info::CurrMove(movement) => write!(f, "currmove {movement}")?,
-            Info::CurrMoveNumber(order) => write!(f, "currmovenumber {order}")?,
             Info::HashFull(permill) => write!(f, "hashfull {permill}")?,
             Info::Nps(nps) => write!(f, "nps {nps}")?,
-            Info::TbHits(hits) => write!(f, "tbhits {hits}")?,
-            Info::SbHits(hits) => write!(f, "sbhits {hits}")?,
-            Info::CpuLoad(permill) => write!(f, "cpuload {permill}")?,
             Info::String(s) => write!(f, "string {s}")?,
-            Info::Refutation(moves) => {
-                write!(f, "refutation")?;
-                for movement in moves {
-                    write!(f, " {movement}")?;
-                }
-            }
-            Info::CurrLine(moves) => {
-                write!(f, "currline")?;
-                for movement in moves {
-                    write!(f, " {movement}")?;
-                }
-            }
         }
         Ok(())
     }
