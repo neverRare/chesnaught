@@ -1155,6 +1155,16 @@ impl Board {
                         }
                     }
                 }
+                let value: i8 = piece
+                    .piece()
+                    .value()
+                    .map_or(0, NonZero::get)
+                    .try_into()
+                    .unwrap();
+                match color {
+                    Color::White => white_score.material += value,
+                    Color::Black => black_score.material += value,
+                }
             }
         }
         for color in [Color::White, Color::Black] {
