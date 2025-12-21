@@ -27,7 +27,7 @@ use crate::{
 
 pub const ESTIMATED_TOTAL_MOVES: u8 = 40;
 
-const INCLUDE_PAWN_AND_KING: bool = false;
+const INCLUDE_PAWN: bool = false;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Piece {
@@ -444,7 +444,7 @@ impl Piece {
     ) -> Box<dyn Iterator<Item = Coord> + '_> {
         match self.piece() {
             PieceKind::Pawn => {
-                if INCLUDE_PAWN_AND_KING {
+                if INCLUDE_PAWN {
                     self.pawn_attack_destination(attack, board)
                 } else {
                     Box::new(empty())
@@ -467,13 +467,7 @@ impl Piece {
                 self.rook_attack_destination(attack, board)
                     .chain(self.bishop_attack_destination(attack, board)),
             ),
-            PieceKind::King => {
-                if INCLUDE_PAWN_AND_KING {
-                    todo!()
-                } else {
-                    Box::new(empty())
-                }
-            }
+            PieceKind::King => todo!(),
         }
     }
 }
