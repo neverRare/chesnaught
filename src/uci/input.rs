@@ -72,19 +72,13 @@ impl<'a> Input<'a> {
         } else if starts_with_token(src, "ucinewgame") {
             Ok(Input::UciNewGame)
         } else if let Some(src) = strip_prefix_token(src, "position") {
-            let (position, mut moves) = split_by_token(src, "moves").unwrap_or((src, ""));
+            let (position, moves) = split_by_token(src, "moves").unwrap_or((src, ""));
             let position = position.parse()?;
-            let moves = from_fn(|| {
-                if moves.is_empty() {
-                    None
-                } else {
-                    let index = moves.find(<char>::is_whitespace).unwrap_or(moves.len());
-                    let (movement, rest) = src.split_at(index);
-                    moves = rest.trim_start();
-                    movement.parse().ok()
-                }
-            })
-            .collect();
+            let moves = moves
+                .split(<char>::is_whitespace)
+                .filter(|token| !token.is_empty())
+                .map_while(|token| token.parse().ok())
+                .collect();
             Ok(Input::Position { position, moves })
         } else if let Some(src) = strip_prefix_token(src, "go") {
             Ok(Input::Go(src.parse().unwrap()))
