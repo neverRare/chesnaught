@@ -368,6 +368,46 @@ impl Piece {
             Box::new(empty())
         }
     }
+    fn rook_attack_destination(
+        self,
+        attack: Coord,
+        board: &Board,
+    ) -> Box<dyn Iterator<Item = Coord> + '_> {
+        debug_assert_ne!(self.position, attack);
+        if self.position.x() == attack.x() || self.position.y() == attack.y() {
+            if self
+                .position
+                .line_ex_ex(attack, (attack - self.position).as_unit())
+                .any(|position| board[position].is_some())
+            {
+                Box::new(empty())
+            } else {
+                Box::new(
+                    attack
+                        .line_exclusive((self.position - attack).as_unit())
+                        .take_while(move |destination| {
+                            *destination == self.position || board[*destination].is_none()
+                        })
+                        .filter(move |destination| *destination != self.position),
+                )
+            }
+        } else {
+            Box::new(
+                [
+                    Coord::new(self.position.x(), attack.y()),
+                    Coord::new(attack.x(), self.position.y()),
+                ]
+                .into_iter()
+                .filter(move |destination| {
+                    !self
+                        .position
+                        .line_ex_ex(*destination, (*destination - self.position).as_unit())
+                        .chain(destination.line_ex_ex(attack, (attack - *destination).as_unit()))
+                        .any(|position| board[position].is_some())
+                }),
+            )
+        }
+    }
     fn attack_destination(
         self,
         attack: Coord,
@@ -377,7 +417,7 @@ impl Piece {
             PieceKind::Pawn => self.pawn_attack_destination(attack, board),
             PieceKind::Knight => todo!(),
             PieceKind::Bishop => todo!(),
-            PieceKind::Rook => todo!(),
+            PieceKind::Rook => self.rook_attack_destination(attack, board),
             PieceKind::Queen => todo!(),
             PieceKind::King => todo!(),
         }
