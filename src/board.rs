@@ -4,7 +4,7 @@ use std::{
     error::Error,
     fmt::{self, Display, Formatter},
     hash::Hash,
-    iter::{FusedIterator, once},
+    iter::{FusedIterator, empty, once},
     num::NonZero,
     ops::{Index, IndexMut, Range},
     rc::Rc,
@@ -17,7 +17,7 @@ use crate::{
     board_display::IndexableBoard,
     castling_right::CastlingRight,
     color::Color,
-    coord::{Coord, ParseCoordError, Vector},
+    coord::{Coord, ParseCoordError, Vector, pawn_direction},
     end_state::EndState,
     heuristics::Estimated,
     misc::InvalidByte,
@@ -298,6 +298,88 @@ impl Piece {
                 Box::new(self.all_controlled_squares_direction(board, &Vector::QUEEN_DIRECTIONS))
             }
             PieceKind::King => Box::new(self.controlled_squares_step(&Vector::KING_MOVES)),
+        }
+    }
+    fn pawn_attack_destination(
+        self,
+        attack: Coord,
+        board: &Board,
+    ) -> Box<dyn Iterator<Item = Coord> + '_> {
+        let difference = attack - self.position;
+        if difference.y == pawn_direction(self.color()) * 3 {
+            let destination = self
+                .position
+                .move_by(Vector::pawn_double_move(self.color()))
+                .unwrap();
+            if self.position.y() == Coord::pawn_home_rank(self.color())
+                && difference.x.unsigned_abs() == 1
+                && !self
+                    .position
+                    .line_ex_in(destination, Vector::pawn_single_move(self.color()))
+                    .any(|position| board[position].is_some())
+            {
+                Box::new(once(destination))
+            } else {
+                Box::new(empty())
+            }
+        } else if difference.y == pawn_direction(self.color()) * 2 {
+            match difference.x {
+                x @ (-2 | 2) => {
+                    let destination = self
+                        .position
+                        .move_by(Vector {
+                            x: x.signum(),
+                            y: pawn_direction(self.color()),
+                        })
+                        .unwrap();
+                    if board
+                        .index(destination)
+                        .is_some_and(|piece| piece.color() == !self.color())
+                    {
+                        Box::new(once(destination))
+                    } else {
+                        Box::new(empty())
+                    }
+                }
+                -1 | 1 => {
+                    let destination = self
+                        .position
+                        .move_by(Vector::pawn_single_move(self.color()))
+                        .unwrap();
+                    if board[destination].is_none() {
+                        Box::new(once(destination))
+                    } else {
+                        Box::new(empty())
+                    }
+                }
+                0 => Box::new(
+                    Vector::pawn_attacks(self.color())
+                        .into_iter()
+                        .filter_map(move |movement| self.position.move_by(movement))
+                        .filter(move |destination| {
+                            board
+                                .index(*destination)
+                                .is_some_and(|piece| piece.color() == !self.color())
+                        }),
+                ),
+                _ => Box::new(empty()),
+            }
+        } else {
+            Box::new(empty())
+        }
+    }
+    fn attack_destination(
+        self,
+        attack: Coord,
+        board: &Board,
+    ) -> Box<dyn Iterator<Item = Coord> + '_> {
+        match self.piece() {
+            PieceKind::Pawn => self.pawn_attack_destination(attack, board),
+            PieceKind::Knight => todo!(),
+            PieceKind::Bishop => todo!(),
+            PieceKind::Rook => todo!(),
+            PieceKind::Queen => todo!(),
+            PieceKind::King => todo!(),
         }
     }
 }
