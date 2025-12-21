@@ -156,11 +156,13 @@ pub fn repl() {
                 }
                 Input::Restart => {
                     board = Board::starting_position();
+                    game_tree = GameTree::new(board.clone());
                     update = true;
                     highlighted.clear();
                 }
                 Input::StartChess960 => {
                     board = Board::chess960(random_range(0..960));
+                    game_tree = GameTree::new(board.clone());
                     update = true;
                     highlighted.clear();
                 }
@@ -173,6 +175,7 @@ pub fn repl() {
                             continue;
                         }
                     };
+                    game_tree = GameTree::new(board.clone());
                     update = true;
                     highlighted.clear();
                 }
