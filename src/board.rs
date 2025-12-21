@@ -373,24 +373,8 @@ impl Piece {
         attack: Coord,
         board: &Board,
     ) -> Box<dyn Iterator<Item = Coord> + '_> {
-        debug_assert_ne!(self.position, attack);
         if self.position.x() == attack.x() || self.position.y() == attack.y() {
-            if self
-                .position
-                .line_ex_ex(attack, (attack - self.position).as_unit())
-                .any(|position| board[position].is_some())
-            {
-                Box::new(empty())
-            } else {
-                Box::new(
-                    attack
-                        .line_exclusive((self.position - attack).as_unit())
-                        .take_while(move |destination| {
-                            *destination == self.position || board[*destination].is_none()
-                        })
-                        .filter(move |destination| *destination != self.position),
-                )
-            }
+            Box::new(empty())
         } else {
             Box::new(
                 [
