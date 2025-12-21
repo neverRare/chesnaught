@@ -1134,7 +1134,7 @@ impl Board {
             .all_pieces()
             .map(|piece| piece.piece().value().map_or(0, NonZero::get))
             .sum();
-        <f32>::from(pieces) * <f32>::from(ESTIMATED_TOTAL_MOVES) / <f32>::from(STARTING_VALUE)
+        <f32>::from(pieces) * <f32>::from(ESTIMATED_TOTAL_MOVES) / <f32>::from(STARTING_VALUE * 2)
     }
     pub fn estimate(&self) -> Estimated {
         let mut white_score = Estimated::default();
