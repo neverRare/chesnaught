@@ -1,7 +1,6 @@
 #![forbid(unsafe_code)]
 #![warn(clippy::pedantic)]
-// TODO: remove this when the engine is fully implemented
-#![allow(dead_code, reason = "work in progress code")]
+// #![allow(dead_code, reason = "work in progress code")]
 
 use crate::uci::uci_loop;
 
