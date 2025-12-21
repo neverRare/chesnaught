@@ -1137,7 +1137,44 @@ impl Board {
         <f32>::from(pieces) * <f32>::from(ESTIMATED_TOTAL_MOVES) / <f32>::from(STARTING_VALUE)
     }
     pub fn estimate(&self) -> Estimated {
-        todo!()
+        let mut white_score = Estimated::default();
+        let mut black_score = Estimated::default();
+        let mut white_coverage = SimpleBoard::default();
+        let mut black_coverage = SimpleBoard::default();
+        for color in [Color::White, Color::Black] {
+            for piece in self.pieces(color) {
+                for attack in piece.controlled_squares(self) {
+                    match color {
+                        Color::White => {
+                            white_coverage[attack] = true;
+                            white_score.square_control += 1;
+                        }
+                        Color::Black => {
+                            black_coverage[attack] = true;
+                            black_score.square_control += 1;
+                        }
+                    }
+                }
+            }
+        }
+        for color in [Color::White, Color::Black] {
+            let opponent = self.king(!color).expect("king not found");
+            for piece in self.non_kings(color) {
+                for attack in piece.attack_destination(opponent.position, self) {
+                    let coverage = match color {
+                        Color::White => black_coverage,
+                        Color::Black => white_coverage,
+                    };
+                    if !coverage[attack] {
+                        match color {
+                            Color::White => white_score.king_safety += 1,
+                            Color::Black => black_score.king_safety += 1,
+                        }
+                    }
+                }
+            }
+        }
+        white_score - black_score
     }
     pub fn move_assert(&mut self, lan: Lan) {
         let valid_moves: FxHashSet<_> = self.valid_moves().into_iter().flatten().collect();

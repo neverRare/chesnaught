@@ -1,15 +1,112 @@
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    ops::{Add, AddAssign, Neg, Sub, SubAssign},
+};
 
 use crate::{color::Color, end_state::EndState, misc::CompoundI8};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct PawnAdvancement(pub [CompoundI8; 4]);
+
+impl Neg for PawnAdvancement {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        PawnAdvancement(self.0.map(|value| -value))
+    }
+}
+impl Add for PawnAdvancement {
+    type Output = PawnAdvancement;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        PawnAdvancement([
+            self.0[0] + rhs.0[0],
+            self.0[1] + rhs.0[1],
+            self.0[2] + rhs.0[2],
+            self.0[3] + rhs.0[3],
+        ])
+    }
+}
+impl AddAssign for PawnAdvancement {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+impl Sub for PawnAdvancement {
+    type Output = PawnAdvancement;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        PawnAdvancement([
+            self.0[0] - rhs.0[0],
+            self.0[1] - rhs.0[1],
+            self.0[2] - rhs.0[2],
+            self.0[3] - rhs.0[3],
+        ])
+    }
+}
+impl SubAssign for PawnAdvancement {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Estimated {
     pub king_constriction: i8,
     pub king_safety: i8,
-    pub end_game_pawn_advancement: [CompoundI8; 4],
+    pub end_game_pawn_advancement: PawnAdvancement,
     pub material: i8,
     pub square_control: i16,
     pub pawn_advancement: i8,
+}
+impl Add for Estimated {
+    type Output = Estimated;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Estimated {
+            king_constriction: self.king_constriction + rhs.king_constriction,
+            king_safety: self.king_safety + rhs.king_safety,
+            end_game_pawn_advancement: self.end_game_pawn_advancement
+                + rhs.end_game_pawn_advancement,
+            material: self.material + rhs.material,
+            square_control: self.square_control + rhs.square_control,
+            pawn_advancement: self.pawn_advancement + rhs.pawn_advancement,
+        }
+    }
+}
+impl AddAssign for Estimated {
+    fn add_assign(&mut self, rhs: Self) {
+        self.king_constriction += rhs.king_constriction;
+        self.king_safety += rhs.king_safety;
+        self.end_game_pawn_advancement += rhs.end_game_pawn_advancement;
+        self.material += rhs.material;
+        self.square_control += rhs.square_control;
+        self.pawn_advancement += rhs.pawn_advancement;
+    }
+}
+impl Sub for Estimated {
+    type Output = Estimated;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Estimated {
+            king_constriction: self.king_constriction - rhs.king_constriction,
+            king_safety: self.king_safety - rhs.king_safety,
+            end_game_pawn_advancement: self.end_game_pawn_advancement
+                - rhs.end_game_pawn_advancement,
+            material: self.material - rhs.material,
+            square_control: self.square_control - rhs.square_control,
+            pawn_advancement: self.pawn_advancement - rhs.pawn_advancement,
+        }
+    }
+}
+impl SubAssign for Estimated {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.king_constriction -= rhs.king_constriction;
+        self.king_safety -= rhs.king_safety;
+        self.end_game_pawn_advancement -= rhs.end_game_pawn_advancement;
+        self.material -= rhs.material;
+        self.square_control -= rhs.square_control;
+        self.pawn_advancement -= rhs.pawn_advancement;
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 
