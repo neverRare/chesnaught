@@ -202,7 +202,16 @@ impl GameTree {
     }
     pub fn move_piece(&mut self, movement: Lan) {
         let new = match &mut self.0.data {
-            Data::Board(board) => GameTreeInner::new(board.clone_and_move_lan(movement)),
+            Data::Board(_) => {
+                let dummy = Data::End(EndState::Draw);
+                let data = replace(&mut self.0.data, dummy);
+                let Data::Board(board) = data else {
+                    unreachable!()
+                };
+                let mut board = *board;
+                board.move_lan(movement);
+                GameTreeInner::new(board)
+            }
             Data::Children { children, .. } => {
                 let (_, _, children) = children.remove(
                     children
