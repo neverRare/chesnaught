@@ -399,7 +399,12 @@ impl Piece {
     ) -> Box<dyn Iterator<Item = Coord> + '_> {
         match self.piece() {
             PieceKind::Pawn => self.pawn_attack_destination(attack, board),
-            PieceKind::Knight => todo!(),
+            PieceKind::Knight => Box::new(
+                Vector::KNIGHT_MOVES
+                    .into_iter()
+                    .filter_map(move |movement| self.position.move_by(movement))
+                    .filter(move |destination| (attack - *destination).is_knight_move()),
+            ),
             PieceKind::Bishop => todo!(),
             PieceKind::Rook => self.rook_attack_destination(attack, board),
             PieceKind::Queen => todo!(),
