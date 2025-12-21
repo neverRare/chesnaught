@@ -103,7 +103,7 @@ impl FromStr for Fen {
     type Err = ParseFenError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut sections = s.split(' ');
+        let mut sections = s.split(' ').filter(|token| !token.is_empty());
 
         let board = parse_board(sections.next().ok_or(ParseFenError::UnexpectedEol)?)?;
 
