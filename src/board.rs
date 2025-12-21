@@ -21,7 +21,7 @@ use crate::{
     end_state::EndState,
     heuristics::Estimated,
     misc::InvalidByte,
-    piece::{self, ColoredPieceKind, InvalidFenPiece, PieceKind, STARTING_VALUE},
+    piece::{ColoredPieceKind, InvalidFenPiece, PieceKind, STARTING_VALUE},
     simple_board::SimpleBoard,
 };
 
