@@ -96,6 +96,21 @@ pub fn uci_loop() {
                 continue;
             }
         };
+        if debug {
+            let input: Vec<_> = text
+                .split(<char>::is_whitespace)
+                .filter(|token| !token.is_empty())
+                .collect();
+            let recognized = parsed_input.to_string();
+            let recognized_tokens: Vec<_> = recognized
+                .split(<char>::is_whitespace)
+                .filter(|token| !token.is_empty())
+                .collect();
+            if input != recognized_tokens {
+                debug_print("warning: there are parts of input that aren't recognized".to_string());
+                debug_print(format!("recognized input: {recognized}"));
+            }
+        }
         match parsed_input {
             Input::Uci => {
                 for config in CONFIG {
