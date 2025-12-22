@@ -1,13 +1,3 @@
-use std::{
-    io::{Write, stdout},
-    sync::{
-        Arc,
-        atomic::{AtomicU64, Ordering},
-    },
-    thread::spawn,
-    time::Instant,
-};
-
 use rand::{Rng, SeedableRng, rngs::SmallRng};
 use rustc_hash::FxHashSet;
 
@@ -51,22 +41,6 @@ impl From<chess::ChessMove> for Lan {
 pub fn fuzz() {
     let mut board = Board::starting_position();
     let mut rng = SmallRng::from_os_rng();
-    let position_count = Arc::new(AtomicU64::new(0));
-    let borrowed = Arc::clone(&position_count);
-    spawn(move || {
-        let mut output = stdout().lock();
-        let started = Instant::now();
-        writeln!(output).unwrap();
-        loop {
-            write!(
-                output,
-                "\rpositions checked: {} seconds elapsed: {}",
-                borrowed.load(Ordering::Relaxed),
-                started.elapsed().as_secs(),
-            )
-            .unwrap();
-        }
-    });
     loop {
         let moves: FxHashSet<_> = board
             .valid_moves()
@@ -76,7 +50,6 @@ pub fn fuzz() {
             .collect();
         if moves.is_empty() {
             board = Board::starting_position();
-            position_count.fetch_add(1, Ordering::AcqRel);
             continue;
         }
         let board2: chess::Board = Fen {
@@ -110,7 +83,6 @@ pub fn fuzz() {
                 }
             );
         }
-        position_count.fetch_add(1, Ordering::AcqRel);
         let moves: Vec<_> = moves.into_iter().collect();
         let movement = moves[rng.random_range(0..moves.len())];
         board.move_lan(movement);
