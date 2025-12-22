@@ -19,6 +19,7 @@ mod piece;
 mod repl;
 mod simple_board;
 mod uci;
+mod fuzz;
 
 fn main() {
     uci_loop();

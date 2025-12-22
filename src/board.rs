@@ -1451,6 +1451,20 @@ impl Move {
         let (first, second) = self.as_lan_pair(board);
         once(first).chain(second)
     }
+    pub fn as_lan(self, board: &Board) -> Lan {
+        let (regular, chess960) = self.as_ambiguous_lan_pair(board);
+        if let Some(chess960) = chess960 {
+            if regular.origin.x() == Coord::KING_ORIGIN
+                && Coord::ROOK_ORIGINS.contains(&chess960.destination.x())
+            {
+                regular
+            } else {
+                chess960
+            }
+        } else {
+            regular
+        }
+    }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Lan {

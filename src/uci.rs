@@ -9,6 +9,7 @@ use crate::{
     board::{Board, NullableLan},
     color::Color,
     engine::Engine,
+    fuzz::fuzz,
     game_tree::Table,
     misc::MEBIBYTES,
     repl::repl,
@@ -323,6 +324,14 @@ pub fn uci_loop() {
                     drop(lines);
                     drop(engine);
                     repl();
+                    return;
+                }
+            }
+            Input::Fuzz => {
+                if !uci {
+                    drop(lines);
+                    drop(engine);
+                    fuzz();
                     return;
                 }
             }

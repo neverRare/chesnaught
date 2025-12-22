@@ -38,6 +38,7 @@ pub enum Input<'a> {
     PonderHit,
     Quit,
     Repl,
+    Fuzz,
 }
 impl<'a> Input<'a> {
     fn from_str_from_start(src: &'a str) -> Result<Self, ParseInputError> {
@@ -90,6 +91,8 @@ impl<'a> Input<'a> {
             Ok(Input::Quit)
         } else if starts_with_token(src, "repl") {
             Ok(Input::Repl)
+        } else if starts_with_token(src, "fuzz") {
+            Ok(Input::Fuzz)
         } else {
             Err(ParseInputError::UnknownCommand(
                 extract_prefix_token(src).into(),
@@ -135,6 +138,7 @@ impl Display for Input<'_> {
             Input::PonderHit => write!(f, "ponderhit")?,
             Input::Quit => write!(f, "quit")?,
             Input::Repl => write!(f, "repl")?,
+            Input::Fuzz => write!(f, "fuzz")?,
         }
         Ok(())
     }
