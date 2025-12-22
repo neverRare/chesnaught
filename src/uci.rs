@@ -1,5 +1,6 @@
 use std::{
     cell::LazyCell,
+    fmt::Write,
     io::{BufRead, stdin},
     num::NonZero,
 };
@@ -185,6 +186,9 @@ pub fn uci_loop() {
             Input::Position { position, moves } => {
                 if uci {
                     if !uci_new_game_available || new_game {
+                        if debug {
+                            debug_print("setting up new board".to_string());
+                        }
                         board = position.board().unwrap();
                         for movement in &moves {
                             board.move_lan(*movement);
@@ -192,7 +196,15 @@ pub fn uci_loop() {
                         engine.set_board(board.clone());
                         new_game = false;
                     } else {
-                        for movement in &moves[(moves.len() - move_count)..] {
+                        let moves = &moves[(moves.len() - move_count)..];
+                        if debug {
+                            let mut message = "reusing previous board. moves used:".to_string();
+                            for movement in moves {
+                                write!(&mut message, " {movement}").unwrap();
+                            }
+                            debug_print(message);
+                        }
+                        for movement in moves {
                             board.move_lan(*movement);
                             engine.move_piece(*movement);
                         }
