@@ -216,7 +216,7 @@ impl GameTree {
                 GameTreeInner::new(board)
             }
             Data::Children { children, .. } => {
-                let (_, _, children) = children.remove(
+                let (_, _, children) = children.swap_remove(
                     children
                         .iter()
                         .position(|(b, c, _)| movement == *b || Some(movement) == *c)
