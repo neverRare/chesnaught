@@ -146,7 +146,7 @@ impl GameTreeInner {
                 let mut alpha_beta = AlphaBetaState::new(current_player, alpha, beta);
 
                 table.insert_repetition(board);
-                for (_, _, game_tree) in children.iter_mut() {
+                for (_, _, game_tree) in &mut *children {
                     nodes += game_tree.alpha_beta(depth - 1, alpha, beta, table, stop_signal);
                     if let Some(score) = game_tree.score
                         && alpha_beta.set(score)
