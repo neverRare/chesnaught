@@ -211,7 +211,7 @@ pub fn uci_loop() {
                         engine.set_board(board.clone());
                         new_game = false;
                     } else {
-                        let moves = &moves[(moves.len() - move_count)..];
+                        let moves = &moves[move_count..];
                         if debug {
                             let mut message = "reusing previous board. moves used:".to_string();
                             for movement in moves {
