@@ -158,7 +158,7 @@ impl Piece {
                         } else {
                             board[destination]?
                         };
-                        Some(SimpleMove {
+                        (board[capture].unwrap().color() != self.color()).then_some(SimpleMove {
                             index,
                             destination,
                             capture: Some(capture),
