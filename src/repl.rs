@@ -229,6 +229,9 @@ pub fn repl() {
                     let movement = game_tree.best_move().unwrap();
                     board.move_lan(movement);
                     game_tree.move_piece(movement);
+                    highlighted.clear();
+                    highlighted.push(movement.origin);
+                    highlighted.push(movement.destination);
                     update = true;
                 }
             }
