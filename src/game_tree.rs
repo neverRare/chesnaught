@@ -211,8 +211,8 @@ impl GameTreeInner {
                 drop(write);
                 children.sort_unstable_by(|(_, _, a), (_, _, b)| match (a.score, b.score) {
                     (None, None) => Ordering::Equal,
-                    (None, Some(_)) => Ordering::Less,
-                    (Some(_), None) => Ordering::Greater,
+                    (None, Some(_)) => Ordering::Greater,
+                    (Some(_), None) => Ordering::Less,
                     (Some(a), Some(b)) => match current_player {
                         Color::White => Ord::cmp(&b, &a),
                         Color::Black => Ord::cmp(&a, &b),
