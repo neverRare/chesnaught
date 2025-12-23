@@ -181,14 +181,17 @@ impl GameTreeInner {
         let mut write = setting.table.write().unwrap();
         write.remove_repetition(&board);
         drop(write);
-        children.sort_unstable_by(|(_, _, a), (_, _, b)| match (a.score, b.score) {
-            (None, None) => Ordering::Equal,
-            (None, Some(_)) => Ordering::Greater,
-            (Some(_), None) => Ordering::Less,
-            (Some(a), Some(b)) => match current_player {
-                Color::White => Ord::cmp(&b, &a),
-                Color::Black => Ord::cmp(&a, &b),
-            },
+        children.sort_unstable_by(|(_, _, a), (_, _, b)| {
+            let ord = match (a.score, b.score) {
+                (None, None) => Ordering::Equal,
+                (None, Some(_)) => Ordering::Less,
+                (Some(_), None) => Ordering::Greater,
+                (Some(a), Some(b)) => match current_player {
+                    Color::White => Ord::cmp(&a, &b),
+                    Color::Black => Ord::cmp(&a, &b).reverse(),
+                },
+            };
+            ord.reverse()
         });
         let mut write = setting.table.write().unwrap();
         write.insert_transposition(board, self.score.unwrap());
