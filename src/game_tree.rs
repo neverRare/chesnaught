@@ -215,12 +215,13 @@ impl GameTreeInner {
 
             let read = setting.table.read().unwrap();
 
-            if let Some(score) = read.get_transposition(&board) {
-                self.score = Some(*score);
-                return 1;
-            }
-            if read.contains_repetition(&board) {
-                return 1;
+            if let Some(table) = read.get(&board) {
+                if table.repetition {
+                    return 1;
+                } else if let Some(score) = table.transposition {
+                    self.score = Some(score);
+                    return 1;
+                }
             }
             drop(read);
             let (nodes, score) = if setting.depth == 0 {
@@ -401,13 +402,8 @@ impl Table {
             self.clear_allocation();
         }
     }
-    fn get_transposition(&self, board: &HashableBoard) -> Option<&Score> {
-        self.table
-            .get(board)
-            .and_then(|value| value.transposition.as_ref())
-    }
-    fn contains_repetition(&self, board: &HashableBoard) -> bool {
-        self.table.get(board).is_some_and(|value| value.repetition)
+    fn get(&self, board: &HashableBoard) -> Option<&TableValue> {
+        self.get(board)
     }
     fn inspect_element(&mut self, board: HashableBoard, f: impl FnOnce(&mut TableValue)) {
         if let Some(value) = self.table.get_mut(&board) {
