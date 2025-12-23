@@ -119,6 +119,8 @@ impl GameTreeInner {
         let children = self.children_or_init().unwrap();
         let mut alpha_beta = AlphaBetaState::new(current_player, setting.alpha, setting.beta);
 
+        let mut searched_children = 0;
+
         let mut write = setting.table.write().unwrap();
         write.insert_repetition(board);
         drop(write);
@@ -147,6 +149,7 @@ impl GameTreeInner {
                     for handle in handles {
                         let (b, score) = handle.join().unwrap();
                         nodes += b;
+                        searched_children += 1;
                         if !stop
                             && let Some(score) = score
                             && alpha_beta.set(score)
@@ -171,6 +174,7 @@ impl GameTreeInner {
                     thread_count: setting.thread_count,
                     stop_signal: setting.stop_signal,
                 });
+                searched_children += 1;
                 if let Some(score) = game_tree.score
                     && alpha_beta.set(score)
                 {
@@ -181,7 +185,7 @@ impl GameTreeInner {
         let mut write = setting.table.write().unwrap();
         write.remove_repetition(&board);
         drop(write);
-        children.sort_unstable_by(|(_, _, a), (_, _, b)| {
+        children[..searched_children].sort_unstable_by(|(_, _, a), (_, _, b)| {
             let ord = match (a.score, b.score) {
                 (None, None) => Ordering::Equal,
                 (None, Some(_)) => Ordering::Less,
