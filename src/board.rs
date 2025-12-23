@@ -17,7 +17,7 @@ use crate::{
     color::Color,
     coord::{Coord, ParseCoordError, RotatedCoord, Vector},
     end_state::EndState,
-    heuristics::Estimated,
+    heuristics::{Estimated, PawnAdvancement},
     misc::InvalidByte,
     piece::{ColoredPieceKind, InvalidFenPiece, PieceKind, STARTING_VALUE},
     simple_board::SimpleBoard,
@@ -1137,6 +1137,8 @@ impl Board {
     pub fn estimate(&self) -> Estimated {
         let mut white_score = Estimated::default();
         let mut black_score = Estimated::default();
+        let mut white_pawn_advancement = [0; 8];
+        let mut black_pawn_advancement = [0; 8];
         let mut white_coverage = SimpleBoard::default();
         let mut black_coverage = SimpleBoard::default();
         for color in [Color::White, Color::Black] {
@@ -1163,8 +1165,30 @@ impl Board {
                     Color::White => white_score.material += value,
                     Color::Black => black_score.material += value,
                 }
+                if piece.piece() == PieceKind::Pawn {
+                    let (array, number) = match color {
+                        Color::White => (
+                            &mut white_pawn_advancement,
+                            7 - <i8>::try_from(piece.position.y()).unwrap(),
+                        ),
+                        Color::Black => (
+                            &mut black_pawn_advancement,
+                            piece.position.y().try_into().unwrap(),
+                        ),
+                    };
+                    for item in array {
+                        if *item == 0 {
+                            *item = number;
+                            break;
+                        }
+                    }
+                }
             }
         }
+        white_pawn_advancement.sort_unstable();
+        black_pawn_advancement.sort_unstable();
+        white_score.pawn_advancement = PawnAdvancement::new(white_pawn_advancement);
+        black_score.pawn_advancement = PawnAdvancement::new(black_pawn_advancement);
         for color in [Color::White, Color::Black] {
             let opponent = self.king(!color).expect("king not found");
             for piece in self.non_kings(color) {

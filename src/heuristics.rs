@@ -8,6 +8,16 @@ use crate::{color::Color, end_state::EndState, misc::CompoundI8};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct PawnAdvancement(pub [CompoundI8; 4]);
 
+impl PawnAdvancement {
+    pub fn new(array: [i8; 8]) -> Self {
+        PawnAdvancement([
+            CompoundI8::new(array[0], array[1]),
+            CompoundI8::new(array[2], array[3]),
+            CompoundI8::new(array[4], array[5]),
+            CompoundI8::new(array[6], array[7]),
+        ])
+    }
+}
 impl Neg for PawnAdvancement {
     type Output = Self;
 
