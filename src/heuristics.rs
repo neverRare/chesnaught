@@ -58,21 +58,10 @@ pub struct Estimated {
     pub king_constriction: i8,
 }
 impl Estimated {
-    pub fn centipawn(self) -> Centipawn {
-        if self.king_constriction == 0 {
-            Centipawn::Centipawn(
-                <i32>::from(self.king_safety) * 1_000
-                    + <i32>::from(self.material) * 100
-                    + <i32>::from(self.square_control),
-            )
-        } else {
-            let color = match self.king_constriction.signum() {
-                1 => Color::White,
-                -1 => Color::Black,
-                _ => unreachable!(),
-            };
-            Centipawn::Win(color)
-        }
+    pub fn centipawn(self) -> i32 {
+        <i32>::from(self.king_safety) * 1_000
+            + <i32>::from(self.material) * 100
+            + <i32>::from(self.square_control)
     }
 }
 impl Add for Estimated {
@@ -141,7 +130,7 @@ impl Score {
     pub fn centipawn(self) -> Centipawn {
         match self {
             Score::Win(color) => Centipawn::Win(color),
-            Score::Estimated(estimated) => estimated.centipawn(),
+            Score::Estimated(estimated) => Centipawn::Centipawn(estimated.centipawn()),
         }
     }
 }
