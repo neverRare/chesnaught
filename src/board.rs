@@ -1186,12 +1186,12 @@ impl Board {
         black_score.pawn_advancement = PawnAdvancement::new(black_pawn_advancement);
         for color in [Color::White, Color::Black] {
             let opponent = self.king(!color).expect("king not found");
+            let coverage = match color {
+                Color::White => black_coverage,
+                Color::Black => white_coverage,
+            };
             for piece in self.non_kings(color) {
                 for attack in piece.attack_destination(opponent.position, self) {
-                    let coverage = match color {
-                        Color::White => black_coverage,
-                        Color::Black => white_coverage,
-                    };
                     if !coverage[attack] {
                         match color {
                             Color::White => white_score.king_safety += 1,
