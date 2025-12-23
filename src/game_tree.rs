@@ -157,8 +157,8 @@ impl GameTreeInner {
                                     scope.spawn(|| {
                                         let nodes = game_tree.alpha_beta(AlphaBetaSetting {
                                             depth: setting.depth - 1,
-                                            alpha: setting.alpha,
-                                            beta: setting.beta,
+                                            alpha: alpha_beta.alpha,
+                                            beta: alpha_beta.beta,
                                             table: setting.table,
                                             multithread_depth: None,
                                             thread_count: setting.thread_count,
@@ -189,8 +189,8 @@ impl GameTreeInner {
                     for (_, _, game_tree) in &mut *children {
                         nodes += game_tree.alpha_beta(AlphaBetaSetting {
                             depth: setting.depth - 1,
-                            alpha: setting.alpha,
-                            beta: setting.beta,
+                            alpha: alpha_beta.alpha,
+                            beta: alpha_beta.beta,
                             table: setting.table,
                             multithread_depth: setting.multithread_depth.map(|depth| depth - 1),
                             thread_count: setting.thread_count,
