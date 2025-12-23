@@ -61,15 +61,15 @@ impl SubAssign for PawnAdvancement {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Estimated {
-    pub king_safety: i8,
     pub material: i8,
+    pub king_safety: i8,
     pub square_control: i16,
     pub pawn_advancement: PawnAdvancement,
 }
 impl Estimated {
     pub fn centipawn(self) -> i32 {
-        <i32>::from(self.king_safety) * 1_000
-            + <i32>::from(self.material) * 100
+        <i32>::from(self.material) * 100
+            + <i32>::from(self.king_safety)
             + <i32>::from(self.square_control)
     }
 }
