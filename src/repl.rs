@@ -246,7 +246,7 @@ pub fn repl() {
                     let sorted = game_tree.calculate(depth, &mut table, thread);
                     writeln!(output, "total number of nodes: {total}").unwrap();
                     writeln!(output, "searched nodes with unsorted branches: {presorted}").unwrap();
-                    writeln!(output, "searched nodes with sorted branches: {total}").unwrap();
+                    writeln!(output, "searched nodes with sorted branches: {sorted}").unwrap();
                 }
             }
             break;
