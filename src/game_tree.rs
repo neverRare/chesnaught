@@ -114,7 +114,7 @@ impl GameTreeInner {
         }
     }
     fn search(&mut self, board: HashableBoard, setting: AlphaBetaSetting) -> u32 {
-        let mut nodes = 0;
+        let mut nodes = 1;
         let current_player = self.current_player().unwrap();
         let children = self.children_or_init().unwrap();
         let mut alpha_beta = AlphaBetaState::new(current_player, setting.alpha, setting.beta);
@@ -219,13 +219,12 @@ impl GameTreeInner {
                 return 1;
             }
             drop(read);
-            let mut nodes = 1;
             if setting.depth == 0 {
                 self.score = Some(self.estimate());
+                1
             } else {
-                nodes += self.search(board, setting);
+                self.search(board, setting)
             }
-            nodes
         }
     }
     fn estimate(&self) -> Score {
