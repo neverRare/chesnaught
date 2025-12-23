@@ -199,7 +199,7 @@ impl GameTreeInner {
         });
         self.score = Some(alpha_beta.score);
         let mut write = setting.table.write().unwrap();
-        write.insert_transposition(board, self.score.unwrap());
+        write.insert_transposition(board, alpha_beta.score);
         drop(write);
         nodes
     }
