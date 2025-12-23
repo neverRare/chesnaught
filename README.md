@@ -4,7 +4,7 @@ Toy Chess and [Chess960] engine that speaks [UCI].
 
 ## Installation
 
-While it's currently under-development, pre-built executables are not yet available. Compile it yourself using [Cargo], remember to put `--release`.
+This is a toy project that I don't feel like providing prebuilt executables. Compile it yourself using [Cargo], remember to put `--release`.
 
 Chesnaught is a command line software. You'll need a GUI in order to use Chesnaught. I recommend [En Croissant].
 
