@@ -113,7 +113,7 @@ impl GameTreeInner {
             Data::End(_) => None,
         }
     }
-    fn search(&mut self, board: HashableBoard, setting: AlphaBetaSetting) -> u32 {
+    fn search(&mut self, board: HashableBoard, setting: AlphaBetaSetting) -> (u32, Score) {
         let mut nodes = 1;
         let current_player = self.current_player().unwrap();
         let children = self.children_or_init().unwrap();
@@ -198,10 +198,7 @@ impl GameTreeInner {
             ord.reverse()
         });
         self.score = Some(alpha_beta.score);
-        let mut write = setting.table.write().unwrap();
-        write.insert_transposition(board, alpha_beta.score);
-        drop(write);
-        nodes
+        (nodes, alpha_beta.score)
     }
     fn alpha_beta(&mut self, setting: AlphaBetaSetting) -> u32 {
         if setting
@@ -226,12 +223,17 @@ impl GameTreeInner {
                 return 1;
             }
             drop(read);
-            if setting.depth == 0 {
-                self.score = Some(self.estimate());
-                1
+            let (nodes, score) = if setting.depth == 0 {
+                let score = self.estimate();
+                self.score = Some(score);
+                (1, score)
             } else {
                 self.search(board, setting)
-            }
+            };
+            let mut write = setting.table.write().unwrap();
+            write.insert_transposition(board, score);
+            drop(write);
+            nodes
         }
     }
     fn estimate(&self) -> Score {
