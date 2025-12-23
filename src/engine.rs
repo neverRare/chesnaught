@@ -21,6 +21,7 @@ enum Input {
     Move(Lan),
     Calculate {
         depth: Option<NonZero<u32>>,
+        nodes: Option<NonZero<u32>>,
         mate_in_plies: Option<NonZero<u32>>,
         info_callback: Box<dyn FnMut(Info) + Send>,
         best_move_callback: Box<dyn FnOnce(Option<Lan>) + Send>,
@@ -65,6 +66,7 @@ impl Engine {
                     Input::Move(movement) => game_tree.move_piece(movement),
                     Input::Calculate {
                         depth,
+                        nodes: max_nodes,
                         mate_in_plies,
                         mut info_callback,
                         best_move_callback,
@@ -89,6 +91,7 @@ impl Engine {
                             });
                             if stop_signal.load(Ordering::Relaxed)
                                 || depth.is_some_and(|depth| i >= depth.get())
+                                || max_nodes.is_some_and(|max_nodes| nodes >= max_nodes.get())
                                 || (game_tree.score().is_some_and(Score::is_win)
                                     && mate_in_plies.is_some_and(|plies| i <= plies.get()))
                             {
@@ -126,6 +129,7 @@ impl Engine {
         &mut self,
         duration: Option<Duration>,
         depth: Option<NonZero<u32>>,
+        nodes: Option<NonZero<u32>>,
         mate_in_plies: Option<NonZero<u32>>,
         info_callback: impl FnMut(Info) + Send + 'static,
         best_move_callback: impl FnOnce(Option<Lan>) + Send + 'static,
@@ -141,6 +145,7 @@ impl Engine {
         self.input
             .send(Input::Calculate {
                 depth,
+                nodes,
                 mate_in_plies,
                 info_callback: Box::new(info_callback),
                 best_move_callback: Box::new(best_move_callback),

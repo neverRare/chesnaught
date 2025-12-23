@@ -275,6 +275,7 @@ pub fn uci_loop() {
                     engine.calculate(
                         go.estimate_move_time(&board),
                         go.depth,
+                        go.nodes,
                         mate,
                         move |info| {
                             // precision doesn't matter
