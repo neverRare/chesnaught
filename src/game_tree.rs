@@ -113,6 +113,91 @@ impl GameTreeInner {
             Data::End(_) => None,
         }
     }
+    fn search(&mut self, board: HashableBoard, setting: AlphaBetaSetting) -> u32 {
+        let mut nodes = 0;
+        let current_player = self.current_player().unwrap();
+        let children = self.children_or_init().unwrap();
+        let mut alpha_beta = AlphaBetaState::new(current_player, setting.alpha, setting.beta);
+
+        let mut write = setting.table.write().unwrap();
+        write.insert_repetition(board);
+        drop(write);
+        if setting.multithread_depth == Some(0) {
+            for chunk in children.chunks_mut(setting.thread_count) {
+                let result: Vec<_> = scope(|scope| {
+                    let handles: Vec<_> = chunk
+                        .iter_mut()
+                        .map(|(_, _, game_tree)| {
+                            scope.spawn(|| {
+                                let nodes = game_tree.alpha_beta(AlphaBetaSetting {
+                                    depth: setting.depth - 1,
+                                    alpha: alpha_beta.alpha,
+                                    beta: alpha_beta.beta,
+                                    table: setting.table,
+                                    multithread_depth: None,
+                                    thread_count: setting.thread_count,
+                                    stop_signal: setting.stop_signal,
+                                });
+                                (nodes, game_tree.score)
+                            })
+                        })
+                        .collect();
+                    while !handles.iter().all(ScopedJoinHandle::is_finished) {}
+                    handles
+                        .into_iter()
+                        .map(|handle| handle.join().unwrap())
+                        .collect()
+                });
+                let mut stop = false;
+                for (b, score) in &result {
+                    nodes += b;
+                    if !stop
+                        && let Some(score) = *score
+                        && alpha_beta.set(score)
+                    {
+                        stop = true;
+                    }
+                }
+                if stop {
+                    break;
+                }
+            }
+        } else {
+            for (_, _, game_tree) in &mut *children {
+                nodes += game_tree.alpha_beta(AlphaBetaSetting {
+                    depth: setting.depth - 1,
+                    alpha: alpha_beta.alpha,
+                    beta: alpha_beta.beta,
+                    table: setting.table,
+                    multithread_depth: setting.multithread_depth.map(|depth| depth - 1),
+                    thread_count: setting.thread_count,
+                    stop_signal: setting.stop_signal,
+                });
+                if let Some(score) = game_tree.score
+                    && alpha_beta.set(score)
+                {
+                    break;
+                }
+            }
+        }
+        let mut write = setting.table.write().unwrap();
+        write.remove_repetition(&board);
+        drop(write);
+        children.sort_unstable_by(|(_, _, a), (_, _, b)| match (a.score, b.score) {
+            (None, None) => Ordering::Equal,
+            (None, Some(_)) => Ordering::Greater,
+            (Some(_), None) => Ordering::Less,
+            (Some(a), Some(b)) => match current_player {
+                Color::White => Ord::cmp(&b, &a),
+                Color::Black => Ord::cmp(&a, &b),
+            },
+        });
+        let mut write = setting.table.write().unwrap();
+        write.insert_transposition(board, self.score.unwrap());
+        drop(write);
+        self.score = Some(alpha_beta.score);
+        nodes
+    }
     fn alpha_beta(&mut self, setting: AlphaBetaSetting) -> u32 {
         if setting
             .stop_signal
@@ -140,89 +225,8 @@ impl GameTreeInner {
             if setting.depth == 0 {
                 self.score = Some(self.estimate());
             } else {
-                let current_player = self.current_player().unwrap();
-                let children = self.children_or_init().unwrap();
-                let mut alpha_beta =
-                    AlphaBetaState::new(current_player, setting.alpha, setting.beta);
-
-                let mut write = setting.table.write().unwrap();
-                write.insert_repetition(board);
-                drop(write);
-                if setting.multithread_depth == Some(0) {
-                    for chunk in children.chunks_mut(setting.thread_count) {
-                        let result: Vec<_> = scope(|scope| {
-                            let handles: Vec<_> = chunk
-                                .iter_mut()
-                                .map(|(_, _, game_tree)| {
-                                    scope.spawn(|| {
-                                        let nodes = game_tree.alpha_beta(AlphaBetaSetting {
-                                            depth: setting.depth - 1,
-                                            alpha: alpha_beta.alpha,
-                                            beta: alpha_beta.beta,
-                                            table: setting.table,
-                                            multithread_depth: None,
-                                            thread_count: setting.thread_count,
-                                            stop_signal: setting.stop_signal,
-                                        });
-                                        (nodes, game_tree.score)
-                                    })
-                                })
-                                .collect();
-                            while !handles.iter().all(ScopedJoinHandle::is_finished) {}
-                            handles
-                                .into_iter()
-                                .map(|handle| handle.join().unwrap())
-                                .collect()
-                        });
-                        let mut stop = false;
-                        for (b, score) in &result {
-                            nodes += b;
-                            if !stop
-                                && let Some(score) = *score
-                                && alpha_beta.set(score)
-                            {
-                                stop = true;
-                            }
-                        }
-                        if stop {
-                            break;
-                        }
-                    }
-                } else {
-                    for (_, _, game_tree) in &mut *children {
-                        nodes += game_tree.alpha_beta(AlphaBetaSetting {
-                            depth: setting.depth - 1,
-                            alpha: alpha_beta.alpha,
-                            beta: alpha_beta.beta,
-                            table: setting.table,
-                            multithread_depth: setting.multithread_depth.map(|depth| depth - 1),
-                            thread_count: setting.thread_count,
-                            stop_signal: setting.stop_signal,
-                        });
-                        if let Some(score) = game_tree.score
-                            && alpha_beta.set(score)
-                        {
-                            break;
-                        }
-                    }
-                }
-                let mut write = setting.table.write().unwrap();
-                write.remove_repetition(&board);
-                drop(write);
-                children.sort_unstable_by(|(_, _, a), (_, _, b)| match (a.score, b.score) {
-                    (None, None) => Ordering::Equal,
-                    (None, Some(_)) => Ordering::Greater,
-                    (Some(_), None) => Ordering::Less,
-                    (Some(a), Some(b)) => match current_player {
-                        Color::White => Ord::cmp(&b, &a),
-                        Color::Black => Ord::cmp(&a, &b),
-                    },
-                });
-                self.score = Some(alpha_beta.score);
+                nodes += self.search(board, setting);
             }
-            let mut write = setting.table.write().unwrap();
-            write.insert_transposition(board, self.score.unwrap());
-            drop(write);
             nodes
         }
     }
@@ -252,6 +256,7 @@ impl GameTreeInner {
         self.children().map(|children| &children[0])
     }
 }
+#[derive(Debug, Clone, Copy)]
 struct AlphaBetaSetting<'lock, 'table, 'bool> {
     depth: u32,
     alpha: Score,
