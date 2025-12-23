@@ -65,7 +65,6 @@ pub struct Estimated {
     pub material: i8,
     pub square_control: i16,
     pub pawn_advancement: PawnAdvancement,
-    pub king_constriction: i8,
 }
 impl Estimated {
     pub fn centipawn(self) -> i32 {
@@ -79,7 +78,6 @@ impl Add for Estimated {
 
     fn add(self, rhs: Self) -> Self::Output {
         Estimated {
-            king_constriction: self.king_constriction + rhs.king_constriction,
             king_safety: self.king_safety + rhs.king_safety,
             pawn_advancement: self.pawn_advancement + rhs.pawn_advancement,
             material: self.material + rhs.material,
@@ -89,7 +87,6 @@ impl Add for Estimated {
 }
 impl AddAssign for Estimated {
     fn add_assign(&mut self, rhs: Self) {
-        self.king_constriction += rhs.king_constriction;
         self.king_safety += rhs.king_safety;
         self.pawn_advancement += rhs.pawn_advancement;
         self.material += rhs.material;
@@ -101,7 +98,6 @@ impl Sub for Estimated {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Estimated {
-            king_constriction: self.king_constriction - rhs.king_constriction,
             king_safety: self.king_safety - rhs.king_safety,
             pawn_advancement: self.pawn_advancement - rhs.pawn_advancement,
             material: self.material - rhs.material,
@@ -111,7 +107,6 @@ impl Sub for Estimated {
 }
 impl SubAssign for Estimated {
     fn sub_assign(&mut self, rhs: Self) {
-        self.king_constriction -= rhs.king_constriction;
         self.king_safety -= rhs.king_safety;
         self.pawn_advancement -= rhs.pawn_advancement;
         self.material -= rhs.material;
