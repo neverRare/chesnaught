@@ -24,7 +24,7 @@ Chesnaught actual uses more than alloted threads but the extra threads should be
 
 ### Hash
 
-The amount of memory in MiB that Chesnaught will use for storing previously computed board position to avoid duplicate computation. Chesnaught will not allocate it right away but it'll start with none then it'll grow as needed. It could be limited to lower setting but it is guaranteed to never exceed provided limit. Optimal setting: as high as you're willing to give.
+The amount of memory in MiB that Chesnaught will use for storing previously computed board position to avoid duplicate computation. Chesnaught will not allocate it right away but it'll start with none then it'll grow as needed. Chesnaught could limit itself to a lower setting but it is guaranteed to never exceed provided limit. Optimal setting: as high as you're willing to give.
 
 ## Playing
 
