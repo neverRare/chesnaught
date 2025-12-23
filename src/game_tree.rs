@@ -174,14 +174,14 @@ impl GameTreeInner {
                                 .map(|handle| handle.join().unwrap())
                                 .collect()
                         });
-                        let stop = false;
+                        let mut stop = false;
                         for (b, score) in &result {
                             nodes += b;
                             if !stop
                                 && let Some(score) = *score
                                 && alpha_beta.set(score)
                             {
-                                break;
+                                stop = true;
                             }
                         }
                         if stop {
