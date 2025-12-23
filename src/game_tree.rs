@@ -402,7 +402,7 @@ impl Table {
         }
     }
     fn get(&self, board: &HashableBoard) -> Option<&TableValue> {
-        self.get(board)
+        self.table.get(board)
     }
     fn inspect_element(&mut self, board: HashableBoard, f: impl FnOnce(&mut TableValue)) {
         if let Some(value) = self.table.get_mut(&board) {
