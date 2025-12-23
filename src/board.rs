@@ -1141,46 +1141,44 @@ impl Board {
         let mut black_pawn_advancement = [0; 8];
         let mut white_coverage = SimpleBoard::default();
         let mut black_coverage = SimpleBoard::default();
-        for color in [Color::White, Color::Black] {
-            for piece in self.pieces(color) {
-                for attack in piece.controlled_squares(self) {
-                    match color {
-                        Color::White => {
-                            white_coverage[attack] = true;
-                            white_score.square_control += 1;
-                        }
-                        Color::Black => {
-                            black_coverage[attack] = true;
-                            black_score.square_control += 1;
-                        }
+        for piece in self.all_pieces() {
+            for attack in piece.controlled_squares(self) {
+                match piece.color() {
+                    Color::White => {
+                        white_coverage[attack] = true;
+                        white_score.square_control += 1;
+                    }
+                    Color::Black => {
+                        black_coverage[attack] = true;
+                        black_score.square_control += 1;
                     }
                 }
-                let value: i8 = piece
-                    .piece()
-                    .value()
-                    .map_or(0, NonZero::get)
-                    .try_into()
-                    .unwrap();
-                match color {
-                    Color::White => white_score.material += value,
-                    Color::Black => black_score.material += value,
-                }
-                if piece.piece() == PieceKind::Pawn {
-                    let (array, number) = match color {
-                        Color::White => (
-                            &mut white_pawn_advancement,
-                            7 - <i8>::try_from(piece.position.y()).unwrap(),
-                        ),
-                        Color::Black => (
-                            &mut black_pawn_advancement,
-                            piece.position.y().try_into().unwrap(),
-                        ),
-                    };
-                    for item in array {
-                        if *item == 0 {
-                            *item = number;
-                            break;
-                        }
+            }
+            let value: i8 = piece
+                .piece()
+                .value()
+                .map_or(0, NonZero::get)
+                .try_into()
+                .unwrap();
+            match piece.color() {
+                Color::White => white_score.material += value,
+                Color::Black => black_score.material += value,
+            }
+            if piece.piece() == PieceKind::Pawn {
+                let (array, number) = match piece.color() {
+                    Color::White => (
+                        &mut white_pawn_advancement,
+                        7 - <i8>::try_from(piece.position.y()).unwrap(),
+                    ),
+                    Color::Black => (
+                        &mut black_pawn_advancement,
+                        piece.position.y().try_into().unwrap(),
+                    ),
+                };
+                for item in array {
+                    if *item == 0 {
+                        *item = number;
+                        break;
                     }
                 }
             }
