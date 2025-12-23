@@ -197,7 +197,6 @@ impl GameTreeInner {
             };
             ord.reverse()
         });
-        self.score = Some(alpha_beta.score);
         (nodes, alpha_beta.score)
     }
     fn alpha_beta(&mut self, setting: AlphaBetaSetting) -> u32 {
@@ -226,11 +225,11 @@ impl GameTreeInner {
             drop(read);
             let (nodes, score) = if setting.depth == 0 {
                 let score = self.estimate();
-                self.score = Some(score);
                 (1, score)
             } else {
                 self.search(board, setting)
             };
+            self.score = Some(score);
             let mut write = setting.table.write().unwrap();
             write.insert_transposition(board, score);
             drop(write);
