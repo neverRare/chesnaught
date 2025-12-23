@@ -124,11 +124,11 @@ impl GameTreeInner {
         drop(write);
         if setting.multithread_depth == Some(0) {
             for chunk in children.chunks_mut(setting.thread_count) {
-                let result: Vec<_> = scope(|scope| {
+                let stop = scope(|scope| {
                     let handles: Vec<_> = chunk
                         .iter_mut()
                         .map(|(_, _, game_tree)| {
-                            scope.spawn(|| {
+                            scope.spawn(move || {
                                 let nodes = game_tree.alpha_beta(AlphaBetaSetting {
                                     depth: setting.depth - 1,
                                     alpha: alpha_beta.alpha,
@@ -143,21 +143,19 @@ impl GameTreeInner {
                         })
                         .collect();
                     while !handles.iter().all(ScopedJoinHandle::is_finished) {}
-                    handles
-                        .into_iter()
-                        .map(|handle| handle.join().unwrap())
-                        .collect()
-                });
-                let mut stop = false;
-                for (b, score) in &result {
-                    nodes += b;
-                    if !stop
-                        && let Some(score) = *score
-                        && alpha_beta.set(score)
-                    {
-                        stop = true;
+                    let mut stop = false;
+                    for handle in handles {
+                        let (b, score) = handle.join().unwrap();
+                        nodes += b;
+                        if !stop
+                            && let Some(score) = score
+                            && alpha_beta.set(score)
+                        {
+                            stop = true;
+                        }
                     }
-                }
+                    stop
+                });
                 if stop {
                     break;
                 }
