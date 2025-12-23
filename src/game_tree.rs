@@ -258,6 +258,17 @@ impl GameTreeInner {
         };
         Score::Estimated(estimated)
     }
+    fn generate(&mut self, depth: u32) -> u32 {
+        let mut nodes = 1;
+        if depth != 0
+            && let Some(children) = self.children_or_init()
+        {
+            for (_, _, tree) in children {
+                nodes += tree.generate(depth - 1);
+            }
+        }
+        nodes
+    }
     fn best_move_tree_pair(&self) -> Option<&MoveTreePair> {
         self.children().map(|children| &children[0])
     }
@@ -357,6 +368,9 @@ impl GameTree {
                     *movement
                 })
         })
+    }
+    pub fn generate(&mut self, depth: u32) -> u32 {
+        self.0.generate(depth)
     }
 }
 impl Drop for GameTree {

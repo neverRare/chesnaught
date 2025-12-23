@@ -31,6 +31,7 @@ enum Input {
     Coord(Coord),
     Move(Lan),
     Bot(u32),
+    CheckPrune(u32),
 }
 impl Display for Input {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -45,6 +46,7 @@ impl Display for Input {
             Input::Coord(position) => write!(f, "{position}")?,
             Input::Move(movement) => write!(f, "{movement}")?,
             Input::Bot(depth) => write!(f, "bot {depth}")?,
+            Input::CheckPrune(depth) => write!(f, "check prune {depth}")?,
         }
         Ok(())
     }
@@ -65,6 +67,8 @@ impl FromStr for Input {
                     Ok(Input::Import(s.parse()?))
                 } else if let Some(s) = strip_prefix_token(s, "bot") {
                     Ok(Input::Bot(s.parse()?))
+                } else if let Some(s) = strip_prefix_token(s, "check prune") {
+                    Ok(Input::CheckPrune(s.parse()?))
                 } else if let Ok(position) = s.parse() {
                     Ok(Input::Coord(position))
                 } else {
@@ -234,6 +238,15 @@ pub fn repl() {
                     highlighted.push(movement.origin);
                     highlighted.push(movement.destination);
                     update = true;
+                }
+                Input::CheckPrune(depth) => {
+                    game_tree = GameTree::new(board.clone());
+                    let total = game_tree.generate(depth);
+                    let presorted = game_tree.calculate(depth, &mut table, thread);
+                    let sorted = game_tree.calculate(depth, &mut table, thread);
+                    writeln!(output, "total number of nodes: {total}").unwrap();
+                    writeln!(output, "searched nodes with unsorted branches: {presorted}").unwrap();
+                    writeln!(output, "searched nodes with sorted branches: {total}").unwrap();
                 }
             }
             break;
