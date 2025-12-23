@@ -34,7 +34,7 @@ If you want to play against Chesnaught. You'll need to put a limit as otherwise 
 
 ## Analysis
 
-You can use perform analysis with Chesnaught to see what it thinks. It shouldn't be used for analyzing games, use [Stockfish] instead. Chesnaught doesn't provide multiple lines as it's mainly designed for playing.
+You can perform analysis with Chesnaught to see what it thinks. It shouldn't be used for analyzing games, use [Stockfish] instead. Chesnaught doesn't provide multiple lines as it's mainly designed for playing.
 
 Chesnaught does provide centipawn analysis but this is an approximation. Chesnaught's actual score is a compound number that is hard to condense into a single number.
 
