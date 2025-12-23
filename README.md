@@ -20,6 +20,8 @@ Before playing, consider configuring it first to give it more computation advant
 
 The amount of threads that Chesnaught will use during search. Optimal setting: the same number as your CPU cores. You can provide less if you want but giving more than the number of your CPU cores may not help.
 
+Chesnaught actual uses more than alloted threads but the extra threads should be fairly lowly processed.
+
 ### Hash
 
 The amount of memory in MiB that Chesnaught will use for storing previously computed board position to avoid duplicate computation. Chesnaught will not allocate it right away but it'll start with none then it'll grow as needed. It could be limited to lower setting but it is guaranteed to never exceed provided limit. Optimal setting: as high as you're willing to give.
