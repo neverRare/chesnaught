@@ -126,6 +126,7 @@ impl GameTreeInner {
         drop(write);
         if setting.multithread_depth == Some(0) {
             for chunk in children.chunks_mut(setting.thread_count) {
+                searched_children += chunk.len();
                 let stop = scope(|scope| {
                     let handles: Vec<_> = chunk
                         .iter_mut()
@@ -149,7 +150,6 @@ impl GameTreeInner {
                     for handle in handles {
                         let (b, score) = handle.join().unwrap();
                         nodes += b;
-                        searched_children += 1;
                         if !stop
                             && let Some(score) = score
                             && alpha_beta.set(score)
