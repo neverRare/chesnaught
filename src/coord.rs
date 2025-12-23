@@ -62,6 +62,12 @@ impl Coord {
             Color::Black => Coord::BLACK_PROMOTION_RANK,
         }
     }
+    pub fn en_passant_target(color: Color) -> u8 {
+        match color {
+            Color::White => Coord::WHITE_EN_PASSANT_TARGET,
+            Color::Black => Coord::BLACK_EN_PASSANT_TARGET,
+        }
+    }
     pub fn en_passant_target_color(y: u8) -> Option<Color> {
         match y {
             Coord::WHITE_EN_PASSANT_TARGET => Some(Color::White),

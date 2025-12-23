@@ -145,7 +145,9 @@ impl Piece {
                     .into_iter()
                     .filter_map(move |movement| self.position.move_by(movement))
                     .filter_map(move |destination| {
-                        let capture = if Some(destination) == board.en_passant_target {
+                        let capture = if Some(destination) == board.en_passant_target
+                            && destination.y() == Coord::en_passant_target(!self.color())
+                        {
                             board
                                 .get_index_with_kind(
                                     destination
