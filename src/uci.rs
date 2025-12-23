@@ -25,7 +25,7 @@ mod output;
 const CHESS960: &str = "UCI_Chess960";
 const ENGINE_ABOUT: &str = "UCI_EngineAbout";
 
-const CONFIG: [Output; 7] = [
+const CONFIG: [Output; 8] = [
     Output::Id {
         field: IdField::Name,
         value: concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
@@ -33,6 +33,15 @@ const CONFIG: [Output; 7] = [
     Output::Id {
         field: IdField::Author,
         value: env!("CARGO_PKG_AUTHORS"),
+    },
+    Output::Option {
+        name: "Thread",
+        kind: OptionType::Spin,
+        default: Some(OptionValue::Int(1)),
+        boundary: Some(Boundary::Boundary {
+            min: 1,
+            max: <i32>::MAX,
+        }),
     },
     Output::Option {
         name: "Hash",
@@ -138,6 +147,28 @@ pub fn uci_loop() {
                                 debug_print(format!("set {CHESS960} to invalid value; ignoring"));
                             }
                             // The engine can already work on chess960 without telling it to use chess960
+                        }
+                        "Thread" => {
+                            let Some(value) = value else {
+                                if debug {
+                                    debug_print("set `Thread` without value; ignoring".to_string());
+                                }
+                                continue;
+                            };
+                            let thread: NonZero<usize> = match value.parse() {
+                                Ok(size) => size,
+                                Err(err) => {
+                                    if debug {
+                                        debug_print(
+                                            "set `Thread` to an invalid value; ignoring"
+                                                .to_string(),
+                                        );
+                                        debug_print(format!("error: {err}"));
+                                    }
+                                    continue;
+                                }
+                            };
+                            engine.set_thread(thread);
                         }
                         "Hash" => {
                             let Some(value) = value else {

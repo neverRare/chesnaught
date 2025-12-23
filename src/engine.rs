@@ -28,6 +28,7 @@ enum Input {
     },
     SetHashMaxCapacity(usize),
     ClearHash,
+    SetThread(NonZero<usize>),
 }
 pub struct Info {
     pub depth: NonZero<u32>,
@@ -51,6 +52,7 @@ impl Engine {
         spawn(move || {
             let mut game_tree = GameTree::new(Board::starting_position());
             let mut table = Table::new(0);
+            let mut thread = 1;
             for input in input_receiver {
                 match input {
                     Input::Ready => {
@@ -70,8 +72,12 @@ impl Engine {
                     } => {
                         for i in 1.. {
                             let start = Instant::now();
-                            let nodes =
-                                game_tree.calculate_with_stop_signal(i, &mut table, &stop_signal);
+                            let nodes = game_tree.calculate_with_stop_signal(
+                                i,
+                                &mut table,
+                                &stop_signal,
+                                thread,
+                            );
                             info_callback(Info {
                                 depth: NonZero::new(i).unwrap(),
                                 time: start.elapsed(),
@@ -90,12 +96,13 @@ impl Engine {
                             }
                         }
                         best_move_callback(game_tree.best_move().or_else(|| {
-                            game_tree.calculate(1, &mut table);
+                            game_tree.calculate(1, &mut table, 1);
                             game_tree.best_move()
                         }));
                     }
                     Input::SetHashMaxCapacity(capacity) => table.set_max_capacity(capacity),
                     Input::ClearHash => table.clear_allocation(),
+                    Input::SetThread(b) => thread = b.get(),
                 }
             }
         });
@@ -154,5 +161,8 @@ impl Engine {
     }
     pub fn clear_hash(&self) {
         self.input.send(Input::ClearHash).unwrap();
+    }
+    pub fn set_thread(&self, thread: NonZero<usize>) {
+        self.input.send(Input::SetThread(thread)).unwrap();
     }
 }

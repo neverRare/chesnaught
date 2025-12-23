@@ -94,6 +94,7 @@ pub fn repl() {
     let mut first_time = true;
     let mut game_tree = GameTree::new(board.clone());
     let mut table = Table::new(4096 * MEBIBYTES / Table::ELEMENT_SIZE);
+    let thread = 8;
     loop {
         if update {
             valid_moves.clear();
@@ -225,7 +226,7 @@ pub fn repl() {
                 }
                 Input::Bot(depth) => {
                     table.clear_allocation();
-                    game_tree.calculate(depth, &mut table);
+                    game_tree.calculate(depth, &mut table, thread);
                     let movement = game_tree.best_move().unwrap();
                     board.move_lan(movement);
                     game_tree.move_piece(movement);

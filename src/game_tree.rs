@@ -4,11 +4,11 @@ use std::{
     iter::from_fn,
     mem::replace,
     sync::{
-        LazyLock,
+        LazyLock, RwLock,
         atomic::{self, AtomicBool},
         mpsc::{Sender, channel},
     },
-    thread::{Builder, panicking},
+    thread::{Builder, ScopedJoinHandle, panicking, scope},
 };
 
 use rustc_hash::FxHashMap;
@@ -118,7 +118,9 @@ impl GameTreeInner {
         depth: u32,
         alpha: Score,
         beta: Score,
-        table: &mut Table,
+        table: &RwLock<&mut Table>,
+        multithread_depth: Option<u32>,
+        thread_count: usize,
         stop_signal: Option<&AtomicBool>,
     ) -> u32 {
         if stop_signal.is_some_and(|signal| signal.load(atomic::Ordering::Relaxed)) {
@@ -130,13 +132,16 @@ impl GameTreeInner {
         } else {
             let board = self.board().unwrap();
 
-            if let Some(score) = table.get_transposition(&board) {
+            let read = table.read().unwrap();
+
+            if let Some(score) = read.get_transposition(&board) {
                 self.score = Some(*score);
                 return 1;
             }
-            if table.contains_repetition(&board) {
+            if read.contains_repetition(&board) {
                 return 1;
             }
+            drop(read);
             let mut nodes = 1;
             if depth == 0 {
                 self.score = Some(self.estimate());
@@ -145,16 +150,67 @@ impl GameTreeInner {
                 let children = self.children_or_init().unwrap();
                 let mut alpha_beta = AlphaBetaState::new(current_player, alpha, beta);
 
-                table.insert_repetition(board);
-                for (_, _, game_tree) in &mut *children {
-                    nodes += game_tree.alpha_beta(depth - 1, alpha, beta, table, stop_signal);
-                    if let Some(score) = game_tree.score
-                        && alpha_beta.set(score)
-                    {
-                        break;
+                let mut write = table.write().unwrap();
+                write.insert_repetition(board);
+                drop(write);
+                if multithread_depth == Some(0) {
+                    for chunk in children.chunks_mut(thread_count) {
+                        let result: Vec<_> = scope(|scope| {
+                            let handles: Vec<_> = chunk
+                                .iter_mut()
+                                .map(|(_, _, game_tree)| {
+                                    scope.spawn(|| {
+                                        let nodes = game_tree.alpha_beta(
+                                            depth - 1,
+                                            alpha,
+                                            beta,
+                                            table,
+                                            None,
+                                            thread_count,
+                                            stop_signal,
+                                        );
+                                        (nodes, game_tree.score)
+                                    })
+                                })
+                                .collect();
+                            while !handles.iter().all(ScopedJoinHandle::is_finished) {}
+                            handles
+                                .into_iter()
+                                .map(|handle| handle.join().unwrap())
+                                .collect()
+                        });
+                        for (b, _) in &result {
+                            nodes += b;
+                        }
+                        for (_, score) in result {
+                            if let Some(score) = score
+                                && alpha_beta.set(score)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    for (_, _, game_tree) in &mut *children {
+                        nodes += game_tree.alpha_beta(
+                            depth - 1,
+                            alpha,
+                            beta,
+                            table,
+                            multithread_depth.map(|multithread_depth| multithread_depth - 1),
+                            thread_count,
+                            stop_signal,
+                        );
+                        if let Some(score) = game_tree.score
+                            && alpha_beta.set(score)
+                        {
+                            break;
+                        }
                     }
                 }
-                table.remove_repetition(&board);
+                let mut write = table.write().unwrap();
+                write.remove_repetition(&board);
+                drop(write);
                 children.sort_unstable_by(|(_, _, a), (_, _, b)| match (a.score, b.score) {
                     (None, None) => Ordering::Equal,
                     (None, Some(_)) => Ordering::Less,
@@ -166,7 +222,9 @@ impl GameTreeInner {
                 });
                 self.score = Some(alpha_beta.score);
             }
-            table.insert_transposition(board, self.score.unwrap());
+            let mut write = table.write().unwrap();
+            write.insert_transposition(board, self.score.unwrap());
+            drop(write);
             nodes
         }
     }
@@ -228,25 +286,40 @@ impl GameTree {
         };
         replace(&mut self.0, new).drop();
     }
-    pub fn calculate(&mut self, depth: u32, table: &mut Table) -> u32 {
+    fn calculate_raw(
+        &mut self,
+        depth: u32,
+        table: &mut Table,
+        thread_count: usize,
+        stop_signal: Option<&AtomicBool>,
+    ) -> u32 {
         table.clear();
-        self.0
-            .alpha_beta(depth, Score::BLACK_WINS, Score::WHITE_WINS, table, None)
+        let multithread_depth = if thread_count > 1 {
+            Some(depth / 2)
+        } else {
+            None
+        };
+        self.0.alpha_beta(
+            depth,
+            Score::BLACK_WINS,
+            Score::WHITE_WINS,
+            &RwLock::new(table),
+            multithread_depth,
+            thread_count,
+            stop_signal,
+        )
+    }
+    pub fn calculate(&mut self, depth: u32, table: &mut Table, thread_count: usize) -> u32 {
+        self.calculate_raw(depth, table, thread_count, None)
     }
     pub fn calculate_with_stop_signal(
         &mut self,
         depth: u32,
         table: &mut Table,
         stop_signal: &AtomicBool,
+        thread_count: usize,
     ) -> u32 {
-        table.clear();
-        self.0.alpha_beta(
-            depth,
-            Score::BLACK_WINS,
-            Score::WHITE_WINS,
-            table,
-            Some(stop_signal),
-        )
+        self.calculate_raw(depth, table, thread_count, Some(stop_signal))
     }
     pub fn best_move(&self) -> Option<Lan> {
         self.0
