@@ -214,8 +214,8 @@ impl GameTreeInner {
                     (None, Some(_)) => Ordering::Less,
                     (Some(_), None) => Ordering::Greater,
                     (Some(a), Some(b)) => match current_player {
-                        Color::White => Ord::cmp(&a, &b),
-                        Color::Black => Ord::cmp(&b, &a),
+                        Color::White => Ord::cmp(&b, &a),
+                        Color::Black => Ord::cmp(&a, &b),
                     },
                 });
                 self.score = Some(alpha_beta.score);
