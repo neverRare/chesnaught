@@ -51,12 +51,11 @@ impl SubAssign for PawnAdvancement {
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Estimated {
-    pub king_constriction: i8,
     pub king_safety: i8,
-    pub end_game_pawn_advancement: PawnAdvancement,
     pub material: i8,
     pub square_control: i16,
-    pub pawn_advancement: i8,
+    pub pawn_advancement: PawnAdvancement,
+    pub king_constriction: i8,
 }
 impl Estimated {
     pub fn centipawn(self) -> Centipawn {
@@ -83,11 +82,9 @@ impl Add for Estimated {
         Estimated {
             king_constriction: self.king_constriction + rhs.king_constriction,
             king_safety: self.king_safety + rhs.king_safety,
-            end_game_pawn_advancement: self.end_game_pawn_advancement
-                + rhs.end_game_pawn_advancement,
+            pawn_advancement: self.pawn_advancement + rhs.pawn_advancement,
             material: self.material + rhs.material,
             square_control: self.square_control + rhs.square_control,
-            pawn_advancement: self.pawn_advancement + rhs.pawn_advancement,
         }
     }
 }
@@ -95,10 +92,9 @@ impl AddAssign for Estimated {
     fn add_assign(&mut self, rhs: Self) {
         self.king_constriction += rhs.king_constriction;
         self.king_safety += rhs.king_safety;
-        self.end_game_pawn_advancement += rhs.end_game_pawn_advancement;
+        self.pawn_advancement += rhs.pawn_advancement;
         self.material += rhs.material;
         self.square_control += rhs.square_control;
-        self.pawn_advancement += rhs.pawn_advancement;
     }
 }
 impl Sub for Estimated {
@@ -108,11 +104,9 @@ impl Sub for Estimated {
         Estimated {
             king_constriction: self.king_constriction - rhs.king_constriction,
             king_safety: self.king_safety - rhs.king_safety,
-            end_game_pawn_advancement: self.end_game_pawn_advancement
-                - rhs.end_game_pawn_advancement,
+            pawn_advancement: self.pawn_advancement - rhs.pawn_advancement,
             material: self.material - rhs.material,
             square_control: self.square_control - rhs.square_control,
-            pawn_advancement: self.pawn_advancement - rhs.pawn_advancement,
         }
     }
 }
@@ -120,10 +114,9 @@ impl SubAssign for Estimated {
     fn sub_assign(&mut self, rhs: Self) {
         self.king_constriction -= rhs.king_constriction;
         self.king_safety -= rhs.king_safety;
-        self.end_game_pawn_advancement -= rhs.end_game_pawn_advancement;
+        self.pawn_advancement -= rhs.pawn_advancement;
         self.material -= rhs.material;
         self.square_control -= rhs.square_control;
-        self.pawn_advancement -= rhs.pawn_advancement;
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
