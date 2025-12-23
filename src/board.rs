@@ -145,10 +145,10 @@ impl Piece {
                     .into_iter()
                     .filter_map(move |movement| self.position.move_by(movement))
                     .filter_map(move |destination| {
-                        let capture = if Some(destination) == board.en_passant_target
+                        if Some(destination) == board.en_passant_target
                             && destination.y() == Coord::en_passant_target(!self.color())
                         {
-                            board
+                            let capture = board
                                 .get_index_with_kind(
                                     destination
                                         .move_by(Vector::pawn_single_move(!self.color()))
@@ -156,15 +156,22 @@ impl Piece {
                                     !self.color(),
                                     PieceKind::Pawn,
                                 )
-                                .expect("pawn that performed double move not found")
+                                .expect("pawn that performed double move not found");
+                            Some(SimpleMove {
+                                index,
+                                destination,
+                                capture: Some(capture),
+                            })
                         } else {
-                            board[destination]?
-                        };
-                        (board[capture].unwrap().color() != self.color()).then_some(SimpleMove {
-                            index,
-                            destination,
-                            capture: Some(capture),
-                        })
+                            let capture = board[destination]?;
+                            (board[capture].unwrap().color() != self.color()).then_some(
+                                SimpleMove {
+                                    index,
+                                    destination,
+                                    capture: Some(capture),
+                                },
+                            )
+                        }
                     })
                     .map(|movement| movement.to_simple_move(board.castling_right)),
             )
