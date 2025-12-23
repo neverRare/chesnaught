@@ -39,16 +39,48 @@ impl Piece {
     pub fn piece(self) -> PieceKind {
         self.piece.piece()
     }
+    fn controlled_squares_step(self, moves: &[Vector]) -> impl Iterator<Item = Coord> {
+        moves
+            .iter()
+            .copied()
+            .filter_map(move |movement| self.position.move_by(movement))
+    }
+    fn controlled_squares_direction(
+        self,
+        board: &Board,
+        direction: Vector,
+    ) -> impl Iterator<Item = Coord> {
+        let mut resume = true;
+        self.position
+            .line_exclusive(direction)
+            .take_while(move |destination| {
+                if resume {
+                    if board[*destination].is_some() {
+                        resume = false;
+                    }
+                    true
+                } else {
+                    false
+                }
+            })
+    }
+    fn all_controlled_squares_direction(
+        self,
+        board: &Board,
+        directions: &[Vector],
+    ) -> impl Iterator<Item = Coord> {
+        directions
+            .iter()
+            .copied()
+            .flat_map(move |direction| self.controlled_squares_direction(board, direction))
+    }
     fn step_moves(
         self,
         index: PieceIndex,
         board: &Board,
         moves: &[Vector],
     ) -> impl Iterator<Item = SimpleMove> {
-        moves
-            .iter()
-            .copied()
-            .filter_map(move |movement| self.position.move_by(movement))
+        self.controlled_squares_step(moves)
             .filter_map(move |destination| {
                 if let Some((capture, piece)) = board.index_and_piece(destination) {
                     (piece.color() != self.color()).then_some({
@@ -253,41 +285,6 @@ impl Piece {
                 PieceKind::Bishop | PieceKind::Rook | PieceKind::Queen
             ) && (target - self.position).is_aligned(blocker - self.position)
                 && blocker.is_inside_of(self.position, target))
-    }
-    fn controlled_squares_step(self, moves: &'static [Vector]) -> impl Iterator<Item = Coord> {
-        moves
-            .iter()
-            .copied()
-            .filter_map(move |movement| self.position.move_by(movement))
-    }
-    fn controlled_squares_direction(
-        self,
-        board: &Board,
-        direction: Vector,
-    ) -> impl Iterator<Item = Coord> {
-        let mut resume = true;
-        self.position
-            .line_exclusive(direction)
-            .take_while(move |destination| {
-                if resume {
-                    if board[*destination].is_some() {
-                        resume = false;
-                    }
-                    true
-                } else {
-                    false
-                }
-            })
-    }
-    fn all_controlled_squares_direction(
-        self,
-        board: &Board,
-        directions: &[Vector],
-    ) -> impl Iterator<Item = Coord> {
-        directions
-            .iter()
-            .copied()
-            .flat_map(move |direction| self.controlled_squares_direction(board, direction))
     }
     fn controlled_squares(self, board: &Board) -> Box<dyn Iterator<Item = Coord> + '_> {
         match self.piece() {
