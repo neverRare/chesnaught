@@ -43,7 +43,7 @@ impl Piece {
         moves
             .iter()
             .copied()
-            .filter_map(move |movement| self.position.move_by(movement))
+            .filter_map(move |movement| self.position.add_checked(movement))
     }
     fn controlled_squares_direction(
         self,
@@ -164,7 +164,7 @@ impl Piece {
                     == Vector::pawn_double_move(self.color()))
                 .then(|| {
                     self.position
-                        .move_by(Vector::pawn_single_move(self.color()))
+                        .add_checked(Vector::pawn_single_move(self.color()))
                         .unwrap()
                 })
                 .filter(|en_passant_target| {
@@ -175,7 +175,7 @@ impl Piece {
             .chain(
                 Vector::pawn_attacks(self.color())
                     .into_iter()
-                    .filter_map(move |movement| self.position.move_by(movement))
+                    .filter_map(move |movement| self.position.add_checked(movement))
                     .filter_map(move |destination| {
                         if Some(destination) == board.en_passant_target
                             && destination.y() == Coord::en_passant_target(!self.color())
@@ -183,7 +183,7 @@ impl Piece {
                             let capture = board
                                 .get_index_with_kind(
                                     destination
-                                        .move_by(Vector::pawn_single_move(!self.color()))
+                                        .add_checked(Vector::pawn_single_move(!self.color()))
                                         .unwrap(),
                                     !self.color(),
                                     PieceKind::Pawn,
@@ -291,7 +291,7 @@ impl Piece {
             PieceKind::Pawn => Box::new(
                 Vector::pawn_attacks(self.color())
                     .into_iter()
-                    .filter_map(move |movement| self.position.move_by(movement)),
+                    .filter_map(move |movement| self.position.add_checked(movement)),
             ),
             PieceKind::Knight => Box::new(self.controlled_squares_step(&Vector::KNIGHT_MOVES)),
             PieceKind::Bishop => {
@@ -315,7 +315,7 @@ impl Piece {
         if difference.y == Vector::pawn_direction(self.color()) * 3 {
             let destination = self
                 .position
-                .move_by(Vector::pawn_double_move(self.color()))
+                .add_checked(Vector::pawn_double_move(self.color()))
                 .unwrap();
             if self.position.y() == Coord::pawn_home_rank(self.color())
                 && difference.x.unsigned_abs() == 1
@@ -333,7 +333,7 @@ impl Piece {
                 x @ (-2 | 2) => {
                     let destination = self
                         .position
-                        .move_by(Vector {
+                        .add_checked(Vector {
                             x: x.signum(),
                             y: Vector::pawn_direction(self.color()),
                         })
@@ -350,7 +350,7 @@ impl Piece {
                 -1 | 1 => {
                     let destination = self
                         .position
-                        .move_by(Vector::pawn_single_move(self.color()))
+                        .add_checked(Vector::pawn_single_move(self.color()))
                         .unwrap();
                     if board[destination].is_none() {
                         Box::new(once(destination))
@@ -361,7 +361,7 @@ impl Piece {
                 0 => Box::new(
                     Vector::pawn_attacks(self.color())
                         .into_iter()
-                        .filter_map(move |movement| self.position.move_by(movement))
+                        .filter_map(move |movement| self.position.add_checked(movement))
                         .filter(move |destination| {
                             board
                                 .index(*destination)
@@ -457,7 +457,7 @@ impl Piece {
             PieceKind::Knight => Box::new(
                 Vector::KNIGHT_MOVES
                     .into_iter()
-                    .filter_map(move |movement| self.position.move_by(movement))
+                    .filter_map(move |movement| self.position.add_checked(movement))
                     .filter(move |destination| {
                         (attack - *destination).is_knight_move()
                             && board
@@ -688,7 +688,7 @@ impl Board {
             moves
                 .iter()
                 .copied()
-                .filter_map(|movement| position.move_by(movement))
+                .filter_map(|movement| position.add_checked(movement))
                 .any(|position| {
                     indices[position].is_some_and(|index| {
                         let b = self[index].unwrap();
@@ -1582,7 +1582,7 @@ impl Lan {
             let capture = if board.en_passant_target == Some(self.destination) {
                 let pawn = self
                     .destination
-                    .move_by(Vector::pawn_single_move(!piece.color()))
+                    .add_checked(Vector::pawn_single_move(!piece.color()))
                     .unwrap();
                 Some(
                     board
@@ -1620,7 +1620,7 @@ impl Lan {
         {
             let en_passant_target = self
                 .origin
-                .move_by(Vector::pawn_single_move(piece.color()))
+                .add_checked(Vector::pawn_single_move(piece.color()))
                 .unwrap();
             board
                 .can_attack_by_pawn(en_passant_target, !piece.color())

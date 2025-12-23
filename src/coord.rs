@@ -105,7 +105,7 @@ impl Coord {
     pub fn y(self) -> u8 {
         (self.0.get() >> 3) & 0b_111
     }
-    pub fn move_by(self, movement: Vector) -> Option<Self> {
+    pub fn add_checked(self, movement: Vector) -> Option<Self> {
         Self::new_checked(
             self.x().checked_add_signed(movement.x)?,
             self.y().checked_add_signed(movement.y)?,
@@ -139,7 +139,7 @@ impl Coord {
             direction.as_unit(),
             "{direction:?} is not a unit"
         );
-        (start..).map_while(move |difference| self.move_by(direction * difference))
+        (start..).map_while(move |difference| self.add_checked(direction * difference))
     }
     pub fn line_inclusive(self, direction: Vector) -> impl Iterator<Item = Self> {
         self.line(direction, 0)
@@ -192,7 +192,7 @@ impl Coord {
         Coord::en_passant_target_color(self.y()).map(|color| {
             (
                 color,
-                self.move_by(Vector::pawn_single_move(color)).unwrap(),
+                self.add_checked(Vector::pawn_single_move(color)).unwrap(),
             )
         })
     }
