@@ -69,7 +69,7 @@ pub struct Estimated {
 impl Estimated {
     pub fn centipawn(self) -> i32 {
         <i32>::from(self.material) * 100
-            + <i32>::from(self.king_safety)
+            + <i32>::from(self.king_safety) * 10
             + <i32>::from(self.square_control)
     }
 }
