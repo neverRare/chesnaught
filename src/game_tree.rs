@@ -193,10 +193,10 @@ impl GameTreeInner {
             };
             ord.reverse()
         });
+        self.score = Some(alpha_beta.score);
         let mut write = setting.table.write().unwrap();
         write.insert_transposition(board, self.score.unwrap());
         drop(write);
-        self.score = Some(alpha_beta.score);
         nodes
     }
     fn alpha_beta(&mut self, setting: AlphaBetaSetting) -> u32 {
