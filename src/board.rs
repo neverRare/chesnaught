@@ -1180,8 +1180,8 @@ impl Board {
                 }
             }
         }
-        white_pawn_advancement.sort_unstable();
-        black_pawn_advancement.sort_unstable();
+        white_pawn_advancement.sort_unstable_by(|a, b| Ord::cmp(a, b).reverse());
+        black_pawn_advancement.sort_unstable_by(|a, b| Ord::cmp(a, b).reverse());
         white_score.pawn_advancement = PawnAdvancement::new(white_pawn_advancement);
         black_score.pawn_advancement = PawnAdvancement::new(black_pawn_advancement);
         for color in [Color::White, Color::Black] {
