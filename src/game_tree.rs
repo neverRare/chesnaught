@@ -28,7 +28,7 @@ enum Data {
     Board(Box<Board>),
     Children {
         board: Box<HashableBoard>,
-        children: Vec<MoveTreePair>,
+        children: Box<[MoveTreePair]>,
     },
     End(EndState),
 }
@@ -70,14 +70,14 @@ impl GameTreeInner {
             Data::End(_) => None,
         }
     }
-    fn children(&self) -> Option<&Vec<MoveTreePair>> {
+    fn children(&self) -> Option<&[MoveTreePair]> {
         if let Data::Children { children, .. } = &self.data {
             Some(children)
         } else {
             None
         }
     }
-    fn children_or_init(&mut self) -> Option<&mut Vec<MoveTreePair>> {
+    fn children_or_init(&mut self) -> Option<&mut Box<[MoveTreePair]>> {
         match &mut self.data {
             Data::Board(board) => {
                 let board = Board::clone(board);
@@ -128,7 +128,7 @@ impl GameTreeInner {
             for chunk in children.chunks_mut(setting.thread_count) {
                 searched_children += chunk.len();
                 let stop = scope(|scope| {
-                    let handles: Vec<_> = chunk
+                    let handles: Box<[_]> = chunk
                         .iter_mut()
                         .map(|(_, _, game_tree)| {
                             scope.spawn(move || {
@@ -303,13 +303,21 @@ impl GameTree {
                 GameTreeInner::new(board)
             }
             Data::Children { children, .. } => {
-                let (_, _, children) = children.swap_remove(
-                    children
-                        .iter()
-                        .position(|(b, c, _)| movement == *b || Some(movement) == *c)
-                        .unwrap(),
+                let i = children
+                    .iter()
+                    .position(|(b, c, _)| movement == *b || Some(movement) == *c)
+                    .unwrap();
+                let (first, second, _) = &children[i];
+                let dummy = (
+                    *first,
+                    *second,
+                    GameTreeInner {
+                        data: Data::End(EndState::Draw),
+                        score: None,
+                    },
                 );
-                children
+                let (_, _, game_tree) = replace(&mut children[i], dummy);
+                game_tree
             }
             Data::End(_) => panic!("cannot move on end state"),
         };

@@ -35,7 +35,7 @@ pub struct Info {
     pub depth: NonZero<u32>,
     pub time: Duration,
     pub nodes: NonZero<u32>,
-    pub pv: Vec<Lan>,
+    pub pv: Box<[Lan]>,
     pub score: Option<Score>,
     pub hash_capacity: usize,
     pub hash_max_capacity: usize,

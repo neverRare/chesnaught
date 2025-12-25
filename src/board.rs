@@ -1216,7 +1216,7 @@ impl Board {
     }
     #[cfg(test)]
     pub fn assert_piece_cant_move(&self, position: Coord) {
-        let valid_moves: Vec<_> = self.valid_moves().into_iter().flatten().collect();
+        let valid_moves: Box<[_]> = self.valid_moves().into_iter().flatten().collect();
         assert!(
             !valid_moves
                 .into_iter()

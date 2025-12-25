@@ -97,7 +97,7 @@ pub struct SearchInfo {
     pub depth: NonZero<u32>,
     pub time: Duration,
     pub nodes: NonZero<u32>,
-    pub pv: Vec<Lan>,
+    pub pv: Box<[Lan]>,
     pub score: Score,
     pub hash_full: u32,
     pub nps: u32,

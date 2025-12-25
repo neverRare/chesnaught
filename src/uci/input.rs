@@ -33,7 +33,7 @@ pub enum Input<'a> {
     UciNewGame,
     Position {
         position: Position,
-        moves: Vec<Lan>,
+        moves: Box<[Lan]>,
     },
     Go(Go),
     Stop,
@@ -101,7 +101,7 @@ impl<'a> Input<'a> {
             ))
         }
     }
-    pub fn from_str(src: &'a str) -> Result<Self, Vec<ParseInputError>> {
+    pub fn from_str(src: &'a str) -> Result<Self, Box<[ParseInputError]>> {
         let mut errors = Vec::new();
         for (i, _) in src.char_indices() {
             match Input::from_str_from_start(&src[i..]) {
@@ -109,7 +109,7 @@ impl<'a> Input<'a> {
                 Err(err) => errors.push(err),
             }
         }
-        Err(errors)
+        Err(errors.into_boxed_slice())
     }
 }
 impl Display for Input<'_> {
@@ -186,7 +186,7 @@ impl FromStr for Position {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Go {
-    pub search_moves: Option<Vec<Lan>>,
+    pub search_moves: Option<Box<[Lan]>>,
     pub ponder: bool,
     pub w_time: Option<Duration>,
     pub b_time: Option<Duration>,
@@ -425,7 +425,7 @@ mod test {
             input,
             Input::Position {
                 position: Position::StartPos,
-                moves: vec!["e2e4".parse().unwrap()]
+                moves: vec!["e2e4".parse().unwrap()].into_boxed_slice()
             }
         );
     }

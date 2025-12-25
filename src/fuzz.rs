@@ -83,7 +83,7 @@ pub fn fuzz() {
                 }
             );
         }
-        let moves: Vec<_> = moves.into_iter().collect();
+        let moves: Box<[_]> = moves.into_iter().collect();
         let movement = moves[rng.random_range(0..moves.len())];
         board.move_lan(movement);
     }

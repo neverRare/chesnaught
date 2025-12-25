@@ -107,12 +107,12 @@ pub fn uci_loop() {
             }
         };
         if debug {
-            let input: Vec<_> = text
+            let input: Box<[_]> = text
                 .split(<char>::is_whitespace)
                 .filter(|token| !token.is_empty())
                 .collect();
             let recognized = parsed_input.to_string();
-            let recognized_tokens: Vec<_> = recognized
+            let recognized_tokens: Box<[_]> = recognized
                 .split(<char>::is_whitespace)
                 .filter(|token| !token.is_empty())
                 .collect();
