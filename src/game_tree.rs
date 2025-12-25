@@ -8,7 +8,7 @@ use std::{
         atomic::{self, AtomicBool},
         mpsc::{Sender, channel},
     },
-    thread::{Builder, ScopedJoinHandle, panicking, scope},
+    thread::{Builder, panicking, scope},
 };
 
 use rustc_hash::FxHashMap;
