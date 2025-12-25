@@ -371,5 +371,5 @@ pub fn uci_loop() {
     }
 }
 fn debug_print(message: String) {
-    println!("{}", Output::Info(Info::Text(message)));
+    println!("{}", Output::Info(Info::Text(message.into_boxed_str())));
 }

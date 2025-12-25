@@ -81,7 +81,7 @@ impl Display for IdField {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Info {
     Search(SearchInfo),
-    Text(String),
+    Text(Box<str>),
 }
 impl Display for Info {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
