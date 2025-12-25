@@ -128,9 +128,9 @@ pub fn uci_loop() {
                 }
                 uci = true;
             }
-            Input::Debug(b) => {
+            Input::Debug(new_value) => {
                 if uci {
-                    debug = b;
+                    debug = new_value;
                 }
             }
             Input::IsReady => {

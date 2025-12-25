@@ -105,7 +105,7 @@ impl Engine {
                     }
                     Input::SetHashMaxCapacity(capacity) => table.set_max_capacity(capacity),
                     Input::ClearHash => table.clear_allocation(),
-                    Input::SetThread(b) => thread = b.get(),
+                    Input::SetThread(new_value) => thread = new_value.get(),
                 }
             }
         });

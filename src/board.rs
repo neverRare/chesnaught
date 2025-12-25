@@ -669,8 +669,8 @@ impl Board {
     fn position_has(&self, position: Coord, color: Color, piece: PieceKind) -> bool {
         if let Some(indices) = self.indices.get() {
             indices[position].is_some_and(|index| {
-                let b = self[index].unwrap();
-                b.color() == color && b.piece() == piece
+                let found_piece = self[index].unwrap();
+                found_piece.color() == color && found_piece.piece() == piece
             })
         } else {
             self.pieces_by_kind(color, piece)
@@ -691,8 +691,8 @@ impl Board {
                 .filter_map(|movement| position.add_checked(movement))
                 .any(|position| {
                     indices[position].is_some_and(|index| {
-                        let b = self[index].unwrap();
-                        b.color() == color && b.piece() == piece
+                        let found_piece = self[index].unwrap();
+                        found_piece.color() == color && found_piece.piece() == piece
                     })
                 })
         } else {
@@ -883,7 +883,7 @@ impl Board {
                 PieceKind::Bishop => {
                     let color = piece.position.color();
                     match piece_left {
-                        Some(PieceLeft::Bishop(b)) if color == b => {
+                        Some(PieceLeft::Bishop(current_color)) if color == current_color => {
                             Some(Some(PieceLeft::Bishop(color)))
                         }
                         Some(_) => None,

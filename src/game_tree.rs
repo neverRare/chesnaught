@@ -147,8 +147,8 @@ impl GameTreeInner {
                         .collect();
                     let mut stop = false;
                     for handle in handles {
-                        let (b, score) = handle.join().unwrap();
-                        nodes += b;
+                        let (additional_nodes, score) = handle.join().unwrap();
+                        nodes += additional_nodes;
                         if !stop
                             && let Some(score) = score
                             && alpha_beta.set(score)
@@ -304,7 +304,7 @@ impl GameTree {
             Data::Children { children, .. } => {
                 let i = children
                     .iter()
-                    .position(|(b, c, _)| movement == *b || Some(movement) == *c)
+                    .position(|(first, second, _)| movement == *first || Some(movement) == *second)
                     .unwrap();
                 let (first, second, _) = &children[i];
                 let dummy = (
