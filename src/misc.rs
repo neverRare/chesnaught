@@ -116,7 +116,7 @@ where
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for (first, item) in once(true).chain(repeat(false)).zip(self.0.iter()) {
-            if first {
+            if !first {
                 write!(f, " ")?;
             }
             write!(f, "{item}")?;
