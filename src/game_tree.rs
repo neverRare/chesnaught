@@ -113,7 +113,7 @@ impl GameTreeInner {
             Data::End(_) => None,
         }
     }
-    fn search(&mut self, board: HashableBoard, setting: AlphaBetaSetting) -> (u32, Score) {
+    fn search(&mut self, setting: AlphaBetaSetting) -> (u32, Score) {
         let mut nodes = 1;
         let current_player = self.current_player().unwrap();
         let children = self.children_or_init().unwrap();
@@ -121,9 +121,6 @@ impl GameTreeInner {
 
         let mut searched_children = 0;
 
-        let mut write = setting.table.write().unwrap();
-        write.insert_repetition(board);
-        drop(write);
         if setting.multithread_depth == Some(0) {
             for chunk in children.chunks_mut(setting.thread_count) {
                 searched_children += chunk.len();
@@ -181,9 +178,6 @@ impl GameTreeInner {
                 }
             }
         }
-        let mut write = setting.table.write().unwrap();
-        write.remove_repetition(&board);
-        drop(write);
         children[..searched_children].sort_unstable_by(|(_, _, a), (_, _, b)| {
             let ord = match (a.score, b.score) {
                 (None, None) => Ordering::Equal,
@@ -226,7 +220,14 @@ impl GameTreeInner {
                 let score = self.estimate();
                 (1, score)
             } else {
-                self.search(board, setting)
+                let mut write = setting.table.write().unwrap();
+                write.insert_repetition(board);
+                drop(write);
+                let nodes_score = self.search(setting);
+                let mut write = setting.table.write().unwrap();
+                write.remove_repetition(&board);
+                drop(write);
+                nodes_score
             };
             self.score = Some(score);
             let mut write = setting.table.write().unwrap();
