@@ -145,7 +145,6 @@ impl GameTreeInner {
                             })
                         })
                         .collect();
-                    while !handles.iter().all(ScopedJoinHandle::is_finished) {}
                     let mut stop = false;
                     for handle in handles {
                         let (b, score) = handle.join().unwrap();
