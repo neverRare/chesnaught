@@ -110,8 +110,8 @@ impl Display for SearchInfo {
             self.depth,
             self.time.as_millis(),
             self.nodes,
-            self.score,
             WithSpace(&self.pv),
+            self.score,
             self.hash_full,
             self.nps,
         )?;
