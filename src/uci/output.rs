@@ -24,7 +24,7 @@ pub enum Output {
     },
     // CopyProtection,
     // Registration,
-    Info(Vec<Info>),
+    Info(Info),
     Option {
         name: &'static str,
         kind: OptionType,
@@ -44,12 +44,7 @@ impl Display for Output {
                     write!(f, " ponder {ponder}")?;
                 }
             }
-            Output::Info(infos) => {
-                write!(f, "info")?;
-                for info in infos {
-                    write!(f, " {info}")?;
-                }
-            }
+            Output::Info(info) => write!(f, "info {info}")?,
             Output::Option {
                 name,
                 kind,
@@ -84,34 +79,45 @@ impl Display for IdField {
 }
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Info {
-    Depth(NonZero<u32>),
-    Time(Duration),
-    Nodes(NonZero<u32>),
-    Pv(Vec<Lan>),
-    Score(Score),
-    HashFull(u32),
-    Nps(u32),
-    String(String),
+    Search(SearchInfo),
+    Text(String),
 }
 impl Display for Info {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Info::Depth(depth) => write!(f, "depth {depth}")?,
-            Info::Time(time) => write!(f, "time {}", time.as_millis())?,
-            Info::Nodes(nodes) => write!(f, "nodes {nodes}")?,
-            Info::Pv(moves) => {
-                write!(f, "pv")?;
-                for movement in moves {
-                    write!(f, " {movement}")?;
-                }
-            }
-            Info::Score(score) => {
-                write!(f, "score {score}")?;
-            }
-            Info::HashFull(permill) => write!(f, "hashfull {permill}")?,
-            Info::Nps(nps) => write!(f, "nps {nps}")?,
-            Info::String(s) => write!(f, "string {s}")?,
+            Info::Search(info) => write!(f, "{info}")?,
+            Info::Text(text) => write!(f, "text {text}")?,
         }
+        Ok(())
+    }
+}
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SearchInfo {
+    pub depth: NonZero<u32>,
+    pub time: Duration,
+    pub nodes: NonZero<u32>,
+    pub pv: Vec<Lan>,
+    pub score: Score,
+    pub hash_full: u32,
+    pub nps: u32,
+}
+impl Display for SearchInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "depth {} time {} nodes {} pv",
+            self.depth,
+            self.time.as_millis(),
+            self.nodes,
+        )?;
+        for movement in &self.pv {
+            write!(f, " {movement}")?;
+        }
+        write!(
+            f,
+            " score {} hashfull {} nps {}",
+            self.score, self.hash_full, self.nps,
+        )?;
         Ok(())
     }
 }

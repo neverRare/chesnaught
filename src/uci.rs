@@ -15,7 +15,7 @@ use crate::{
     repl::repl,
     uci::{
         input::Input,
-        output::{Boundary, IdField, Info, OptionType, OptionValue, Output, Score},
+        output::{Boundary, IdField, Info, OptionType, OptionValue, Output, Score, SearchInfo},
     },
 };
 
@@ -298,19 +298,19 @@ pub fn uci_loop() {
                             let nps = (info.nodes.get() as f32 / info.time.as_secs_f32()) as u32;
                             println!(
                                 "{}",
-                                Output::Info(vec![
-                                    Info::Depth(info.depth),
-                                    Info::Time(info.time),
-                                    Info::Nodes(info.nodes),
-                                    Info::Pv(info.pv),
-                                    Info::Score(Score::from_centipawn(
+                                Output::Info(Info::Search(SearchInfo {
+                                    depth: info.depth,
+                                    time: info.time,
+                                    nodes: info.nodes,
+                                    pv: info.pv,
+                                    score: Score::from_centipawn(
                                         // TODO: don't unwrap
                                         info.score.unwrap().centipawn(),
                                         current_player,
-                                    )),
-                                    Info::HashFull(hash_full),
-                                    Info::Nps(nps),
-                                ])
+                                    ),
+                                    hash_full,
+                                    nps
+                                }))
                             );
                         },
                         |movement| {
@@ -371,5 +371,5 @@ pub fn uci_loop() {
     }
 }
 fn debug_print(message: String) {
-    println!("{}", Output::Info(vec![Info::String(message)]));
+    println!("{}", Output::Info(Info::Text(message)));
 }
