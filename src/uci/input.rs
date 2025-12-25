@@ -12,7 +12,9 @@ use crate::{
     board::{Board, InvalidBoard, Lan},
     color::Color,
     fen::{Fen, ParseFenError},
-    misc::{extract_prefix_token, split_by_token, starts_with_token, strip_prefix_token},
+    misc::{
+        WithSpace, extract_prefix_token, split_by_token, starts_with_token, strip_prefix_token,
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -128,10 +130,7 @@ impl Display for Input<'_> {
             Input::Register(register) => write!(f, "register {register}")?,
             Input::UciNewGame => write!(f, "ucinewgame")?,
             Input::Position { position, moves } => {
-                write!(f, "position {position} moves")?;
-                for movement in moves {
-                    write!(f, " {movement}")?;
-                }
+                write!(f, "position {position} moves {}", WithSpace(moves))?;
             }
             Input::Go(go) => write!(f, "go {go}")?,
             Input::Stop => write!(f, "stop")?,
@@ -245,10 +244,7 @@ impl Display for Go {
         };
         if let Some(search_moves) = &self.search_moves {
             add_space(f)?;
-            write!(f, "searchmoves")?;
-            for movement in search_moves {
-                write!(f, " {movement}")?;
-            }
+            write!(f, "searchmoves {}", WithSpace(search_moves))?;
         }
         if self.ponder {
             add_space(f)?;

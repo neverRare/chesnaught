@@ -8,6 +8,7 @@ use crate::{
     board::{Lan, NullableLan},
     color::Color,
     heuristics::Centipawn,
+    misc::WithSpace,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -105,18 +106,14 @@ impl Display for SearchInfo {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "depth {} time {} nodes {} pv",
+            "depth {} time {} nodes {} pv {} score {} hashfull {} nps {}",
             self.depth,
             self.time.as_millis(),
             self.nodes,
-        )?;
-        for movement in &self.pv {
-            write!(f, " {movement}")?;
-        }
-        write!(
-            f,
-            " score {} hashfull {} nps {}",
-            self.score, self.hash_full, self.nps,
+            self.score,
+            WithSpace(&self.pv),
+            self.hash_full,
+            self.nps,
         )?;
         Ok(())
     }

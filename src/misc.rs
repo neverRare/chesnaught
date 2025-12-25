@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     error::Error,
     fmt::{self, Display, Formatter},
+    iter::{once, repeat},
     ops::{Add, AddAssign, Neg, Sub, SubAssign},
 };
 
@@ -106,6 +107,23 @@ impl SubAssign<CompoundI8> for CompoundI8 {
 #[cold]
 pub fn cold_path() {}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct WithSpace<'a, T>(pub &'a [T]);
+
+impl<T> Display for WithSpace<'_, T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for (first, item) in once(true).chain(repeat(false)).zip(self.0.iter()) {
+            if first {
+                write!(f, " ")?;
+            }
+            write!(f, "{item}")?;
+        }
+        Ok(())
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InvalidByte;
 
