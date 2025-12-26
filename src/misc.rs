@@ -154,3 +154,15 @@ impl Display for InvalidByte {
     }
 }
 impl Error for InvalidByte {}
+
+#[cfg(test)]
+mod test {
+    use crate::misc::CompoundI8;
+
+    #[test]
+    fn construction() {
+        let compound = CompoundI8::new(-8, 7);
+        assert_eq!(compound.left(), -8);
+        assert_eq!(compound.right(), 7);
+    }
+}
