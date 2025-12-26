@@ -48,20 +48,19 @@ impl GameTreeInner {
         GameTreeInner { data, score: None }
     }
     fn drop(self) {
-        static DROPPER: LazyLock<Option<Sender<GameTreeInner>>> = LazyLock::new(|| {
+        static DROPPER: LazyLock<Sender<GameTreeInner>> = LazyLock::new(|| {
             let (sender, receiver) = channel();
 
-            let result = Builder::new().spawn(|| {
+            // If this failed, every sends will fail.
+            let _ = Builder::new().spawn(|| {
                 for game_tree in receiver {
                     drop(game_tree);
                 }
             });
-            result.ok().map(|_| sender)
+            sender
         });
-        match &*DROPPER {
-            Some(sender) => sender.send(self).unwrap(),
-            None => drop(self),
-        }
+        // Err which contains self will be dropped
+        let _ = DROPPER.send(self);
     }
     fn board(&self) -> Option<HashableBoard> {
         match &self.data {
