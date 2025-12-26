@@ -133,10 +133,8 @@ impl GameTreeInner {
                                     depth: setting.depth - 1,
                                     alpha: alpha_beta.alpha,
                                     beta: alpha_beta.beta,
-                                    table: setting.table,
                                     multithread_depth: None,
-                                    thread_count: setting.thread_count,
-                                    stop_signal: setting.stop_signal,
+                                    ..setting
                                 });
                                 (nodes, game_tree.score)
                             })
@@ -165,10 +163,8 @@ impl GameTreeInner {
                     depth: setting.depth - 1,
                     alpha: alpha_beta.alpha,
                     beta: alpha_beta.beta,
-                    table: setting.table,
                     multithread_depth: setting.multithread_depth.map(|depth| depth - 1),
-                    thread_count: setting.thread_count,
-                    stop_signal: setting.stop_signal,
+                    ..setting
                 });
                 searched_children += 1;
                 if let Some(score) = game_tree.score
