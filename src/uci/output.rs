@@ -98,7 +98,7 @@ pub struct SearchInfo {
     pub time: Duration,
     pub nodes: NonZero<u32>,
     pub pv: Box<[Lan]>,
-    pub score: Score,
+    pub score: Option<Score>,
     pub hash_full: u32,
     pub nps: u32,
 }
@@ -106,15 +106,17 @@ impl Display for SearchInfo {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "depth {} time {} nodes {} pv {} score {} hashfull {} nps {}",
+            "depth {} time {} nodes {} pv {} hashfull {} nps {}",
             self.depth,
             self.time.as_millis(),
             self.nodes,
             WithSpace(&self.pv),
-            self.score,
             self.hash_full,
             self.nps,
         )?;
+        if let Some(score) = self.score {
+            write!(f, " score {score}")?;
+        }
         Ok(())
     }
 }

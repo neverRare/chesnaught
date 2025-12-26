@@ -303,11 +303,10 @@ pub fn uci_loop() {
                                     time: info.time,
                                     nodes: info.nodes,
                                     pv: info.pv,
-                                    score: Score::from_centipawn(
-                                        // TODO: don't unwrap
-                                        info.score.unwrap().centipawn(),
+                                    score: info.score.map(|score| Score::from_centipawn(
+                                        score.centipawn(),
                                         current_player,
-                                    ),
+                                    )),
                                     hash_full,
                                     nps
                                 }))
