@@ -115,7 +115,7 @@ impl GameTreeInner {
         let mut nodes = 1;
         let current_player = self.current_player().unwrap();
         let children = self.children_or_init().unwrap();
-        let mut alpha_beta = AlphaBetaState::new(current_player, setting.alpha, setting.beta);
+        let mut alpha_beta = AlphaBetaState::new(current_player, setting);
 
         let mut searched_children = 0;
 
@@ -459,11 +459,11 @@ struct AlphaBetaState {
     score: Score,
 }
 impl AlphaBetaState {
-    fn new(current_player: Color, alpha: Score, beta: Score) -> Self {
+    fn new(current_player: Color, setting: SearchSetting) -> Self {
         AlphaBetaState {
             current_player,
-            alpha,
-            beta,
+            alpha: setting.alpha,
+            beta: setting.beta,
             score: match current_player {
                 Color::White => Score::BLACK_WINS,
                 Color::Black => Score::WHITE_WINS,
