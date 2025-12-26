@@ -408,20 +408,20 @@ impl Piece {
         attack: Coord,
         board: &Board,
     ) -> Box<dyn Iterator<Item = Coord> + '_> {
-        let position = self.position.rotate();
+        let rotated_position = self.position.rotate();
         let rotated_attack = attack.rotate();
-        if position.x == rotated_attack.x || position.y == rotated_attack.y {
+        if rotated_position.x == rotated_attack.x || rotated_position.y == rotated_attack.y {
             Box::new(empty())
         } else {
             Box::new(
                 [
                     RotatedCoord {
-                        x: position.x,
+                        x: rotated_position.x,
                         y: rotated_attack.y,
                     },
                     RotatedCoord {
                         x: rotated_attack.x,
-                        y: position.y,
+                        y: rotated_position.y,
                     },
                 ]
                 .into_iter()
