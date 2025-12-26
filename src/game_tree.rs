@@ -59,8 +59,7 @@ impl GameTreeInner {
             });
             sender
         });
-        // Err which contains self will be dropped
-        let _ = DROPPER.send(self);
+        drop(DROPPER.send(self));
     }
     fn board(&self) -> Option<HashableBoard> {
         match &self.data {
