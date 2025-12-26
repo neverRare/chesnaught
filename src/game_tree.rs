@@ -136,7 +136,8 @@ impl GameTreeInner {
                     for handle in handles {
                         let (additional_nodes, score) = handle.join().unwrap();
                         nodes += additional_nodes;
-                        if let Some(score) = score
+                        if !stop
+                            && let Some(score) = score
                             && alpha_beta.set(score)
                         {
                             stop = true;
@@ -171,9 +172,7 @@ impl GameTreeInner {
             };
             ord.reverse()
         });
-        let score = alpha_beta.score.into_finite();
-        debug_assert_eq!(score, children[0].2.score);
-        self.score = score;
+        self.score = alpha_beta.score.into_finite();
         nodes
     }
     fn search(&mut self, setting: SearchSetting) -> u32 {
