@@ -136,8 +136,7 @@ impl GameTreeInner {
                     for handle in handles {
                         let (additional_nodes, score) = handle.join().unwrap();
                         nodes += additional_nodes;
-                        if !stop
-                            && let Some(score) = score
+                        if let Some(score) = score
                             && alpha_beta.set(score)
                         {
                             stop = true;
