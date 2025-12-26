@@ -111,7 +111,7 @@ impl GameTreeInner {
             Data::End(_) => None,
         }
     }
-    fn search_children(&mut self, setting: SearchSetting) -> (u32, Option<Score>) {
+    fn search_children(&mut self, setting: SearchSetting) -> u32 {
         let mut nodes = 1;
         let current_player = self.current_player().unwrap();
         let children = self.children_or_init().unwrap();
@@ -172,7 +172,8 @@ impl GameTreeInner {
             };
             ord.reverse()
         });
-        (nodes, alpha_beta.score.into_finite())
+        self.score = alpha_beta.score.into_finite();
+        nodes
     }
     fn search(&mut self, setting: SearchSetting) -> u32 {
         if setting
@@ -209,12 +210,11 @@ impl GameTreeInner {
                 let mut write = setting.table.write().unwrap();
                 write.insert_repetition(board);
                 drop(write);
-                let (nodes, score) = self.search_children(setting);
-                self.score = score;
+                let nodes = self.search_children(setting);
                 let mut write = setting.table.write().unwrap();
                 let table_value = write.get_mut(&board).unwrap();
                 table_value.repetition = false;
-                if let Some(score) = score {
+                if let Some(score) = self.score {
                     table_value.transposition = Some(score);
                 }
                 drop(write);
