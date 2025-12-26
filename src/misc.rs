@@ -69,7 +69,7 @@ impl PartialOrd for CompoundI8 {
 }
 impl Ord for CompoundI8 {
     fn cmp(&self, other: &Self) -> Ordering {
-        Ord::cmp(&(self.left(), self.right()), &(other.left(), other.right()))
+        Ord::cmp(&[self.left(), self.right()], &[other.left(), other.right()])
     }
 }
 impl Neg for CompoundI8 {
