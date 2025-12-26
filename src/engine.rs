@@ -54,6 +54,7 @@ impl Engine {
             let mut game_tree = GameTree::new(Board::starting_position());
             let mut table = Table::new(0);
             let mut thread = 1;
+            let mut last_depth = 1;
             for input in input_receiver {
                 match input {
                     Input::Ready => {
@@ -72,7 +73,23 @@ impl Engine {
                         best_move_callback,
                         stop_signal,
                     } => {
-                        for i in 1.. {
+                        if let Some(movement) = game_tree.best_move() {
+                            info_callback(Info {
+                                depth: NonZero::new(1).unwrap(),
+                                time: Duration::ZERO,
+                                nodes: NonZero::new(2).unwrap(),
+                                pv: [movement].into(),
+                                score: game_tree.score(),
+                                hash_capacity: table.capacity(),
+                                hash_max_capacity: table.max_capacity(),
+                            });
+                        }
+                        let start = match depth {
+                            Some(depth) => Ord::min(depth.get(), last_depth),
+                            None => last_depth,
+                        };
+                        for i in start.. {
+                            last_depth = i;
                             let start = Instant::now();
                             let nodes = game_tree.calculate_with_stop_signal(
                                 i,
