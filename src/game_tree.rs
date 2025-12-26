@@ -111,7 +111,7 @@ impl GameTreeInner {
             Data::End(_) => None,
         }
     }
-    fn search(&mut self, setting: SearchSetting) -> (u32, Score) {
+    fn search_children(&mut self, setting: SearchSetting) -> (u32, Score) {
         let mut nodes = 1;
         let current_player = self.current_player().unwrap();
         let children = self.children_or_init().unwrap();
@@ -127,7 +127,7 @@ impl GameTreeInner {
                         .iter_mut()
                         .map(|(_, _, game_tree)| {
                             scope.spawn(move || {
-                                let nodes = game_tree.alpha_beta(setting.deeper(alpha_beta));
+                                let nodes = game_tree.search(setting.deeper(alpha_beta));
                                 (nodes, game_tree.score)
                             })
                         })
@@ -151,7 +151,7 @@ impl GameTreeInner {
             }
         } else {
             for (_, _, game_tree) in &mut *children {
-                nodes += game_tree.alpha_beta(setting.deeper(alpha_beta));
+                nodes += game_tree.search(setting.deeper(alpha_beta));
                 searched_children += 1;
                 if let Some(score) = game_tree.score
                     && alpha_beta.set(score)
@@ -174,7 +174,7 @@ impl GameTreeInner {
         });
         (nodes, alpha_beta.score)
     }
-    fn alpha_beta(&mut self, setting: SearchSetting) -> u32 {
+    fn search(&mut self, setting: SearchSetting) -> u32 {
         if setting
             .stop_signal
             .is_some_and(|signal| signal.load(atomic::Ordering::Relaxed))
@@ -209,7 +209,7 @@ impl GameTreeInner {
                 let mut write = setting.table.write().unwrap();
                 write.insert_repetition(board);
                 drop(write);
-                let (nodes, score) = self.search(setting);
+                let (nodes, score) = self.search_children(setting);
                 self.score = Some(score);
                 let mut write = setting.table.write().unwrap();
                 let table_value = write.get_mut(&board).unwrap();
@@ -333,7 +333,7 @@ impl GameTree {
         } else {
             None
         };
-        self.0.alpha_beta(SearchSetting {
+        self.0.search(SearchSetting {
             depth,
             alpha: Score::BLACK_WINS,
             beta: Score::WHITE_WINS,
