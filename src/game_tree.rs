@@ -172,7 +172,9 @@ impl GameTreeInner {
             };
             ord.reverse()
         });
-        self.score = alpha_beta.score.into_finite();
+        let score = alpha_beta.score.into_finite();
+        debug_assert_eq!(score, children[0].2.score);
+        self.score = score;
         nodes
     }
     fn search(&mut self, setting: SearchSetting) -> u32 {
