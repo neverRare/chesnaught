@@ -308,10 +308,10 @@ impl Piece {
     }
     fn pawn_attack_destination(
         self,
-        attack: Coord,
+        victim: Coord,
         board: &Board,
     ) -> Box<dyn Iterator<Item = Coord> + '_> {
-        let difference = attack - self.position;
+        let difference = victim - self.position;
         if difference.y == Vector::pawn_direction(self.color()) * 3 {
             let destination = self
                 .position
@@ -374,42 +374,25 @@ impl Piece {
             Box::new(empty())
         }
     }
-    fn rook_attack_destination(
-        self,
-        attack: Coord,
-        board: &Board,
-    ) -> Box<dyn Iterator<Item = Coord> + '_> {
-        if self.position.x() == attack.x() || self.position.y() == attack.y() {
+    fn rook_attack_destination_unfiltered(self, victim: Coord) -> Box<dyn Iterator<Item = Coord>> {
+        if self.position.x() == victim.x() || self.position.y() == victim.y() {
             Box::new(empty())
         } else {
             Box::new(
                 [
-                    Coord::new(self.position.x(), attack.y()),
-                    Coord::new(attack.x(), self.position.y()),
+                    Coord::new(self.position.x(), victim.y()),
+                    Coord::new(victim.x(), self.position.y()),
                 ]
-                .into_iter()
-                .filter(move |destination| {
-                    board
-                        .index(*destination)
-                        .is_none_or(|piece| piece.color() == !self.color())
-                        && !self
-                            .position
-                            .line_ex_ex(*destination, (*destination - self.position).as_unit())
-                            .chain(
-                                destination.line_ex_ex(attack, (attack - *destination).as_unit()),
-                            )
-                            .any(|position| board[position].is_some())
-                }),
+                .into_iter(),
             )
         }
     }
-    fn bishop_attack_destination(
+    fn bishop_attack_destination_unfiltered(
         self,
-        attack: Coord,
-        board: &Board,
-    ) -> Box<dyn Iterator<Item = Coord> + '_> {
+        victim: Coord,
+    ) -> Box<dyn Iterator<Item = Coord>> {
         let rotated_position = self.position.rotate();
-        let rotated_attack = attack.rotate();
+        let rotated_attack = victim.rotate();
         if rotated_position.x == rotated_attack.x || rotated_position.y == rotated_attack.y {
             Box::new(empty())
         } else {
@@ -425,31 +408,19 @@ impl Piece {
                     },
                 ]
                 .into_iter()
-                .filter_map(RotatedCoord::rotate_back)
-                .filter(move |destination| {
-                    board
-                        .index(*destination)
-                        .is_none_or(|piece| piece.color() == !self.color())
-                        && !self
-                            .position
-                            .line_ex_ex(*destination, (*destination - self.position).as_unit())
-                            .chain(
-                                destination.line_ex_ex(attack, (attack - *destination).as_unit()),
-                            )
-                            .any(|position| board[position].is_some())
-                }),
+                .filter_map(RotatedCoord::rotate_back),
             )
         }
     }
     fn attack_destination(
         self,
-        attack: Coord,
+        victim: Coord,
         board: &Board,
     ) -> Box<dyn Iterator<Item = Coord> + '_> {
         match self.piece() {
             PieceKind::Pawn => {
                 if INCLUDE_PAWN {
-                    self.pawn_attack_destination(attack, board)
+                    self.pawn_attack_destination(victim, board)
                 } else {
                     Box::new(empty())
                 }
@@ -459,21 +430,51 @@ impl Piece {
                     .into_iter()
                     .filter_map(move |movement| self.position.add_checked(movement))
                     .filter(move |destination| {
-                        (attack - *destination).is_knight_move()
+                        (victim - *destination).is_knight_move()
                             && board
                                 .index(*destination)
                                 .is_none_or(|piece| piece.color() == !self.color())
                     }),
             ),
-            PieceKind::Bishop => self.bishop_attack_destination(attack, board),
-            PieceKind::Rook => self.rook_attack_destination(attack, board),
-            PieceKind::Queen => Box::new(
-                self.rook_attack_destination(attack, board)
-                    .chain(self.bishop_attack_destination(attack, board)),
-            ),
+            PieceKind::Bishop => Box::new(filter_attacks(
+                self.bishop_attack_destination_unfiltered(victim),
+                self,
+                victim,
+                board,
+            )),
+            PieceKind::Rook => Box::new(filter_attacks(
+                self.rook_attack_destination_unfiltered(victim),
+                self,
+                victim,
+                board,
+            )),
+            PieceKind::Queen => Box::new(filter_attacks(
+                self.rook_attack_destination_unfiltered(victim)
+                    .chain(self.bishop_attack_destination_unfiltered(victim)),
+                self,
+                victim,
+                board,
+            )),
             PieceKind::King => todo!(),
         }
     }
+}
+fn filter_attacks(
+    destinations: impl Iterator<Item = Coord>,
+    attacker: Piece,
+    victim: Coord,
+    board: &Board,
+) -> impl Iterator<Item = Coord> {
+    destinations.filter(move |destination| {
+        board
+            .index(*destination)
+            .is_none_or(|piece| piece.color() == !attacker.color())
+            && !attacker
+                .position
+                .line_ex_ex(*destination, (*destination - attacker.position).as_unit())
+                .chain(destination.line_ex_ex(victim, (victim - *destination).as_unit()))
+                .any(|position| board[position].is_some())
+    })
 }
 impl Display for Piece {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
