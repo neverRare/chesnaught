@@ -107,9 +107,14 @@ impl SubAssign<CompoundI8> for CompoundI8 {
 #[cold]
 pub fn cold_path() {}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct WithSpace<'a, T>(pub &'a [T]);
-
+impl<T> Clone for WithSpace<'_, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T> Copy for WithSpace<'_, T> {}
 impl<T> Display for WithSpace<'_, T>
 where
     T: Display,
