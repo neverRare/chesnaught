@@ -216,24 +216,26 @@ impl GameTreeInner {
                 }
             }
             drop(read);
-            let (nodes, score) = if setting.depth == 0 {
+            if setting.depth == 0 {
                 let score = self.estimate();
-                (1, score)
+                self.score = Some(score);
+                let mut write = setting.table.write().unwrap();
+                write.insert_transposition(board, score);
+                drop(write);
+                1
             } else {
                 let mut write = setting.table.write().unwrap();
                 write.insert_repetition(board);
                 drop(write);
-                let nodes_score = self.search(setting);
+                let (nodes, score) = self.search(setting);
+                self.score = Some(score);
                 let mut write = setting.table.write().unwrap();
-                write.remove_repetition(&board);
+                let table_value = write.get_mut(&board).unwrap();
+                table_value.repetition = false;
+                table_value.transposition = Some(score);
                 drop(write);
-                nodes_score
-            };
-            self.score = Some(score);
-            let mut write = setting.table.write().unwrap();
-            write.insert_transposition(board, score);
-            drop(write);
-            nodes
+                nodes
+            }
         }
     }
     fn estimate(&self) -> Score {
@@ -425,6 +427,9 @@ impl Table {
     }
     fn get(&self, board: &HashableBoard) -> Option<&TableValue> {
         self.table.get(board)
+    }
+    fn get_mut(&mut self, board: &HashableBoard) -> Option<&mut TableValue> {
+        self.table.get_mut(board)
     }
     fn inspect_element(&mut self, board: HashableBoard, f: impl FnOnce(&mut TableValue)) {
         if let Some(value) = self.table.get_mut(&board) {
