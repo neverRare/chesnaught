@@ -6,7 +6,10 @@ Toy Chess and [Chess960] engine that speaks [UCI].
 
 This is a toy project that I don't feel like providing prebuilt executables. Compile it yourself using [Cargo], remember to put `--release`.
 
-Chesnaught is a command line software. You'll need a GUI in order to use Chesnaught. I recommend [En Croissant].
+Chesnaught is a command line software. You'll need a GUI in order to use Chesnaught. Here are my recommendation:
+
+- [En Croissant] &ndash; User friendly option
+- [Cute Chess] &ndash; Lightweight option
 
 ## Playing Motif
 
@@ -44,4 +47,5 @@ Chesnaught does provide centipawn analysis but this is an approximation. Chesnau
 [UCI]: https://en.wikipedia.org/wiki/Universal_Chess_Interface
 [Cargo]: https://rust-lang.org/
 [En Croissant]: https://encroissant.org/
+[Cute Chess]: https://cutechess.com/
 [Stockfish]: https://stockfishchess.org/
