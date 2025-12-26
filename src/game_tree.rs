@@ -111,7 +111,7 @@ impl GameTreeInner {
             Data::End(_) => None,
         }
     }
-    fn search(&mut self, setting: AlphaBetaSetting) -> (u32, Score) {
+    fn search(&mut self, setting: SearchSetting) -> (u32, Score) {
         let mut nodes = 1;
         let current_player = self.current_player().unwrap();
         let children = self.children_or_init().unwrap();
@@ -127,8 +127,7 @@ impl GameTreeInner {
                         .iter_mut()
                         .map(|(_, _, game_tree)| {
                             scope.spawn(move || {
-                                let nodes = game_tree
-                                    .alpha_beta(setting.deeper(alpha_beta.alpha, alpha_beta.beta));
+                                let nodes = game_tree.alpha_beta(setting.deeper(alpha_beta));
                                 (nodes, game_tree.score)
                             })
                         })
@@ -152,7 +151,7 @@ impl GameTreeInner {
             }
         } else {
             for (_, _, game_tree) in &mut *children {
-                nodes += game_tree.alpha_beta(setting.deeper(alpha_beta.alpha, alpha_beta.beta));
+                nodes += game_tree.alpha_beta(setting.deeper(alpha_beta));
                 searched_children += 1;
                 if let Some(score) = game_tree.score
                     && alpha_beta.set(score)
@@ -175,7 +174,7 @@ impl GameTreeInner {
         });
         (nodes, alpha_beta.score)
     }
-    fn alpha_beta(&mut self, setting: AlphaBetaSetting) -> u32 {
+    fn alpha_beta(&mut self, setting: SearchSetting) -> u32 {
         if setting
             .stop_signal
             .is_some_and(|signal| signal.load(atomic::Ordering::Relaxed))
@@ -259,7 +258,7 @@ impl GameTreeInner {
     }
 }
 #[derive(Debug, Clone, Copy)]
-struct AlphaBetaSetting<'lock, 'table, 'bool> {
+struct SearchSetting<'lock, 'table, 'bool> {
     depth: u32,
     alpha: Score,
     beta: Score,
@@ -268,12 +267,12 @@ struct AlphaBetaSetting<'lock, 'table, 'bool> {
     thread_count: usize,
     stop_signal: Option<&'bool AtomicBool>,
 }
-impl AlphaBetaSetting<'_, '_, '_> {
-    fn deeper(self, alpha: Score, beta: Score) -> Self {
-        AlphaBetaSetting {
+impl SearchSetting<'_, '_, '_> {
+    fn deeper(self, alpha_beta: AlphaBetaState) -> Self {
+        SearchSetting {
             depth: self.depth - 1,
-            alpha,
-            beta,
+            alpha: alpha_beta.alpha,
+            beta: alpha_beta.beta,
             multithread_depth: self
                 .multithread_depth
                 .and_then(|depth| depth.checked_sub(1)),
@@ -334,7 +333,7 @@ impl GameTree {
         } else {
             None
         };
-        self.0.alpha_beta(AlphaBetaSetting {
+        self.0.alpha_beta(SearchSetting {
             depth,
             alpha: Score::BLACK_WINS,
             beta: Score::WHITE_WINS,
@@ -452,6 +451,7 @@ impl Table {
         self.table = HashMap::default();
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct AlphaBetaState {
     current_player: Color,
     alpha: Score,
