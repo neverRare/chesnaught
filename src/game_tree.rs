@@ -445,11 +445,6 @@ impl Table {
     fn insert_repetition(&mut self, board: HashableBoard) {
         self.inspect_element(board, |value| value.repetition = true);
     }
-    fn remove_repetition(&mut self, board: &HashableBoard) {
-        if let Some(value) = self.table.get_mut(board) {
-            value.repetition = false;
-        }
-    }
     fn clear(&mut self) {
         self.table.clear();
     }
