@@ -68,7 +68,7 @@ impl Engine {
                         game_tree = GameTree::new(board);
                     }
                     Input::Move(movement) => {
-                        last_depth -= 1;
+                        last_depth = Ord::max(last_depth - 1, 1);
                         game_tree.move_piece(movement);
                     }
                     Input::Calculate {
