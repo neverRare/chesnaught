@@ -32,6 +32,7 @@ enum Input {
     Move(Lan),
     Bot(u32),
     CheckPrune(u32),
+    Eval,
 }
 impl Display for Input {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -47,6 +48,7 @@ impl Display for Input {
             Input::Move(movement) => write!(f, "{movement}")?,
             Input::Bot(depth) => write!(f, "bot {depth}")?,
             Input::CheckPrune(depth) => write!(f, "check prune {depth}")?,
+            Input::Eval => write!(f, "eval")?,
         }
         Ok(())
     }
@@ -62,6 +64,7 @@ impl FromStr for Input {
             "start chess960" => Ok(Input::StartChess960),
             "quit" => Ok(Input::Quit),
             "fen" => Ok(Input::ExportFen),
+            "eval" => Ok(Input::Eval),
             s => {
                 if let Some(s) = strip_prefix_token(s, "import") {
                     Ok(Input::Import(s.parse()?))
@@ -144,17 +147,22 @@ pub fn repl() {
             };
             match input {
                 Input::Help => {
-                    writeln!(output, "flip           - flip the board").unwrap();
+                    writeln!(output, "flip - flip the board").unwrap();
+                    writeln!(output, "quit - quit the game").unwrap();
+                    writeln!(output, "fen  - export the position as fen").unwrap();
+                    writeln!(output).unwrap();
                     writeln!(output, "restart        - reset to starting position").unwrap();
                     writeln!(output, "start chess960 - start a new chess960 game").unwrap();
-                    writeln!(output, "quit           - quit the game").unwrap();
                     writeln!(output, "import <fen>   - import a position").unwrap();
-                    writeln!(output, "fen            - export the position as fen").unwrap();
+                    writeln!(output).unwrap();
                     writeln!(output, "e2             - view valid moves").unwrap();
                     writeln!(output, "e2e4           - play the move").unwrap();
                     writeln!(output, "e7e8q          - move and promote").unwrap();
                     writeln!(output, "e1g1 (or e1h1) - perform castling").unwrap();
-                    writeln!(output, "bot <depth>    - let a bot play").unwrap();
+                    writeln!(output).unwrap();
+                    writeln!(output, "bot <depth>         - let a bot play").unwrap();
+                    writeln!(output, "check prune <depth> - check pruning performance").unwrap();
+                    writeln!(output, "eval                - evaluate position at depth 0").unwrap();
                 }
                 Input::Flip => {
                     view = !view;
@@ -247,6 +255,9 @@ pub fn repl() {
                     writeln!(output, "total number of nodes: {total}").unwrap();
                     writeln!(output, "searched nodes with unsorted branches: {presorted}").unwrap();
                     writeln!(output, "searched nodes with sorted branches: {sorted}").unwrap();
+                }
+                Input::Eval => {
+                    writeln!(output, "{:#?}", board.estimate()).unwrap();
                 }
             }
             break;
