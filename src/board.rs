@@ -340,7 +340,7 @@ impl Piece {
                         .unwrap();
                     if board
                         .index(destination)
-                        .is_some_and(|piece| piece.color() == !self.color())
+                        .is_some_and(|piece| piece.color() != self.color())
                     {
                         Box::new(once(destination))
                     } else {
@@ -365,7 +365,7 @@ impl Piece {
                         .filter(move |destination| {
                             board
                                 .index(*destination)
-                                .is_some_and(|piece| piece.color() == !self.color())
+                                .is_some_and(|piece| piece.color() != self.color())
                         }),
                 ),
                 _ => Box::new(empty()),
@@ -433,7 +433,7 @@ impl Piece {
                         (victim - *destination).is_knight_move()
                             && board
                                 .index(*destination)
-                                .is_none_or(|piece| piece.color() == !self.color())
+                                .is_none_or(|piece| piece.color() != self.color())
                     }),
             ),
             PieceKind::Bishop => Box::new(filter_attacks(
@@ -468,7 +468,7 @@ fn filter_attacks(
     destinations.filter(move |destination| {
         board
             .index(*destination)
-            .is_none_or(|piece| piece.color() == !attacker.color())
+            .is_none_or(|piece| piece.color() != attacker.color())
             && !attacker
                 .position
                 .line_ex_ex(*destination, (*destination - attacker.position).as_unit())
