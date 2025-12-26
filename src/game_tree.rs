@@ -127,13 +127,8 @@ impl GameTreeInner {
                         .iter_mut()
                         .map(|(_, _, game_tree)| {
                             scope.spawn(move || {
-                                let nodes = game_tree.alpha_beta(AlphaBetaSetting {
-                                    depth: setting.depth - 1,
-                                    alpha: alpha_beta.alpha,
-                                    beta: alpha_beta.beta,
-                                    multithread_depth: None,
-                                    ..setting
-                                });
+                                let nodes = game_tree
+                                    .alpha_beta(setting.deeper(alpha_beta.alpha, alpha_beta.beta));
                                 (nodes, game_tree.score)
                             })
                         })
@@ -157,13 +152,7 @@ impl GameTreeInner {
             }
         } else {
             for (_, _, game_tree) in &mut *children {
-                nodes += game_tree.alpha_beta(AlphaBetaSetting {
-                    depth: setting.depth - 1,
-                    alpha: alpha_beta.alpha,
-                    beta: alpha_beta.beta,
-                    multithread_depth: setting.multithread_depth.map(|depth| depth - 1),
-                    ..setting
-                });
+                nodes += game_tree.alpha_beta(setting.deeper(alpha_beta.alpha, alpha_beta.beta));
                 searched_children += 1;
                 if let Some(score) = game_tree.score
                     && alpha_beta.set(score)
@@ -278,6 +267,19 @@ struct AlphaBetaSetting<'lock, 'table, 'bool> {
     multithread_depth: Option<u32>,
     thread_count: usize,
     stop_signal: Option<&'bool AtomicBool>,
+}
+impl AlphaBetaSetting<'_, '_, '_> {
+    fn deeper(self, alpha: Score, beta: Score) -> Self {
+        AlphaBetaSetting {
+            depth: self.depth - 1,
+            alpha,
+            beta,
+            multithread_depth: self
+                .multithread_depth
+                .and_then(|depth| depth.checked_sub(1)),
+            ..self
+        }
+    }
 }
 #[derive(Debug, Clone)]
 pub struct GameTree(GameTreeInner);
