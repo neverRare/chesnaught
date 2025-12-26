@@ -63,7 +63,10 @@ impl Engine {
                             return;
                         }
                     }
-                    Input::SetBoard(board) => game_tree = GameTree::new(board),
+                    Input::SetBoard(board) => {
+                        last_depth = 1;
+                        game_tree = GameTree::new(board);
+                    }
                     Input::Move(movement) => {
                         last_depth -= 1;
                         game_tree.move_piece(movement);
