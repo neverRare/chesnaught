@@ -18,7 +18,7 @@ use crate::{
     color::Color,
     end_state::EndState,
     heuristics::Score,
-    misc::cold_path,
+    misc::{Extended, cold_path},
 };
 
 type MoveTreePair = (Lan, Option<Lan>, GameTreeInner);
@@ -111,7 +111,7 @@ impl GameTreeInner {
             Data::End(_) => None,
         }
     }
-    fn search_children(&mut self, setting: SearchSetting) -> (u32, Score) {
+    fn search_children(&mut self, setting: SearchSetting) -> (u32, Option<Score>) {
         let mut nodes = 1;
         let current_player = self.current_player().unwrap();
         let children = self.children_or_init().unwrap();
@@ -172,7 +172,7 @@ impl GameTreeInner {
             };
             ord.reverse()
         });
-        (nodes, alpha_beta.score)
+        (nodes, alpha_beta.score.into_finite())
     }
     fn search(&mut self, setting: SearchSetting) -> u32 {
         if setting
@@ -210,11 +210,13 @@ impl GameTreeInner {
                 write.insert_repetition(board);
                 drop(write);
                 let (nodes, score) = self.search_children(setting);
-                self.score = Some(score);
+                self.score = score;
                 let mut write = setting.table.write().unwrap();
                 let table_value = write.get_mut(&board).unwrap();
                 table_value.repetition = false;
-                table_value.transposition = Some(score);
+                if let Some(score) = score {
+                    table_value.transposition = Some(score);
+                }
                 drop(write);
                 nodes
             }
@@ -260,8 +262,8 @@ impl GameTreeInner {
 #[derive(Debug, Clone, Copy)]
 struct SearchSetting<'lock, 'table, 'bool> {
     depth: u32,
-    alpha: Score,
-    beta: Score,
+    alpha: Extended<Score>,
+    beta: Extended<Score>,
     table: &'lock RwLock<&'table mut Table>,
     multithread_depth: Option<u32>,
     thread_count: usize,
@@ -335,8 +337,8 @@ impl GameTree {
         };
         self.0.search(SearchSetting {
             depth,
-            alpha: Score::BLACK_WINS,
-            beta: Score::WHITE_WINS,
+            alpha: Extended::NegInf,
+            beta: Extended::Inf,
             table: &RwLock::new(table),
             multithread_depth,
             thread_count,
@@ -454,9 +456,9 @@ impl Table {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct AlphaBetaState {
     current_player: Color,
-    alpha: Score,
-    beta: Score,
-    score: Score,
+    alpha: Extended<Score>,
+    beta: Extended<Score>,
+    score: Extended<Score>,
 }
 impl AlphaBetaState {
     fn new(current_player: Color, setting: SearchSetting) -> Self {
@@ -465,12 +467,13 @@ impl AlphaBetaState {
             alpha: setting.alpha,
             beta: setting.beta,
             score: match current_player {
-                Color::White => Score::BLACK_WINS,
-                Color::Black => Score::WHITE_WINS,
+                Color::White => Extended::NegInf,
+                Color::Black => Extended::Inf,
             },
         }
     }
     fn set(&mut self, score: Score) -> bool {
+        let score = Extended::Finite(score);
         match self.current_player {
             Color::White => {
                 self.score = Ord::max(self.score, score);

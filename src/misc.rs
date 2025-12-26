@@ -129,6 +129,21 @@ where
         Ok(())
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Extended<T> {
+    NegInf,
+    Finite(T),
+    Inf,
+}
+impl<T> Extended<T> {
+    pub fn into_finite(self) -> Option<T> {
+        if let Extended::Finite(value) = self {
+            Some(value)
+        } else {
+            None
+        }
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InvalidByte;
 
