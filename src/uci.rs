@@ -264,9 +264,9 @@ pub fn uci_loop() {
                             clippy::cast_precision_loss
                         )]
                         let hash_full = if info.hash_capacity >= hash_max_capacity {
-                            1_000_000
+                            1_000
                         } else {
-                            (info.hash_capacity as f32 / hash_max_capacity as f32 * 1_000_000_f32)
+                            (info.hash_capacity as f32 / hash_max_capacity as f32 * 1_000_f32)
                                 as u32
                         };
                         #[allow(
