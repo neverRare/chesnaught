@@ -198,9 +198,9 @@ impl Engine {
             stop_signal.store(true, Ordering::Relaxed);
         }
     }
-    pub fn ponder(&self) -> Lan {
-        while self.ponder.read().unwrap().is_none() {}
-        self.ponder.write().unwrap().take().unwrap()
+    pub fn ponder(&self) -> Option<Lan> {
+        self.ready();
+        self.ponder.write().unwrap().take()
     }
     pub fn set_hash_max_capacity(&self, max_capacity: usize) {
         self.input
