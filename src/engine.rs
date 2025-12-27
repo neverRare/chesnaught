@@ -78,7 +78,7 @@ impl Engine {
                         best_move_callback,
                         stop_signal,
                     } => {
-                        if let Some(movement) = game_tree.best_move() {
+                        let start = if let Some(movement) = game_tree.best_move() {
                             info_callback(Info {
                                 depth: NonZero::new(1).unwrap(),
                                 time: Duration::ZERO,
@@ -87,10 +87,12 @@ impl Engine {
                                 score: game_tree.score(),
                                 hash_capacity: table.capacity(),
                             });
-                        }
-                        let start = match depth {
-                            Some(depth) => Ord::min(depth.get(), last_depth),
-                            None => last_depth,
+                            match depth {
+                                Some(depth) => Ord::min(depth.get(), last_depth),
+                                None => last_depth,
+                            }
+                        } else {
+                            1
                         };
                         for i in start.. {
                             last_depth = i;
