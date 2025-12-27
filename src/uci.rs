@@ -294,6 +294,7 @@ pub fn uci_loop() {
                     go.depth,
                     go.nodes,
                     mate,
+                    go.ponder,
                     info_callback(hash_max_capacity, board.current_player()),
                     best_move_callback(ponder, go.ponder),
                 );
@@ -315,6 +316,7 @@ pub fn uci_loop() {
                     None,
                     None,
                     None,
+                    false,
                     info_callback(hash_max_capacity, board.current_player()),
                     best_move_callback(ponder, false),
                 );

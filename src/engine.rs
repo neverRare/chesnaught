@@ -23,6 +23,7 @@ enum Input {
         depth: Option<NonZero<u32>>,
         nodes: Option<NonZero<u32>>,
         mate_in_plies: Option<NonZero<u32>>,
+        ponder: bool,
         info_callback: Box<dyn FnMut(Info) + Send>,
         best_move_callback: Box<dyn FnOnce(Option<Lan>, Option<Lan>) + Send>,
         stop_signal: Arc<AtomicBool>,
@@ -50,8 +51,8 @@ impl Engine {
     pub fn new() -> Self {
         let (input, input_receiver) = channel();
         let (ready_sender, ready) = sync_channel(0);
-        let ponder = Arc::new(RwLock::new(None));
-        let ponder_ = Arc::clone(&ponder);
+        let pondered_movement = Arc::new(RwLock::new(None));
+        let ponder = Arc::clone(&pondered_movement);
         spawn(move || {
             let mut game_tree = GameTree::new(Board::starting_position());
             let mut table = Table::new(0);
@@ -77,6 +78,7 @@ impl Engine {
                         depth,
                         nodes: max_nodes,
                         mate_in_plies,
+                        ponder: ponder_mode,
                         mut info_callback,
                         best_move_callback,
                         stop_signal,
@@ -132,8 +134,8 @@ impl Engine {
                             let mut best_line = game_tree.best_line().fuse();
                             (best_line.next(), best_line.next())
                         };
-                        if let Some(movement) = pondered_move {
-                            let mut write = ponder.write().unwrap();
+                        if !ponder_mode && let Some(movement) = pondered_move {
+                            let mut write = pondered_movement.write().unwrap();
                             *write = Some(movement);
                             drop(write);
                         }
@@ -149,7 +151,7 @@ impl Engine {
             stop_signal: None,
             input,
             ready,
-            ponder: ponder_,
+            ponder,
         }
     }
     pub fn ready(&self) {
@@ -168,6 +170,7 @@ impl Engine {
         depth: Option<NonZero<u32>>,
         nodes: Option<NonZero<u32>>,
         mate_in_plies: Option<NonZero<u32>>,
+        ponder: bool,
         info_callback: impl FnMut(Info) + Send + 'static,
         best_move_callback: impl FnOnce(Option<Lan>, Option<Lan>) + Send + 'static,
     ) {
@@ -184,6 +187,7 @@ impl Engine {
                 depth,
                 nodes,
                 mate_in_plies,
+                ponder,
                 info_callback: Box::new(info_callback),
                 best_move_callback: Box::new(best_move_callback),
                 stop_signal: stop_signal.clone(),
