@@ -19,7 +19,6 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Input<'a> {
-    Uci,
     Debug(bool),
     IsReady,
     SetOption {
@@ -39,14 +38,10 @@ pub enum Input<'a> {
     Stop,
     PonderHit,
     Quit,
-    Repl,
-    Fuzz,
 }
 impl<'a> Input<'a> {
     fn from_str_from_start(src: &'a str) -> Result<Self, ParseInputError> {
-        if starts_with_token(src, "uci") {
-            Ok(Input::Uci)
-        } else if let Some(src) = strip_prefix_token(src, "debug") {
+        if let Some(src) = strip_prefix_token(src, "debug") {
             if starts_with_token(src, "on") {
                 Ok(Input::Debug(true))
             } else if starts_with_token(src, "off") {
@@ -91,10 +86,6 @@ impl<'a> Input<'a> {
             Ok(Input::PonderHit)
         } else if starts_with_token(src, "quit") {
             Ok(Input::Quit)
-        } else if starts_with_token(src, "repl") {
-            Ok(Input::Repl)
-        } else if starts_with_token(src, "fuzz") {
-            Ok(Input::Fuzz)
         } else {
             Err(ParseInputError::UnknownCommand(
                 extract_prefix_token(src).into(),
@@ -115,7 +106,6 @@ impl<'a> Input<'a> {
 impl Display for Input<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Input::Uci => write!(f, "uci")?,
             Input::Debug(debug) => {
                 let switch = if *debug { "on" } else { "false" };
                 write!(f, "debug {switch}")?;
@@ -136,8 +126,6 @@ impl Display for Input<'_> {
             Input::Stop => write!(f, "stop")?,
             Input::PonderHit => write!(f, "ponderhit")?,
             Input::Quit => write!(f, "quit")?,
-            Input::Repl => write!(f, "repl")?,
-            Input::Fuzz => write!(f, "fuzz")?,
         }
         Ok(())
     }

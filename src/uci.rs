@@ -9,10 +9,8 @@ use crate::{
     board::{Board, NullableLan},
     color::Color,
     engine::Engine,
-    fuzz::fuzz,
     game_tree::Table,
     misc::MEBIBYTES,
-    repl::repl,
     uci::{
         input::Input,
         output::{Boundary, IdField, Info, OptionType, OptionValue, Output, Score, SearchInfo},
@@ -73,10 +71,12 @@ const CONFIG: [Output; 8] = [
     Output::UciOk,
 ];
 pub fn uci_loop() {
+    for config in CONFIG {
+        println!("{config}");
+    }
     let input = stdin().lock();
     let mut lines = input.lines();
 
-    let mut uci = false;
     let mut debug = false;
     let mut engine = LazyCell::new(Engine::new);
     let mut board = Board::starting_position();
@@ -122,250 +122,202 @@ pub fn uci_loop() {
             }
         }
         match parsed_input {
-            Input::Uci => {
-                for config in CONFIG {
-                    println!("{config}");
-                }
-                uci = true;
-            }
-            Input::Debug(new_value) => {
-                if uci {
-                    debug = new_value;
-                }
-            }
+            Input::Debug(new_value) => debug = new_value,
+
             Input::IsReady => {
-                if uci {
-                    engine.ready();
-                    println!("{}", Output::ReadyOk);
-                }
+                engine.ready();
+                println!("{}", Output::ReadyOk);
             }
             Input::SetOption { name, value } => {
-                if uci {
-                    match name {
-                        CHESS960 => {
-                            if debug && !matches!(value, Some("true" | "false")) {
-                                debug_print(format!("set {CHESS960} to invalid value; ignoring"));
-                            }
-                            // The engine can already work on chess960 without telling it to use chess960
+                match name {
+                    CHESS960 => {
+                        if debug && !matches!(value, Some("true" | "false")) {
+                            debug_print(format!("set {CHESS960} to invalid value; ignoring"));
                         }
-                        "Thread" => {
-                            let Some(value) = value else {
+                        // The engine can already work on chess960 without telling it to use chess960
+                    }
+                    "Thread" => {
+                        let Some(value) = value else {
+                            if debug {
+                                debug_print("set `Thread` without value; ignoring".to_string());
+                            }
+                            continue;
+                        };
+                        let thread: NonZero<usize> = match value.parse() {
+                            Ok(size) => size,
+                            Err(err) => {
                                 if debug {
-                                    debug_print("set `Thread` without value; ignoring".to_string());
+                                    debug_print(
+                                        "set `Thread` to an invalid value; ignoring".to_string(),
+                                    );
+                                    debug_print(format!("error: {err}"));
                                 }
                                 continue;
-                            };
-                            let thread: NonZero<usize> = match value.parse() {
-                                Ok(size) => size,
-                                Err(err) => {
-                                    if debug {
-                                        debug_print(
-                                            "set `Thread` to an invalid value; ignoring"
-                                                .to_string(),
-                                        );
-                                        debug_print(format!("error: {err}"));
-                                    }
-                                    continue;
-                                }
-                            };
-                            engine.set_thread(thread);
-                        }
-                        "Hash" => {
-                            let Some(value) = value else {
+                            }
+                        };
+                        engine.set_thread(thread);
+                    }
+                    "Hash" => {
+                        let Some(value) = value else {
+                            if debug {
+                                debug_print("set `Hash` without value; ignoring".to_string());
+                            }
+                            continue;
+                        };
+                        let size: usize = match value.parse() {
+                            Ok(size) => size,
+                            Err(err) => {
                                 if debug {
-                                    debug_print("set `Hash` without value; ignoring".to_string());
+                                    debug_print(
+                                        "set `Hash` to an invalid value; ignoring".to_string(),
+                                    );
+                                    debug_print(format!("error: {err}"));
                                 }
                                 continue;
-                            };
-                            let size: usize = match value.parse() {
-                                Ok(size) => size,
-                                Err(err) => {
-                                    if debug {
-                                        debug_print(
-                                            "set `Hash` to an invalid value; ignoring".to_string(),
-                                        );
-                                        debug_print(format!("error: {err}"));
-                                    }
-                                    continue;
-                                }
-                            };
-                            engine.set_hash_max_capacity(
-                                (size / Table::ELEMENT_SIZE).saturating_mul(MEBIBYTES),
-                            );
-                        }
-                        "Clear Hash" => {
-                            if value.is_none() {
-                                engine.clear_hash();
-                            } else if debug {
-                                debug_print(
-                                    "set `Clear Hash` to invalid value; ignoring".to_string(),
-                                );
                             }
+                        };
+                        engine.set_hash_max_capacity(
+                            (size / Table::ELEMENT_SIZE).saturating_mul(MEBIBYTES),
+                        );
+                    }
+                    "Clear Hash" => {
+                        if value.is_none() {
+                            engine.clear_hash();
+                        } else if debug {
+                            debug_print("set `Clear Hash` to invalid value; ignoring".to_string());
                         }
-                        ENGINE_ABOUT => {
-                            if debug {
-                                debug_print(format!(
-                                    "setting the option `{ENGINE_ABOUT}` is ignored"
-                                ));
-                            }
+                    }
+                    ENGINE_ABOUT => {
+                        if debug {
+                            debug_print(format!("setting the option `{ENGINE_ABOUT}` is ignored"));
                         }
-                        name => {
-                            if debug {
-                                debug_print(format!("unknown option `{name}`; ignoring"));
-                            }
+                    }
+                    name => {
+                        if debug {
+                            debug_print(format!("unknown option `{name}`; ignoring"));
                         }
                     }
                 }
             }
             Input::Register(_) => {
-                if uci && debug {
+                if debug {
                     debug_print("`register` is ignored".to_string());
                 }
             }
             Input::UciNewGame => {
-                if uci {
-                    new_game = true;
-                    uci_new_game_available = true;
-                    engine.set_board(Board::starting_position());
-                    board = Board::starting_position();
-                }
+                new_game = true;
+                uci_new_game_available = true;
+                engine.set_board(Board::starting_position());
+                board = Board::starting_position();
             }
             Input::Position { position, moves } => {
-                if uci {
-                    if !uci_new_game_available || new_game {
-                        if debug {
-                            debug_print("setting up new board".to_string());
-                        }
-                        board = position.board().unwrap();
-                        for movement in &moves {
-                            board.move_lan(*movement);
-                        }
-                        engine.set_board(board.clone());
-                        new_game = false;
-                    } else {
-                        let moves = &moves[move_count..];
-                        if debug {
-                            let mut message = "reusing previous board. moves used:".to_string();
-                            for movement in moves {
-                                write!(&mut message, " {movement}").unwrap();
-                            }
-                            debug_print(message);
-                        }
-                        for movement in moves {
-                            board.move_lan(*movement);
-                            engine.move_piece(*movement);
-                        }
+                if !uci_new_game_available || new_game {
+                    if debug {
+                        debug_print("setting up new board".to_string());
                     }
-                    move_count = moves.len();
+                    board = position.board().unwrap();
+                    for movement in &moves {
+                        board.move_lan(*movement);
+                    }
+                    engine.set_board(board.clone());
+                    new_game = false;
+                } else {
+                    let moves = &moves[move_count..];
+                    if debug {
+                        let mut message = "reusing previous board. moves used:".to_string();
+                        for movement in moves {
+                            write!(&mut message, " {movement}").unwrap();
+                        }
+                        debug_print(message);
+                    }
+                    for movement in moves {
+                        board.move_lan(*movement);
+                        engine.move_piece(*movement);
+                    }
                 }
+                move_count = moves.len();
             }
             Input::Go(go) => {
-                if uci {
-                    new_game = false;
+                new_game = false;
 
-                    let mate = go.mate.map(|moves| {
-                        let moves = moves.get();
-                        let plies = match board.current_player() {
-                            Color::White => moves * 2,
-                            Color::Black => moves * 2 - 1,
+                let mate = go.mate.map(|moves| {
+                    let moves = moves.get();
+                    let plies = match board.current_player() {
+                        Color::White => moves * 2,
+                        Color::Black => moves * 2 - 1,
+                    };
+                    NonZero::new(plies).unwrap()
+                });
+                let current_player = board.current_player();
+                engine.calculate(
+                    go.estimate_move_time(&board),
+                    go.depth,
+                    go.nodes,
+                    mate,
+                    move |info| {
+                        // precision doesn't matter
+                        #[allow(
+                            clippy::cast_possible_truncation,
+                            clippy::cast_sign_loss,
+                            clippy::cast_precision_loss
+                        )]
+                        let hash_full = if info.hash_capacity >= info.hash_max_capacity {
+                            1_000_000
+                        } else {
+                            (info.hash_capacity as f32 / info.hash_max_capacity as f32
+                                * 1_000_000_f32) as u32
                         };
-                        NonZero::new(plies).unwrap()
-                    });
-                    let current_player = board.current_player();
-                    engine.calculate(
-                        go.estimate_move_time(&board),
-                        go.depth,
-                        go.nodes,
-                        mate,
-                        move |info| {
-                            // precision doesn't matter
-                            #[allow(
-                                clippy::cast_possible_truncation,
-                                clippy::cast_sign_loss,
-                                clippy::cast_precision_loss
-                            )]
-                            let hash_full = if info.hash_capacity >= info.hash_max_capacity {
-                                1_000_000
-                            } else {
-                                (info.hash_capacity as f32 / info.hash_max_capacity as f32
-                                    * 1_000_000_f32) as u32
-                            };
-                            #[allow(
-                                clippy::cast_possible_truncation,
-                                clippy::cast_sign_loss,
-                                clippy::cast_precision_loss
-                            )]
-                            let nps = (info.nodes.get() as f32 / info.time.as_secs_f32()) as u32;
-                            println!(
-                                "{}",
-                                Output::Info(Info::Search(SearchInfo {
-                                    depth: info.depth,
-                                    time: info.time,
-                                    nodes: info.nodes,
-                                    pv: info.pv,
-                                    score: info.score.map(|score| Score::from_centipawn(
-                                        score.centipawn(),
-                                        current_player,
-                                    )),
-                                    hash_full,
-                                    nps
-                                }))
-                            );
-                        },
-                        |movement| {
-                            println!(
-                                "{}",
-                                Output::BestMove {
-                                    movement: NullableLan(movement),
-                                    ponder: None
-                                }
-                            );
-                        },
-                    );
-                    if debug {
-                        if go.ponder {
-                            debug_print("`go ponder` is unsupported; ignoring".to_string());
-                        }
-                        if go.search_moves.is_some() {
-                            debug_print("`go searchmoves` is unsupported; ignoring".to_string());
-                        }
-                        if go.nodes.is_some() {
-                            debug_print("`go nodes` is unsupported; ignoring".to_string());
-                        }
+                        #[allow(
+                            clippy::cast_possible_truncation,
+                            clippy::cast_sign_loss,
+                            clippy::cast_precision_loss
+                        )]
+                        let nps = (info.nodes.get() as f32 / info.time.as_secs_f32()) as u32;
+                        println!(
+                            "{}",
+                            Output::Info(Info::Search(SearchInfo {
+                                depth: info.depth,
+                                time: info.time,
+                                nodes: info.nodes,
+                                pv: info.pv,
+                                score: info.score.map(|score| Score::from_centipawn(
+                                    score.centipawn(),
+                                    current_player,
+                                )),
+                                hash_full,
+                                nps
+                            }))
+                        );
+                    },
+                    |movement| {
+                        println!(
+                            "{}",
+                            Output::BestMove {
+                                movement: NullableLan(movement),
+                                ponder: None
+                            }
+                        );
+                    },
+                );
+                if debug {
+                    if go.ponder {
+                        debug_print("`go ponder` is unsupported; ignoring".to_string());
+                    }
+                    if go.search_moves.is_some() {
+                        debug_print("`go searchmoves` is unsupported; ignoring".to_string());
+                    }
+                    if go.nodes.is_some() {
+                        debug_print("`go nodes` is unsupported; ignoring".to_string());
                     }
                 }
             }
-            Input::Stop => {
-                if uci {
-                    engine.stop();
-                }
-            }
+            Input::Stop => engine.stop(),
             Input::PonderHit => {
-                if uci && debug {
+                if debug {
                     debug_print("`ponderhit` is unsupported; ignoring".to_string());
                 }
             }
-            Input::Quit => {
-                if uci {
-                    return;
-                }
-            }
-            Input::Repl => {
-                if !uci {
-                    drop(lines);
-                    drop(engine);
-                    repl();
-                    return;
-                }
-            }
-            Input::Fuzz => {
-                if !uci {
-                    drop(lines);
-                    drop(engine);
-                    fuzz();
-                    return;
-                }
-            }
+            Input::Quit => return,
         }
     }
 }
