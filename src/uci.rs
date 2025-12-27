@@ -1,7 +1,7 @@
 use std::{
     cell::LazyCell,
-    fmt::Write,
-    io::{BufRead, stdin},
+    fmt::Write as _,
+    io::{BufRead, Write, stdin, stdout},
     num::NonZero,
 };
 
@@ -71,9 +71,11 @@ const CONFIG: [Output; 8] = [
     Output::UciOk,
 ];
 pub fn uci_loop() {
+    let mut output = stdout().lock();
     for config in CONFIG {
-        println!("{config}");
+        writeln!(output, "{config}").unwrap();
     }
+    drop(output);
     let input = stdin().lock();
     let mut lines = input.lines();
 
