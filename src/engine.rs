@@ -134,11 +134,9 @@ impl Engine {
                             let mut best_line = game_tree.best_line().fuse();
                             (best_line.next(), best_line.next())
                         };
-                        if !ponder_mode {
-                            let mut write = pondered_move_queue.write().unwrap();
-                            *write = pondered_move;
-                            drop(write);
-                        }
+                        let mut write = pondered_move_queue.write().unwrap();
+                        *write = if ponder_mode { pondered_move } else { None };
+                        drop(write);
                         best_move_callback(movement, pondered_move);
                     }
                     Input::SetHashMaxCapacity(capacity) => table.set_max_capacity(capacity),
