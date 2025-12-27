@@ -135,7 +135,7 @@ impl Engine {
                             (best_line.next(), best_line.next())
                         };
                         let mut write = pondered_move_queue.write().unwrap();
-                        *write = if ponder_mode { pondered_move } else { None };
+                        *write = if ponder_mode { None } else { pondered_move };
                         drop(write);
                         best_move_callback(movement, pondered_move);
                     }
