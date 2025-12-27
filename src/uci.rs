@@ -295,7 +295,7 @@ pub fn uci_loop() {
                     go.nodes,
                     mate,
                     info_callback(hash_max_capacity, board.current_player()),
-                    best_move_callback(ponder),
+                    best_move_callback(ponder, go.ponder),
                 );
                 if debug {
                     if go.search_moves.is_some() {
@@ -316,7 +316,7 @@ pub fn uci_loop() {
                     None,
                     None,
                     info_callback(hash_max_capacity, board.current_player()),
-                    best_move_callback(ponder),
+                    best_move_callback(ponder, false),
                 );
             }
             Input::Quit => return,
@@ -361,15 +361,24 @@ fn info_callback(hash_max_capacity: usize, current_player: Color) -> impl Fn(eng
         );
     }
 }
-fn best_move_callback(ponder: bool) -> impl Fn(Option<Lan>, Option<Lan>) + Send {
+fn best_move_callback(
+    ponder_enabled: bool,
+    ponder_mode: bool,
+) -> impl Fn(Option<Lan>, Option<Lan>) + Send {
     move |movement, ponder_movement| {
-        let ponder_movement = if ponder { ponder_movement } else { None };
-        println!(
-            "{}",
-            Output::BestMove {
-                movement: NullableLan(movement),
-                ponder: ponder_movement
-            }
-        );
+        if !ponder_mode {
+            let ponder_movement = if ponder_enabled {
+                ponder_movement
+            } else {
+                None
+            };
+            println!(
+                "{}",
+                Output::BestMove {
+                    movement: NullableLan(movement),
+                    ponder: ponder_movement
+                }
+            );
+        }
     }
 }
