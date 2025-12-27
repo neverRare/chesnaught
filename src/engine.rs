@@ -51,8 +51,8 @@ impl Engine {
     pub fn new() -> Self {
         let (input, input_receiver) = channel();
         let (ready_sender, ready) = sync_channel(0);
-        let pondered_movement = Arc::new(RwLock::new(None));
-        let ponder = Arc::clone(&pondered_movement);
+        let pondered_move_queue = Arc::new(RwLock::new(None));
+        let ponder = Arc::clone(&pondered_move_queue);
         spawn(move || {
             let mut game_tree = GameTree::new(Board::starting_position());
             let mut table = Table::new(0);
@@ -134,9 +134,9 @@ impl Engine {
                             let mut best_line = game_tree.best_line().fuse();
                             (best_line.next(), best_line.next())
                         };
-                        if !ponder_mode && let Some(movement) = pondered_move {
-                            let mut write = pondered_movement.write().unwrap();
-                            *write = Some(movement);
+                        if !ponder_mode {
+                            let mut write = pondered_move_queue.write().unwrap();
+                            *write = pondered_move;
                             drop(write);
                         }
                         best_move_callback(movement, pondered_move);
@@ -200,9 +200,9 @@ impl Engine {
             stop_signal.store(true, Ordering::Relaxed);
         }
     }
-    pub fn ponder(&self) -> Option<Lan> {
-        let read = self.ponder.read().unwrap();
-        *read
+    pub fn ponder(&self) -> Lan {
+        while self.ponder.read().unwrap().is_none() {}
+        self.ponder.write().unwrap().take().unwrap()
     }
     pub fn set_hash_max_capacity(&self, max_capacity: usize) {
         self.input

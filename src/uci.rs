@@ -310,7 +310,7 @@ pub fn uci_loop() {
             Input::Stop => engine.stop(),
             Input::PonderHit => {
                 engine.stop();
-                engine.move_piece(engine.ponder().unwrap());
+                engine.move_piece(engine.ponder());
                 engine.calculate(
                     last_go.clone().unwrap().estimate_move_time(&board),
                     None,
