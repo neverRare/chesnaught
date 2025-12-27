@@ -6,13 +6,13 @@ use std::{
 };
 
 use crate::{
-    board::{Board, NullableLan},
+    board::{Board, Lan, NullableLan},
     color::Color,
-    engine::Engine,
+    engine::{self, Engine},
     game_tree::Table,
     misc::MEBIBYTES,
     uci::{
-        input::Input,
+        input::{Go, Input},
         output::{Boundary, IdField, Info, OptionType, OptionValue, Output, Score, SearchInfo},
     },
 };
@@ -23,7 +23,7 @@ mod output;
 const CHESS960: &str = "UCI_Chess960";
 const ENGINE_ABOUT: &str = "UCI_EngineAbout";
 
-const CONFIG: [Output; 8] = [
+const CONFIG: [Output; 9] = [
     Output::Id {
         field: IdField::Name,
         value: concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
@@ -63,6 +63,12 @@ const CONFIG: [Output; 8] = [
         boundary: None,
     },
     Output::Option {
+        name: "Ponder",
+        kind: OptionType::Check,
+        default: Some(OptionValue::Bool(false)),
+        boundary: None,
+    },
+    Output::Option {
         name: "UCI_EngineAbout",
         kind: OptionType::String,
         default: Some(OptionValue::Str(env!("CARGO_PKG_REPOSITORY"))),
@@ -86,6 +92,10 @@ pub fn uci_loop() {
     let mut move_count = 0;
     let mut new_game = true;
     let mut uci_new_game_available = false;
+
+    let mut ponder = false;
+
+    let mut last_go = None;
     loop {
         let text = lines.next().unwrap().unwrap();
         let text = text.trim();
@@ -189,6 +199,26 @@ pub fn uci_loop() {
                             debug_print("set `Clear Hash` to invalid value; ignoring".to_string());
                         }
                     }
+                    "Ponder" => {
+                        if let Some(value) = value {
+                            let value = match value.parse() {
+                                Ok(value) => value,
+                                Err(err) => {
+                                    if debug {
+                                        debug_print(
+                                            "set `Ponder` to an invalid value; ignoring"
+                                                .to_string(),
+                                        );
+                                        debug_print(format!("error: {err}"));
+                                    }
+                                    continue;
+                                }
+                            };
+                            ponder = value;
+                        } else if debug {
+                            debug_print("set `Ponder` without value; ignoring".to_string());
+                        }
+                    }
                     ENGINE_ABOUT => {
                         if debug {
                             debug_print(format!("setting the option `{ENGINE_ABOUT}` is ignored"));
@@ -242,6 +272,15 @@ pub fn uci_loop() {
             Input::Go(go) => {
                 new_game = false;
 
+                last_go = Some(Go {
+                    search_moves: None,
+                    ponder: false,
+                    depth: None,
+                    nodes: None,
+                    mate: None,
+                    move_time: None,
+                    ..go
+                });
                 let mate = go.mate.map(|moves| {
                     let moves = moves.get();
                     let plies = match board.current_player() {
@@ -250,61 +289,15 @@ pub fn uci_loop() {
                     };
                     NonZero::new(plies).unwrap()
                 });
-                let current_player = board.current_player();
                 engine.calculate(
                     go.estimate_move_time(&board),
                     go.depth,
                     go.nodes,
                     mate,
-                    move |info| {
-                        // precision doesn't matter
-                        #[allow(
-                            clippy::cast_possible_truncation,
-                            clippy::cast_sign_loss,
-                            clippy::cast_precision_loss
-                        )]
-                        let hash_full = if info.hash_capacity >= hash_max_capacity {
-                            1_000
-                        } else {
-                            (info.hash_capacity as f32 / hash_max_capacity as f32 * 1_000_f32)
-                                as u32
-                        };
-                        #[allow(
-                            clippy::cast_possible_truncation,
-                            clippy::cast_sign_loss,
-                            clippy::cast_precision_loss
-                        )]
-                        let nps = (info.nodes.get() as f32 / info.time.as_secs_f32()) as u32;
-                        println!(
-                            "{}",
-                            Output::Info(Info::Search(SearchInfo {
-                                depth: info.depth,
-                                time: info.time,
-                                nodes: info.nodes,
-                                pv: info.pv,
-                                score: info.score.map(|score| Score::from_centipawn(
-                                    score.centipawn(),
-                                    current_player,
-                                )),
-                                hash_full,
-                                nps
-                            }))
-                        );
-                    },
-                    |movement| {
-                        println!(
-                            "{}",
-                            Output::BestMove {
-                                movement: NullableLan(movement),
-                                ponder: None
-                            }
-                        );
-                    },
+                    info_callback(hash_max_capacity, board.current_player()),
+                    best_move_callback(ponder),
                 );
                 if debug {
-                    if go.ponder {
-                        debug_print("`go ponder` is unsupported; ignoring".to_string());
-                    }
                     if go.search_moves.is_some() {
                         debug_print("`go searchmoves` is unsupported; ignoring".to_string());
                     }
@@ -315,9 +308,16 @@ pub fn uci_loop() {
             }
             Input::Stop => engine.stop(),
             Input::PonderHit => {
-                if debug {
-                    debug_print("`ponderhit` is unsupported; ignoring".to_string());
-                }
+                engine.stop();
+                engine.move_piece(engine.ponder().unwrap());
+                engine.calculate(
+                    last_go.clone().unwrap().estimate_move_time(&board),
+                    None,
+                    None,
+                    None,
+                    info_callback(hash_max_capacity, board.current_player()),
+                    best_move_callback(ponder),
+                );
             }
             Input::Quit => return,
         }
@@ -325,4 +325,51 @@ pub fn uci_loop() {
 }
 fn debug_print(message: String) {
     println!("{}", Output::Info(Info::Text(message.into_boxed_str())));
+}
+fn info_callback(hash_max_capacity: usize, current_player: Color) -> impl Fn(engine::Info) + Send {
+    move |info| {
+        // precision doesn't matter
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::cast_precision_loss
+        )]
+        let hash_full = if info.hash_capacity >= hash_max_capacity {
+            1_000
+        } else {
+            (info.hash_capacity as f32 / hash_max_capacity as f32 * 1_000_f32) as u32
+        };
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::cast_precision_loss
+        )]
+        let nps = (info.nodes.get() as f32 / info.time.as_secs_f32()) as u32;
+        println!(
+            "{}",
+            Output::Info(Info::Search(SearchInfo {
+                depth: info.depth,
+                time: info.time,
+                nodes: info.nodes,
+                pv: info.pv,
+                score: info
+                    .score
+                    .map(|score| Score::from_centipawn(score.centipawn(), current_player,)),
+                hash_full,
+                nps
+            }))
+        );
+    }
+}
+fn best_move_callback(ponder: bool) -> impl Fn(Option<Lan>, Option<Lan>) + Send {
+    move |movement, ponder_movement| {
+        let ponder_movement = if ponder { ponder_movement } else { None };
+        println!(
+            "{}",
+            Output::BestMove {
+                movement: NullableLan(movement),
+                ponder: ponder_movement
+            }
+        );
+    }
 }

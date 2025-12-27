@@ -1,7 +1,7 @@
 use std::{
     num::NonZero,
     sync::{
-        Arc,
+        Arc, RwLock,
         atomic::{AtomicBool, Ordering},
         mpsc::{Receiver, Sender, channel, sync_channel},
     },
@@ -24,7 +24,7 @@ enum Input {
         nodes: Option<NonZero<u32>>,
         mate_in_plies: Option<NonZero<u32>>,
         info_callback: Box<dyn FnMut(Info) + Send>,
-        best_move_callback: Box<dyn FnOnce(Option<Lan>) + Send>,
+        best_move_callback: Box<dyn FnOnce(Option<Lan>, Option<Lan>) + Send>,
         stop_signal: Arc<AtomicBool>,
     },
     SetHashMaxCapacity(usize),
@@ -44,11 +44,14 @@ pub struct Engine {
     stop_signal: Option<Arc<AtomicBool>>,
     input: Sender<Input>,
     ready: Receiver<()>,
+    ponder: Arc<RwLock<Option<Lan>>>,
 }
 impl Engine {
     pub fn new() -> Self {
         let (input, input_receiver) = channel();
         let (ready_sender, ready) = sync_channel(0);
+        let ponder = Arc::new(RwLock::new(None));
+        let ponder_ = Arc::clone(&ponder);
         spawn(move || {
             let mut game_tree = GameTree::new(Board::starting_position());
             let mut table = Table::new(0);
@@ -120,10 +123,21 @@ impl Engine {
                                 break;
                             }
                         }
-                        best_move_callback(game_tree.best_move().or_else(|| {
+                        let mut best_line = game_tree.best_line().fuse();
+                        let (movement, pondered_move) = if let Some(movement) = best_line.next() {
+                            (Some(movement), best_line.next())
+                        } else {
+                            drop(best_line);
                             game_tree.calculate(1, &mut table, 1);
-                            game_tree.best_move()
-                        }));
+                            let mut best_line = game_tree.best_line().fuse();
+                            (best_line.next(), best_line.next())
+                        };
+                        if let Some(movement) = pondered_move {
+                            let mut write = ponder.write().unwrap();
+                            *write = Some(movement);
+                            drop(write);
+                        }
+                        best_move_callback(movement, pondered_move);
                     }
                     Input::SetHashMaxCapacity(capacity) => table.set_max_capacity(capacity),
                     Input::ClearHash => table.clear_allocation(),
@@ -135,6 +149,7 @@ impl Engine {
             stop_signal: None,
             input,
             ready,
+            ponder: ponder_,
         }
     }
     pub fn ready(&self) {
@@ -154,7 +169,7 @@ impl Engine {
         nodes: Option<NonZero<u32>>,
         mate_in_plies: Option<NonZero<u32>>,
         info_callback: impl FnMut(Info) + Send + 'static,
-        best_move_callback: impl FnOnce(Option<Lan>) + Send + 'static,
+        best_move_callback: impl FnOnce(Option<Lan>, Option<Lan>) + Send + 'static,
     ) {
         let stop_signal = Arc::new(AtomicBool::new(false));
         if let Some(duration) = duration {
@@ -180,6 +195,10 @@ impl Engine {
         if let Some(stop_signal) = &self.stop_signal {
             stop_signal.store(true, Ordering::Relaxed);
         }
+    }
+    pub fn ponder(&self) -> Option<Lan> {
+        let read = self.ponder.read().unwrap();
+        *read
     }
     pub fn set_hash_max_capacity(&self, max_capacity: usize) {
         self.input
