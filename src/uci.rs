@@ -81,6 +81,7 @@ pub fn uci_loop() {
 
     let mut debug = false;
     let mut engine = LazyCell::new(Engine::new);
+    let mut hash_max_capacity = 0;
     let mut board = Board::starting_position();
     let mut move_count = 0;
     let mut new_game = true;
@@ -178,9 +179,8 @@ pub fn uci_loop() {
                                 continue;
                             }
                         };
-                        engine.set_hash_max_capacity(
-                            (size / Table::ELEMENT_SIZE).saturating_mul(MEBIBYTES),
-                        );
+                        hash_max_capacity = (size / Table::ELEMENT_SIZE).saturating_mul(MEBIBYTES);
+                        engine.set_hash_max_capacity(hash_max_capacity);
                     }
                     "Clear Hash" => {
                         if value.is_none() {
@@ -263,11 +263,11 @@ pub fn uci_loop() {
                             clippy::cast_sign_loss,
                             clippy::cast_precision_loss
                         )]
-                        let hash_full = if info.hash_capacity >= info.hash_max_capacity {
+                        let hash_full = if info.hash_capacity >= hash_max_capacity {
                             1_000_000
                         } else {
-                            (info.hash_capacity as f32 / info.hash_max_capacity as f32
-                                * 1_000_000_f32) as u32
+                            (info.hash_capacity as f32 / hash_max_capacity as f32 * 1_000_000_f32)
+                                as u32
                         };
                         #[allow(
                             clippy::cast_possible_truncation,

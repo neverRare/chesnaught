@@ -412,9 +412,6 @@ impl Table {
     pub fn capacity(&self) -> usize {
         self.table.capacity()
     }
-    pub fn max_capacity(&self) -> usize {
-        self.max_capacity
-    }
     pub fn set_max_capacity(&mut self, max_capacity: usize) {
         self.max_capacity = Ord::min(max_capacity, <i32>::MAX as usize);
         if self.capacity() > self.max_capacity {

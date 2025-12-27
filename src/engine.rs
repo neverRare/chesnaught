@@ -38,7 +38,6 @@ pub struct Info {
     pub pv: Box<[Lan]>,
     pub score: Option<Score>,
     pub hash_capacity: usize,
-    pub hash_max_capacity: usize,
 }
 #[derive(Debug)]
 pub struct Engine {
@@ -87,7 +86,6 @@ impl Engine {
                                 pv: [movement].into(),
                                 score: game_tree.score(),
                                 hash_capacity: table.capacity(),
-                                hash_max_capacity: table.max_capacity(),
                             });
                         }
                         let start = match depth {
@@ -110,7 +108,6 @@ impl Engine {
                                 pv: game_tree.best_line().collect(),
                                 score: game_tree.score(),
                                 hash_capacity: table.capacity(),
-                                hash_max_capacity: table.max_capacity(),
                             });
                             if stop_signal.load(Ordering::Relaxed)
                                 || depth.is_some_and(|depth| i >= depth.get())
