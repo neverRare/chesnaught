@@ -27,6 +27,7 @@ enum Input {
         info_callback: Box<dyn FnMut(Info) + Send>,
         best_move_callback: Box<dyn FnOnce(Option<Lan>, Option<Lan>) + Send>,
         stop_signal: Arc<AtomicBool>,
+        call_best_move: Arc<AtomicBool>,
     },
     SetHashMaxCapacity(usize),
     ClearHash,
@@ -43,6 +44,7 @@ pub struct Info {
 #[derive(Debug)]
 pub struct Engine {
     stop_signal: Option<Arc<AtomicBool>>,
+    call_best_move: Option<Arc<AtomicBool>>,
     input: Sender<Input>,
     ready: Receiver<()>,
     ponder: Arc<RwLock<Option<Lan>>>,
@@ -82,6 +84,7 @@ impl Engine {
                         mut info_callback,
                         best_move_callback,
                         stop_signal,
+                        call_best_move,
                     } => {
                         let start = if let Some(movement) = game_tree.best_move() {
                             info_callback(Info {
@@ -137,7 +140,9 @@ impl Engine {
                         let mut write = pondered_move_queue.write().unwrap();
                         *write = if ponder_mode { None } else { pondered_move };
                         drop(write);
-                        best_move_callback(movement, pondered_move);
+                        if call_best_move.load(Ordering::Relaxed) {
+                            best_move_callback(movement, pondered_move);
+                        }
                     }
                     Input::SetHashMaxCapacity(capacity) => table.set_max_capacity(capacity),
                     Input::ClearHash => table.clear_allocation(),
@@ -146,6 +151,7 @@ impl Engine {
             }
         });
         Engine {
+            call_best_move: None,
             stop_signal: None,
             input,
             ready,
@@ -180,6 +186,7 @@ impl Engine {
                 stop_signal.store(true, Ordering::Relaxed);
             });
         }
+        let call_best_move = Arc::new(AtomicBool::new(true));
         self.input
             .send(Input::Calculate {
                 depth,
@@ -189,11 +196,18 @@ impl Engine {
                 info_callback: Box::new(info_callback),
                 best_move_callback: Box::new(best_move_callback),
                 stop_signal: stop_signal.clone(),
+                call_best_move: call_best_move.clone(),
             })
             .unwrap();
         self.stop_signal = Some(stop_signal);
+        self.call_best_move = Some(call_best_move);
     }
-    pub fn stop(&self) {
+    pub fn stop(&self, call_best_move: bool) {
+        // it's important to set this before the stop signal because the stop
+        // signal is read first
+        if let Some(atomic) = &self.call_best_move {
+            atomic.store(call_best_move, Ordering::Relaxed);
+        }
         if let Some(stop_signal) = &self.stop_signal {
             stop_signal.store(true, Ordering::Relaxed);
         }

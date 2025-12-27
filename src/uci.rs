@@ -296,7 +296,7 @@ pub fn uci_loop() {
                     mate,
                     go.ponder,
                     info_callback(hash_max_capacity, board.current_player()),
-                    best_move_callback(ponder, go.ponder),
+                    best_move_callback(ponder),
                 );
                 if debug {
                     if go.search_moves.is_some() {
@@ -307,9 +307,9 @@ pub fn uci_loop() {
                     }
                 }
             }
-            Input::Stop => engine.stop(),
+            Input::Stop => engine.stop(true),
             Input::PonderHit => {
-                engine.stop();
+                engine.stop(false);
                 engine.move_piece(engine.ponder().unwrap());
                 engine.calculate(
                     last_go.clone().unwrap().estimate_move_time(&board),
@@ -318,7 +318,7 @@ pub fn uci_loop() {
                     None,
                     false,
                     info_callback(hash_max_capacity, board.current_player()),
-                    best_move_callback(ponder, false),
+                    best_move_callback(ponder),
                 );
             }
             Input::Quit => return,
@@ -363,24 +363,19 @@ fn info_callback(hash_max_capacity: usize, current_player: Color) -> impl Fn(eng
         );
     }
 }
-fn best_move_callback(
-    ponder_enabled: bool,
-    ponder_mode: bool,
-) -> impl Fn(Option<Lan>, Option<Lan>) + Send {
+fn best_move_callback(ponder_enabled: bool) -> impl Fn(Option<Lan>, Option<Lan>) + Send {
     move |movement, ponder_movement| {
-        if !ponder_mode {
-            let ponder_movement = if ponder_enabled {
-                ponder_movement
-            } else {
-                None
-            };
-            println!(
-                "{}",
-                Output::BestMove {
-                    movement: NullableLan(movement),
-                    ponder: ponder_movement
-                }
-            );
-        }
+        let ponder_movement = if ponder_enabled {
+            ponder_movement
+        } else {
+            None
+        };
+        println!(
+            "{}",
+            Output::BestMove {
+                movement: NullableLan(movement),
+                ponder: ponder_movement
+            }
+        );
     }
 }
