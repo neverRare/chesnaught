@@ -21,9 +21,14 @@ Before playing, consider configuring it first to give it more computation advant
 
 ### Thread
 
-The amount of threads that Chesnaught will use during search. Optimal setting: the same number as your CPU cores. You can provide less if you want but giving more than the number of your CPU cores may not help.
+The amount of threads that Chesnaught will use during search. Optimal setting: the same number as your CPU cores. You can provide less if you want. Giving more may not help.
 
-Chesnaught actual uses more than alloted threads but the extra threads should be fairly lowly processed.
+Chesnaught actual uses more than alloted threads but the extra threads should be lowly prioritized by the processor e.g. they're blocked most of the time. Here are the detailed list of threads used:
+
+- IO thread &ndash; Processes inputs, sends output, and sends instruction to the engine thread. It is important that the IO thread and the engine thread are separate so the IO thread can process inputs while the engine is thinking. Should only be awake briefly whenever there is an input.
+- Engine thread &ndash; Performs analysis, may spawn multithreaded analysis thread but this thread will wait for them to finish.
+- Multithreaded analysis threads &ndash; Has the same number as the option. Spawned by the engine thread.
+- Search tree garbage collector &ndash; Because the trees are huge and complex, it can take a while to free them. Chesnaught simply sends them to this thread in order to be freed asynchronously. Garbages are queued. This could be a bottleneck but since creation of large trees requires time, this shouldn't be a problem.
 
 ### Hash
 
