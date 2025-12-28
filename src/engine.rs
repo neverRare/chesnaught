@@ -206,10 +206,10 @@ impl Engine {
         // it's important to set this before the stop signal because the stop
         // signal is read first
         if let Some(atomic) = &self.call_best_move {
-            atomic.store(call_best_move, Ordering::Relaxed);
+            atomic.store(call_best_move, Ordering::SeqCst);
         }
         if let Some(stop_signal) = &self.stop_signal {
-            stop_signal.store(true, Ordering::Relaxed);
+            stop_signal.store(true, Ordering::SeqCst);
         }
     }
     pub fn ponder(&self) -> Option<Lan> {
