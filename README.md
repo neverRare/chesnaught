@@ -29,7 +29,7 @@ Chesnaught actual uses more than the alloted threads but the extra threads shoul
 - Engine thread &ndash; Performs analysis, may spawn multithreaded analysis threads but this thread will block and wait for them to finish.
 - Multithreaded analysis threads &ndash; Has the same number as the option. Spawned by the engine thread.
 - Timing thread &ndash; Used for timings, it's only purpose is to sleep for a set time and then tell the engine to stop.
-- Search tree garbage collector &ndash; The only real bottleneck outside of the allocated analysis threads. Because the trees are huge and complex, it can take a while to free them. Chesnaught simply sends them to this thread in order to be freed asynchronously. Garbages are queued. This could be a bottleneck but since creation of large trees requires time, which would allocate time freeing garbages, this shouldn't be a problem. Garbage collection should also be fairly brief and therefore not affect the analysis threads.
+- Search tree garbage collector &ndash; The only real bottleneck outside of the allocated analysis threads. Because the trees are huge and complex, it can take a while to free them. Chesnaught simply sends them to this thread in order to be freed asynchronously. Garbages are queued. This could be a bottleneck but since creation of large trees requires time, which would allocate time freeing garbages, this shouldn't be a problem. Garbage collection should also be fairly brief and therefore not significantly affect the analysis threads.
 
 ### Hash
 
