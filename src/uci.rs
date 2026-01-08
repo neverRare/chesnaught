@@ -328,6 +328,7 @@ pub fn uci_loop() {
 fn debug_print(message: String) {
     println!("{}", Output::Info(Info::Text(message.into_boxed_str())));
 }
+// TODO: don't print when it doesn't match the pondered move
 fn info_callback(hash_max_capacity: usize, current_player: Color) -> impl Fn(engine::Info) + Send {
     move |info| {
         // precision doesn't matter
