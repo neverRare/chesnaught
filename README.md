@@ -21,7 +21,7 @@ Before playing, consider configuring it first to give it more computation advant
 
 ### Thread
 
-The amount of threads that Chesnaught will use during search. Optimal setting: the same number as your CPU cores. You can provide less if you want. Giving more may not help.
+The amount of threads that Chesnaught will use during search. Optimal setting: the same number as your CPU cores. You can provide less if you want. Giving more may not help. When letting two bots play against each other and both are allowed to ponder while the other is thinking, it may be a good idea to allocate half for each.
 
 Chesnaught actual uses more than the allotted threads but the extra threads should be lowly prioritized by the OS e.g. they're blocked most of the time. Here are the detailed list of threads used:
 
